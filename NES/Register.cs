@@ -14,6 +14,17 @@ namespace NES
         /// </summary>
         private T _value;
 
+        public Register()
+        {
+
+        }
+
+
+        public Register(T initialValue)
+        {
+            _value = initialValue;
+        }
+
         /// <summary>
         /// Allocates a value in the register.
         /// </summary>
