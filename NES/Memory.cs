@@ -32,4 +32,9 @@ namespace NES
         /// <param name="value">The value that would be stored in the memory slot (8 bit value).</param>
         void Store(ushort address, byte value);
     }
+
+    //public static class HexadecimalExtensions
+    //{
+    //    public static ushort ToDecimal(this ushort hexValue) => Convert.ToUInt16(hexValue.ToString(), 16);
+    //}
 }

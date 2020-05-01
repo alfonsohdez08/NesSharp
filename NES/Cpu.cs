@@ -13,17 +13,17 @@ namespace NES
         /// <summary>
         /// Accumulators.
         /// </summary>
-        private Register<byte> _a;
+        private readonly Register<byte> _a = new Register<byte>();
 
         /// <summary>
         /// X register (general purpose).
         /// </summary>
-        private Register<byte> _x;
+        private readonly Register<byte> _x = new Register<byte>();
 
         /// <summary>
         /// Y register (general purpose).
         /// </summary>
-        private Register<byte> _y;
+        private readonly Register<byte> _y = new Register<byte>();
 
         /// <summary>
         /// Status register (each bit represents a flag).
@@ -33,14 +33,14 @@ namespace NES
         /// <summary>
         /// Holds the address of the outer 
         /// </summary>
-        private Register<byte> _stackPointer;
+        private readonly Register<byte> _stackPointer = new Register<byte>();
         #endregion
 
         #region 16-bits register
         /// <summary>
         /// Starting address for the Program Counter when the CPU is started.
         /// </summary>
-        private const ushort PcStartingAddress = 0x0200;
+        private const ushort PcStartingAddress = 0x0200; // Position 512 in the array
 
         /// <summary>
         /// The Program Counter register (holds the memory address of the next instruction).
@@ -61,32 +61,39 @@ namespace NES
         }
 
         /// <summary>
+        /// Executes the program loaded in the memory.
+        /// </summary>
+        public void Start()
+        {
+            // Each time a machine cycle is elapsed, the program counter would be incremeted
+            while (Cycle())
+                IncrementPC();
+        }
+
+        /// <summary>
         /// Executes a machine cycle (fetch, decode, execute instruction).
         /// </summary>
-        public void Cycle()
+        private bool Cycle()
         {
-            byte opCode;
+            // Fetchs the OpCode from the memory
+            byte opCode = _memory.Fetch(_currentPcAddress);
 
-            do
+            // Decodes and executes the OpCode
+            switch (opCode)
             {
-                // Fetchs the OpCode from the memory
-                opCode = _memory.Fetch(_currentPcAddress);
+                case 0xA9: //LDA (immediate addressing)
+                    LDA_Immediate();
+                    break;
+                case 0x8D:
+                    STA_Absolute(); //STA (absolute addressing)
+                    break;
+                case 0x00:
+                    return false;
+                default:
+                    throw new NotSupportedException($"OpCode not supported: {opCode.ToString("X")}");
+            }
 
-                // Decodes and executes the OpCode
-                switch(opCode)
-                {
-                    case 0xA9: //LDA (immediate addressing)
-                        LDA_Immediate();
-                        break;
-                    case 0x8D:
-                        STA_Absolute(); //STA (absolute addressing)
-                        break;
-                    default:
-                        throw new NotSupportedException($"OpCode not supported: {opCode.ToString("X")}");
-                }
-
-                IncrementPC();
-            } while (opCode != 0x00);
+            return true;
         }
 
         /// <summary>
@@ -108,7 +115,6 @@ namespace NES
             _a.SetValue(value);
         }
 
-
         /// <summary>
         /// Stores the accumulator value (STA) in a given address (absolute address).
         /// </summary>
@@ -120,10 +126,30 @@ namespace NES
             IncrementPC();
             byte highByte = _memory.Fetch(_currentPcAddress);
 
-            ushort absAddress = (ushort)(lowByte + highByte); //Check if this is the way to merge two bytes (LOW_BYTE HIGH_BYTE)            
+            ushort absAddress = ByteManipulation.ParseBytes(lowByte, highByte);//Check if this is the way to merge two bytes (LOW_BYTE HIGH_BYTE)
             byte acValue = _a.GetValue();
 
-            _memory.Store(absAddress, acValue); // I think when a value is set to the accumulator, it should apply a math operation (either add or substraction based on the sign)
+            _memory.Store(absAddress, acValue);
+        }
+    }
+
+
+    public static class ByteManipulation
+    {
+
+        /// <summary>
+        /// Parse low byte and high byte in order to format it based on little endian format.
+        /// </summary>
+        /// <param name="lowByte">Low byte (least significant byte).</param>
+        /// <param name="highByte">High byte (most significant byte).</param>
+        /// <returns>A 16 bit value parsed in the little endian format.</returns>
+        public static ushort ParseBytes(byte lowByte, byte highByte)
+        {
+            string highByteHex = highByte.ToString("x");
+            string lowByteHex = lowByte.ToString("x");
+
+            // 6502 CPU is little endian (LOW_BYTE HIGH_BYTE)
+            return Convert.ToUInt16(lowByteHex + highByteHex, 16);
         }
     }
 }
