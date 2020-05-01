@@ -38,14 +38,9 @@ namespace NES
 
         #region 16-bits register
         /// <summary>
-        /// Starting address for the Program Counter when the CPU is started.
-        /// </summary>
-        private const ushort PcStartingAddress = 0x0200; // Position 512 in the array
-
-        /// <summary>
         /// The Program Counter register (holds the memory address of the next instruction).
         /// </summary>
-        private readonly Register<ushort> _programCounter = new Register<ushort>(PcStartingAddress);
+        private readonly Register<ushort> _programCounter;
         
         private ushort _currentPcAddress => _programCounter.GetValue();
         #endregion
@@ -55,9 +50,15 @@ namespace NES
         /// </summary>
         private readonly IMemory _memory;
 
-        public Cpu(IMemory memory)
+        /// <summary>
+        /// Creates an instace of a 6502 CPU.
+        /// </summary>
+        /// <param name="memory">Memory with program already loaded.</param>
+        /// <param name="startingAddress">Address where the program starts.</param>
+        public Cpu(IMemory memory, ushort startingAddress = 0x0200)
         {
             _memory = memory;
+            _programCounter = new Register<ushort>(startingAddress);
         }
 
         /// <summary>
