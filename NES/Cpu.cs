@@ -28,7 +28,7 @@ namespace NES
         /// <summary>
         /// Status register (each bit represents a flag).
         /// </summary>
-        private Register<byte> _status = new Register<byte>(0b00000000);
+        private readonly Flags _flags = new Flags();
 
         /// <summary>
         /// Holds the address of the outer 
@@ -76,6 +76,11 @@ namespace NES
         /// </summary>
         private bool Cycle()
         {
+            /*
+                Remarks: The whole instruction is executed in a cycle; however, in reality, this is not true. An instruction could long multiple cycles (take more than
+                once cycle). Learn more about this.
+             */
+
             // Fetchs the OpCode from the memory
             byte opCode = _memory.Fetch(_currentPcAddress);
 
@@ -102,7 +107,7 @@ namespace NES
         /// </summary>
         private void IncrementPC()
         {
-            _programCounter.SetValue((ushort)(_currentPcAddress + 0x1));
+            _programCounter.SetValue((ushort)(_currentPcAddress + 1));
         }
 
         /// <summary>
