@@ -93,6 +93,9 @@ namespace NES
                 case 0x8D:
                     STA_Absolute(); //STA (absolute addressing)
                     break;
+                case 0x69:
+                    ADC_Immediate(); //ADC (immediate addressing)
+                    break;
                 case 0x00:
                     return false;
                 default:
@@ -108,6 +111,18 @@ namespace NES
         private void IncrementPC()
         {
             _programCounter.SetValue((ushort)(_currentPcAddress + 1));
+        }
+
+        private void ADC_Immediate()
+        {
+            IncrementPC();
+
+            byte value = _memory.Fetch(_currentPcAddress);
+
+            int result = _a.GetValue() + value;
+            if (result >= 256) // Value is greater than a byte
+                _flags.Carry();
+
         }
 
         /// <summary>

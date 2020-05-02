@@ -37,6 +37,12 @@ namespace NES
         public void InterruptDisable(bool enable = true) => Flag(2, enable);
 
         /// <summary>
+        /// Controls the Break flag.
+        /// </summary>
+        /// <param name="enable">If true, turn on the bit related to the flag; otherwise turn off the bit related to the flag.</param>
+        public void Break(bool enable = true) => Flag(4, enable);
+
+        /// <summary>
         /// Controls the Overflow flag.
         /// </summary>
         /// <param name="enable">If true, turn on the bit related to the flag; otherwise turn off the bit related to the flag.</param>
@@ -85,7 +91,8 @@ namespace NES
             if (flags.Length < 8)
                 flags = flags.PadLeft(8 - flags.Length, '0');
 
-            var sb = new StringBuilder(flags);
+            var sb = new StringBuilder();
+            sb.AppendLine(flags);
             sb.AppendLine(FlagsLegend);
 
             return sb.ToString();

@@ -4,8 +4,9 @@ using System.Text;
 
 namespace NES
 {
-    enum OpCode
+    class Accumulator: Register<byte>
     {
-        ADC, ASL, 
+
+
     }
 }
