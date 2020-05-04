@@ -4,6 +4,15 @@ using System.Text;
 
 namespace NES
 {
+    enum StatusFlag: byte
+    {
+        Carry = 0,
+        Zero = 1,
+        Interrupt = 2,
+        Overflow = 6,
+        Negative = 7
+    }
+
     class Flags: Register<byte>
     {
         private const string FlagsLegend = "NVssDIZC";
@@ -19,66 +28,46 @@ namespace NES
         }
 
         /// <summary>
-        /// Controls the Carry flag.
+        /// Either turn "on" or "off" the given CPU status flag.
         /// </summary>
-        /// <param name="enable">If true, turn on the bit related to the flag; otherwise turn off the bit related to the flag.</param>
-        public void Carry(bool enable = true) => Flag(0, enable);
+        /// <param name="flag">The CPU status flag.</param>
+        /// <param name="val">If true it means it should be "on"; otherwise "off".</param>
+        public void SetFlag(StatusFlag flag, bool val)
+        {
+            byte flagPos = (byte)flag;
+            int mask = 1 << flagPos;
+
+            byte flags = GetValue();
+            
+            int result;
+            if (val)
+                result = flags | mask;
+            else
+                result = ((flags | mask) ^ mask); // Just in case the bit still ON
+
+            SetValue((byte)result);
+        }
 
         /// <summary>
-        /// Controls the Zero flag.
+        /// Gets the current value of the given CPU status flag.
         /// </summary>
-        /// <param name="enable">If true, turn on the bit related to the flag; otherwise turn off the bit related to the flag.</param>
-        public void Zero(bool enable = true) => Flag(1, enable);
+        /// <param name="flag">The CPU status flag.</param>
+        /// <returns>True if it's "on"; otherwise false.</returns>
+        public bool GetFlag(StatusFlag flag)
+        {
+            byte flagPos = (byte)flag;
+            int mask = 1 << flagPos;
 
-        /// <summary>
-        /// Controls the Interrupt flag.
-        /// </summary>
-        /// <param name="enable">If true, turn on the bit related to the flag; otherwise turn off the bit related to the flag.</param>
-        public void InterruptDisable(bool enable = true) => Flag(2, enable);
+            byte flags = GetValue();
+            int result = flags & mask;
 
-        /// <summary>
-        /// Controls the Break flag.
-        /// </summary>
-        /// <param name="enable">If true, turn on the bit related to the flag; otherwise turn off the bit related to the flag.</param>
-        public void Break(bool enable = true) => Flag(4, enable);
-
-        /// <summary>
-        /// Controls the Overflow flag.
-        /// </summary>
-        /// <param name="enable">If true, turn on the bit related to the flag; otherwise turn off the bit related to the flag.</param>
-        public void Overflow(bool enable = true) => Flag(6, enable);
-
-        /// <summary>
-        /// Controls the Negative flag.
-        /// </summary>
-        /// <param name="enable">If true, turn on the bit related to the flag; otherwise turn off the bit related to the flag.</param>
-        public void Negative(bool enable = true) => Flag(7, enable);
+            return result == 1;
+        }
 
         /// <summary>
         /// Clears all flags.
         /// </summary>
         public void ClearFlags() => SetValue(FlagsDisabled);
-
-        /// <summary>
-        /// Turn on/off a flag identified by the given bit position.
-        /// </summary>
-        /// <param name="bitPosition">The bit position (0-7).</param>
-        /// <param name="enable">If true, turn on the bit; otherwise turn off.</param>
-        private void Flag(byte bitPosition, bool enable)
-        {
-            if (bitPosition < 0 || bitPosition > 7)
-                throw new ArgumentOutOfRangeException("Bit position out of range. Ensure position is in the range [0-7].");
-
-            byte flags = GetValue();
-            byte mask = (byte)(1 << bitPosition);
-
-            if (enable)
-                flags = (byte)(flags | mask);
-            else
-                flags = (byte)((byte)(flags | mask) ^ mask);
-
-            SetValue(flags);
-        }
 
 #if DEBUG
         /// <summary>
@@ -91,9 +80,7 @@ namespace NES
             if (flags.Length < 8)
                 flags = flags.PadLeft(8 - flags.Length, '0');
 
-            var sb = new StringBuilder();
-            sb.AppendLine(flags);
-            sb.AppendLine(FlagsLegend);
+            var sb = new StringBuilder(flags);
 
             return sb.ToString();
         }

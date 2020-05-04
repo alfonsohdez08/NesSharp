@@ -117,12 +117,62 @@ namespace NES
         {
             IncrementPC();
 
-            byte value = _memory.Fetch(_currentPcAddress);
+            byte valueFromMemory = _memory.Fetch(_currentPcAddress);
+            byte accValue = _a.GetValue();
+            int result = accValue + valueFromMemory + (_flags.GetFlag(StatusFlag.Carry) ? 0x01 : 0);
 
-            int result = _a.GetValue() + value;
-            if (result >= 256) // Value is greater than a byte
-                _flags.Carry();
+            // If result is greater than 255, enable the Carry flag
+            _flags.SetFlag(StatusFlag.Carry, result > 255);
 
+            // If the bit no. 7 is set, then enable the Negative flag
+            _flags.SetFlag(StatusFlag.Negative, (result & (1 << 7)) == 128);
+
+            // If result equals 0, enable the Zero flag
+            _flags.SetFlag(StatusFlag.Zero, (result & 0xFF) == 0);
+
+            //if (((~((accValue ^ valueFromMemory) & (accValue ^ result))) & 0x0080) == 1) // ???
+            if (accValue.IsNegative() && accValue.IsNegative() && !((byte)(result & 0xFF)).IsNegative())
+                _flags.SetFlag(StatusFlag.Overflow, true);
+            else if (!accValue.IsNegative() && !accValue.IsNegative() && ((byte)(result & 0xFF)).IsNegative())
+                _flags.SetFlag(StatusFlag.Overflow, true);
+            else
+                _flags.SetFlag(StatusFlag.Overflow, false);
+
+            _a.SetValue((byte)(result & 0xFF));
+        }
+
+        private void SBC_Immediate()
+        {
+            /*
+	            fetch();
+	
+	            // Operating in 16-bit domain to capture carry out
+	
+	            // We can invert the bottom 8 bits with bitwise xor
+	            uint16_t value = ((uint16_t)fetched) ^ 0x00FF;
+	
+	            // Notice this is exactly the same as addition from here!
+	            temp = (uint16_t)a + value + (uint16_t)GetFlag(C);
+	            SetFlag(C, temp & 0xFF00);
+	            SetFlag(Z, ((temp & 0x00FF) == 0));
+	            SetFlag(V, (temp ^ (uint16_t)a) & (temp ^ value) & 0x0080);
+	            SetFlag(N, temp & 0x0080);
+	            a = temp & 0x00FF;
+	            return 1;             
+             */
+
+            IncrementPC();
+
+            int valueFromMemory = ~_memory.Fetch(_currentPcAddress);
+            byte accValue = _a.GetValue();
+
+            int result = accValue + valueFromMemory + (_flags.GetFlag(StatusFlag.Carry) ? 1 : 0);
+
+            _flags.SetFlag(StatusFlag.Carry, ((accValue & 1 << 1) & (valueFromMemory & 1 << 1)) == 0);
+            _flags.SetFlag(StatusFlag.Zero, (result & 0xFF) == 0);
+            _flags.SetFlag(StatusFlag.Negative, (result & (1 << 7)) == 128);
+
+            _a.SetValue((byte)(result & 0xFF));
         }
 
         /// <summary>
@@ -171,6 +221,18 @@ namespace NES
 
             // 6502 CPU is little endian (LOW_BYTE HIGH_BYTE)
             return Convert.ToUInt16(lowByteHex + highByteHex, 16);
+        }
+
+        /// <summary>
+        /// Checks if the given value is negative (the bit no. 7 is "on").
+        /// </summary>
+        /// <param name="val">The value.</param>
+        /// <returns>True if it's negative; otherwise false.</returns>
+        public static bool IsNegative(this byte val)
+        {
+            byte mask = 1 << 7;
+
+            return (val & mask) == 128;
         }
     }
 }
