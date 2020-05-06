@@ -160,7 +160,7 @@ namespace NES
 
             byte accValue = _a.GetValue();
 
-            int temp = accValue + complement;
+            int temp = accValue + complement + (_flags.GetFlag(StatusFlag.Carry) ? 1 : 0);
             byte result = (byte)(temp & 0xFF);
 
             _flags.SetFlag(StatusFlag.Carry, temp > 255);
