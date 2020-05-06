@@ -136,6 +136,7 @@ namespace NES
             // If result equals 0, enable the Zero flag
             _flags.SetFlag(StatusFlag.Zero, result == 0);
 
+            // TODO: research formula for overflow flag (ADC and SBC)
             if (accValue.IsNegative() && val.IsNegative() && !result.IsNegative() || !accValue.IsNegative() && !val.IsNegative() && result.IsNegative())
                 _flags.SetFlag(StatusFlag.Overflow, true);
             else
@@ -156,7 +157,7 @@ namespace NES
             IncrementPC();
 
             byte val = _memory.Fetch(_currentPcAddress);
-            int complement = val ^ 0xFF;
+            byte complement = (byte)(val ^ 0xFF);
 
             byte accValue = _a.GetValue();
 
@@ -170,6 +171,7 @@ namespace NES
             _flags.SetFlag(StatusFlag.Negative, (temp & 1 << 7) == 128);
 
             if (((temp ^ accValue) & (temp ^ complement) & 0x0080) == 128)
+                //if (accValue.IsPositive() && complement.IsPositive() && result.IsNegative() || accValue.IsNegative() && complement.IsNegative() && result.IsPositive())
                 _flags.SetFlag(StatusFlag.Overflow, true);
             else
                 _flags.SetFlag(StatusFlag.Overflow, false);
@@ -236,5 +238,12 @@ namespace NES
 
             return (val & mask) == 128;
         }
+
+        /// <summary>
+        /// Checks if the given value is positive (the bit no. 7 is "off").
+        /// </summary>
+        /// <param name="val">The value.</param>
+        /// <returns>True if it's positive; otherwise false.</returns>
+        public static bool IsPositive(this byte val) => !val.IsNegative();
     }
 }
