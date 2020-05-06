@@ -7,7 +7,8 @@ namespace NES
     {
         static void Main(string[] args)
         {
-            string[] hexDump = new string[] { "a9", "01" ,"8d", "00", "02", "a9" ,"05" ,"8d" ,"01" ,"02" ,"a9" ,"08", "8d" ,"02" ,"02" };
+            //string[] hexDump = new string[] { "a9", "01" ,"8d", "00", "02", "a9" ,"05" ,"8d" ,"01" ,"02" ,"a9" ,"08", "8d" ,"02" ,"02" };
+            string[] hexDump = new string[] { "a9", "01", "e9","78" };
             var memory = new Memory();
             const ushort startingAddress = 0x0600;
             ushort address = startingAddress; //initial address

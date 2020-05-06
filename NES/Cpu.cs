@@ -96,6 +96,9 @@ namespace NES
                 case 0x69:
                     ADC_Immediate(); //ADC (immediate addressing)
                     break;
+                case 0xE9:
+                    SBC_Immediate();
+                    break;
                 case 0x00:
                     return false;
                 default:
@@ -116,63 +119,62 @@ namespace NES
         private void ADC_Immediate()
         {
             IncrementPC();
-
-            byte valueFromMemory = _memory.Fetch(_currentPcAddress);
+            
             byte accValue = _a.GetValue();
-            int result = accValue + valueFromMemory + (_flags.GetFlag(StatusFlag.Carry) ? 0x01 : 0);
+            byte val = _memory.Fetch(_currentPcAddress);
+
+            int temp = accValue + val + (_flags.GetFlag(StatusFlag.Carry) ? 1 : 0);
+
+            byte result = (byte)(temp & 0xFF);
 
             // If result is greater than 255, enable the Carry flag
-            _flags.SetFlag(StatusFlag.Carry, result > 255);
+            _flags.SetFlag(StatusFlag.Carry, temp > 255);
 
             // If the bit no. 7 is set, then enable the Negative flag
             _flags.SetFlag(StatusFlag.Negative, (result & (1 << 7)) == 128);
 
             // If result equals 0, enable the Zero flag
-            _flags.SetFlag(StatusFlag.Zero, (result & 0xFF) == 0);
+            _flags.SetFlag(StatusFlag.Zero, result == 0);
 
-            //if (((~((accValue ^ valueFromMemory) & (accValue ^ result))) & 0x0080) == 1) // ???
-            if (accValue.IsNegative() && accValue.IsNegative() && !((byte)(result & 0xFF)).IsNegative())
-                _flags.SetFlag(StatusFlag.Overflow, true);
-            else if (!accValue.IsNegative() && !accValue.IsNegative() && ((byte)(result & 0xFF)).IsNegative())
+            if (accValue.IsNegative() && val.IsNegative() && !result.IsNegative() || !accValue.IsNegative() && !val.IsNegative() && result.IsNegative())
                 _flags.SetFlag(StatusFlag.Overflow, true);
             else
                 _flags.SetFlag(StatusFlag.Overflow, false);
 
-            _a.SetValue((byte)(result & 0xFF));
+            _a.SetValue(result);
         }
 
         private void SBC_Immediate()
         {
             /*
-	            fetch();
-	
-	            // Operating in 16-bit domain to capture carry out
-	
-	            // We can invert the bottom 8 bits with bitwise xor
-	            uint16_t value = ((uint16_t)fetched) ^ 0x00FF;
-	
-	            // Notice this is exactly the same as addition from here!
-	            temp = (uint16_t)a + value + (uint16_t)GetFlag(C);
-	            SetFlag(C, temp & 0xFF00);
-	            SetFlag(Z, ((temp & 0x00FF) == 0));
-	            SetFlag(V, (temp ^ (uint16_t)a) & (temp ^ value) & 0x0080);
-	            SetFlag(N, temp & 0x0080);
-	            a = temp & 0x00FF;
-	            return 1;             
+                Substraction formula: A = A + (2 complement of M); where A = Accumulator value, M = value fetched from memory
+
+                If carry is enabled after the sum/substraction, it means that a borrow didn't happen
+                If carry is disabled after the sum/substraction, it means that a borrow did happen             
              */
 
             IncrementPC();
 
-            int valueFromMemory = ~_memory.Fetch(_currentPcAddress);
+            byte val = _memory.Fetch(_currentPcAddress);
+            int complement = val ^ 0xFF;
+
             byte accValue = _a.GetValue();
 
-            int result = accValue + valueFromMemory + (_flags.GetFlag(StatusFlag.Carry) ? 1 : 0);
+            int temp = accValue + complement;
+            byte result = (byte)(temp & 0xFF);
 
-            _flags.SetFlag(StatusFlag.Carry, ((accValue & 1 << 1) & (valueFromMemory & 1 << 1)) == 0);
-            _flags.SetFlag(StatusFlag.Zero, (result & 0xFF) == 0);
-            _flags.SetFlag(StatusFlag.Negative, (result & (1 << 7)) == 128);
+            _flags.SetFlag(StatusFlag.Carry, temp > 255);
 
-            _a.SetValue((byte)(result & 0xFF));
+            _flags.SetFlag(StatusFlag.Zero, result == 0);
+
+            _flags.SetFlag(StatusFlag.Negative, (temp & 1 << 7) == 128);
+
+            if (((temp ^ accValue) & (temp ^ complement) & 0x0080) == 128)
+                _flags.SetFlag(StatusFlag.Overflow, true);
+            else
+                _flags.SetFlag(StatusFlag.Overflow, false);
+
+            _a.SetValue(result);
         }
 
         /// <summary>
