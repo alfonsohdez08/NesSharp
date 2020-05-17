@@ -272,18 +272,19 @@ namespace NES
 
         private void SBC()
         {
-            /* Same story as ADC: overflow happens when the result can't fit into a signed byte: RESULT < -128 OR RESULT > 127
-             * However, in substraction, the overflow would happen when both operands initially have different signs. The sign of substracting number
-             * will change when taking its one complement (from (-) to (+), and (+) to (-)). For example, M - (+N) = M - (-N) = M + N or
-             * or -M - (+N) = -M - N
-             */
-
             /*
                 The substraction M - N can be represented as: M + (-N) = M + (256 - N) = M + (2 complement of N)
                 Because there's not a borrow flag, we use the carry flag as our borrow flag by using its complement: B = 1 - C
                 The substraction of N from M is expressed as:
                     M - N - B = M + (-N) - (1 - C) = M + (2 complement of N) - 1 + C
                     M + (256 - N) - 1 + C = M + (255 - N) + C = M + (1 complement of N) + C
+             */
+
+            /* Same story as ADC: overflow happens when the result can't fit into a signed byte: RESULT < -128 OR RESULT > 127
+             * However, in substraction, the overflow would happen when both operands initially have different signs. The sign of substracting number
+             * will change when taking its one complement (from (-) to (+), and (+) to (-)). For example, M = (+), N = (-), so when making the
+             * substraction, we end with M + (-N) = M + (+N); it gets converted to (+) because the one complement of N. Another example would be, M = (-),
+             * N = (+), so the substraction is -M + (+N) = -M + (-N); it gets converted to (-) because the one complement of N.
              */
 
             byte accValue = _a.GetValue();
