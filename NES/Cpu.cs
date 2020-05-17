@@ -238,12 +238,18 @@ namespace NES
         /// </summary>
         private void ADC()
         {            
+            /*
+             * Overflow happens when the result can't fit into a signed byte: RESULT < -128 OR RESULT > 127
+             * In order to this happen, both operands should hava the same sign: same sign operands
+             * produces a bigger magnitude (the magnitude of a signed number is the actual number next to the sign: +5 magnitude equals to 5).
+             */
+
             byte accValue = _a.GetValue();
             byte val = _operand;
 
             int temp = accValue + val + (_flags.GetFlag(StatusFlag.Carry) ? 1 : 0);
 
-            byte result = (byte)(temp & 0xFF);
+            byte result = (byte)(temp & 0x00FF);
 
             // If result is greater than 255, enable the Carry flag
             _flags.SetFlag(StatusFlag.Carry, temp > 255);
@@ -266,6 +272,12 @@ namespace NES
 
         private void SBC()
         {
+            /* Same story as ADC: overflow happens when the result can't fit into a signed byte: RESULT < -128 OR RESULT > 127
+             * However, in substraction, the overflow would happen when both operands initially have different signs. The sign of substracting number
+             * will change when taking its one complement (from (-) to (+), and (+) to (-)). For example, M - (+N) = M - (-N) = M + N or
+             * or -M - (+N) = -M - N
+             */
+
             /*
                 The substraction M - N can be represented as: M + (-N) = M + (256 - N) = M + (2 complement of N)
                 Because there's not a borrow flag, we use the carry flag as our borrow flag by using its complement: B = 1 - C
