@@ -4,6 +4,20 @@ using System.Text;
 
 namespace NES
 {
+
+    enum AddressingMode
+    {
+        ZeroPage,
+        ZeroPageX,
+        ZeroPageY,
+        Immediate,
+        Relative,
+        Absolute,
+        AbsoluteX,
+        AbsoluteY,
+        Indirect
+    }
+
     /// <summary>
     /// The 6502 CPU.
     /// </summary>
@@ -42,13 +56,18 @@ namespace NES
         /// </summary>
         private readonly Register<ushort> _programCounter;
         
-        private ushort _currentPcAddress => _programCounter.GetValue();
+        private ushort _pcAddress => _programCounter.GetValue();
         #endregion
 
         /// <summary>
         /// The CPU's memory.
         /// </summary>
         private readonly IMemory _memory;
+
+        /// <summary>
+        /// Instruction's operand (set based on the instruction's addressing mode).
+        /// </summary>
+        private byte _operand; 
 
         /// <summary>
         /// Creates an instace of a 6502 CPU.
@@ -82,22 +101,61 @@ namespace NES
              */
 
             // Fetchs the OpCode from the memory
-            byte opCode = _memory.Fetch(_currentPcAddress);
+            byte opCode = _memory.Fetch(_pcAddress);
 
             // Decodes and executes the OpCode
             switch (opCode)
             {
-                case 0xA9: //LDA (immediate addressing)
-                    LDA_Immediate();
+                case 0xA9:
+                    FetchOperand(AddressingMode.Immediate);
+                    LDA();
                     break;
-                case 0x8D:
-                    STA_Absolute(); //STA (absolute addressing)
+                case 0xA5:
+                    FetchOperand(AddressingMode.ZeroPage);
+                    LDA();
+                    break;
+                case 0xB5:
+                    FetchOperand(AddressingMode.ZeroPageX);
+                    LDA();
+                    break;
+                case 0xAD:
+                    FetchOperand(AddressingMode.Absolute);
+                    LDA();
+                    break;
+                case 0xBD:
+                    FetchOperand(AddressingMode.AbsoluteX);
+                    LDA();
+                    break;
+                case 0xB9:
+                    FetchOperand(AddressingMode.AbsoluteY);
+                    LDA();
                     break;
                 case 0x69:
-                    ADC_Immediate(); //ADC (immediate addressing)
+                    FetchOperand(AddressingMode.Immediate);
+                    ADC();
+                    break;
+                case 0x65:
+                    FetchOperand(AddressingMode.ZeroPage);
+                    ADC();
+                    break;
+                case 0x75:
+                    FetchOperand(AddressingMode.ZeroPageX);
+                    ADC();
+                    break;
+                case 0x6D:
+                    FetchOperand(AddressingMode.Absolute);
+                    ADC();
+                    break;
+                case 0x7D:
+                    FetchOperand(AddressingMode.AbsoluteX);
+                    ADC();
+                    break;
+                case 0x79:
+                    FetchOperand(AddressingMode.AbsoluteY);
+                    ADC();
                     break;
                 case 0xE9:
-                    SBC_Immediate();
+                    SBC();
                     break;
                 case 0x00:
                     return false;
@@ -108,20 +166,80 @@ namespace NES
             return true;
         }
 
+        #region Addressing modes
+
+        /// <summary>
+        /// Fetchs the instruction operand based on the instruction addressing mode.
+        /// </summary>
+        /// <param name="mode">The instruction's addressing mode.</param>
+        private void FetchOperand(AddressingMode mode)
+        {
+            byte operand;
+            
+            IncrementPC();
+
+            switch (mode)
+            {
+                case AddressingMode.ZeroPage:
+                    operand = _memory.Fetch(_memory.Fetch(_pcAddress));
+                    break;
+                case AddressingMode.ZeroPageX:
+                    operand = _memory.Fetch(ByteExtensions.Sum(_memory.Fetch(_pcAddress), _x.GetValue())); //What would happen if by adding the X content cross the zero page 
+                    break;
+                case AddressingMode.ZeroPageY:
+                    operand = _memory.Fetch(ByteExtensions.Sum(_memory.Fetch(_pcAddress), _y.GetValue()));
+                    break;
+                case AddressingMode.Immediate:
+                    operand = _memory.Fetch(_pcAddress);
+                    break;
+                case AddressingMode.Relative:
+                    operand = _memory.Fetch(_pcAddress); // This would be an address offset that would be used for the branch instructions
+                    break;
+                case AddressingMode.Absolute:
+                case AddressingMode.AbsoluteX:
+                case AddressingMode.AbsoluteY:
+                case AddressingMode.Indirect:
+                    ushort addressParsed;
+                    {
+                        byte lowByte = _memory.Fetch(_pcAddress);
+
+                        IncrementPC();
+
+                        byte highByte = _memory.Fetch(_pcAddress);
+
+                        addressParsed = ByteExtensions.ParseBytes(lowByte, highByte);
+                    }
+                    if (mode == AddressingMode.Absolute || mode == AddressingMode.Indirect)
+                        operand = _memory.Fetch(addressParsed); // For Indirect mode, this would be an address
+                    else if (mode == AddressingMode.AbsoluteX)
+                        operand = _memory.Fetch((ushort)(addressParsed + _x.GetValue()));
+                    else
+                        operand = _memory.Fetch((ushort)(addressParsed + _y.GetValue()));
+                    break;
+                default:
+                    throw new NotImplementedException($"The given addressing mode is not supported: {mode.ToString()}.");
+            }
+
+            _operand = operand;
+        }
+
+        #endregion
+
         /// <summary>
         /// Increments the address allocated in the Program Counter.
         /// </summary>
         private void IncrementPC()
         {
-            _programCounter.SetValue((ushort)(_currentPcAddress + 1));
+            _programCounter.SetValue((ushort)(_pcAddress + 1));
         }
 
-        private void ADC_Immediate()
-        {
-            IncrementPC();
-            
+        /// <summary>
+        /// Adds a value to the accumulator's value.
+        /// </summary>
+        private void ADC()
+        {            
             byte accValue = _a.GetValue();
-            byte val = _memory.Fetch(_currentPcAddress);
+            byte val = _operand;
 
             int temp = accValue + val + (_flags.GetFlag(StatusFlag.Carry) ? 1 : 0);
 
@@ -131,77 +249,72 @@ namespace NES
             _flags.SetFlag(StatusFlag.Carry, temp > 255);
 
             // If the bit no. 7 is set, then enable the Negative flag
-            _flags.SetFlag(StatusFlag.Negative, (result & (1 << 7)) == 128);
+            _flags.SetFlag(StatusFlag.Negative, (result & (1 << 7)) == 0x0080);
 
             // If result equals 0, enable the Zero flag
             _flags.SetFlag(StatusFlag.Zero, result == 0);
 
-            // TODO: research formula for overflow flag (ADC and SBC)
-            if (accValue.IsNegative() && val.IsNegative() && !result.IsNegative() || !accValue.IsNegative() && !val.IsNegative() && result.IsNegative())
-                _flags.SetFlag(StatusFlag.Overflow, true);
-            else
-                _flags.SetFlag(StatusFlag.Overflow, false);
-
-            _a.SetValue(result);
-        }
-
-        private void SBC_Immediate()
-        {
-            /*
-                Substraction formula: A = A + (2 complement of M); where A = Accumulator value, M = value fetched from memory
-
-                If carry is enabled after the sum/substraction, it means that a borrow didn't happen
-                If carry is disabled after the sum/substraction, it means that a borrow did happen             
-             */
-
-            IncrementPC();
-
-            byte val = _memory.Fetch(_currentPcAddress);
-            byte complement = (byte)(val ^ 0xFF);
-
-            byte accValue = _a.GetValue();
-
-            int temp = accValue + complement + (_flags.GetFlag(StatusFlag.Carry) ? 1 : 0);
-            byte result = (byte)(temp & 0xFF);
-
-            _flags.SetFlag(StatusFlag.Carry, temp > 255);
-
-            _flags.SetFlag(StatusFlag.Zero, result == 0);
-
-            _flags.SetFlag(StatusFlag.Negative, (temp & 1 << 7) == 128);
-
-            if (((temp ^ accValue) & (temp ^ complement) & 0x0080) == 128)
-                //if (accValue.IsPositive() && complement.IsPositive() && result.IsNegative() || accValue.IsNegative() && complement.IsNegative() && result.IsPositive())
-                _flags.SetFlag(StatusFlag.Overflow, true);
-            else
-                _flags.SetFlag(StatusFlag.Overflow, false);
+            // If two numbers of the same sign produce a number whose sign is different, then there's an overflow
+            _flags.SetFlag(StatusFlag.Overflow, ((accValue ^ result) & (val ^ result) & 0x0080) == 0x0080);
 
             _a.SetValue(result);
         }
 
         /// <summary>
+        /// Substracts a value from the accumulator's value.
+        /// </summary>
+
+        private void SBC()
+        {
+            /*
+                The substraction M - N can be represented as: M + (-N) = M + (256 - N) = M + (2 complement of N)
+                Because there's not a borrow flag, we use the carry flag as our borrow flag by using its complement: B = 1 - C
+                The substraction of N from M is expressed as:
+                    M - N - B = M + (-N) - (1 - C) = M + (2 complement of N) - 1 + C
+                    M + (256 - N) - 1 + C = M + (255 - N) + C = M + (1 complement of N) + C
+             */
+
+            byte accValue = _a.GetValue();
+            byte val = _operand;
+            byte complement = (byte)(val ^ 0x00FF);
+
+            int temp = accValue + complement + (_flags.GetFlag(StatusFlag.Carry) ? 1 : 0);
+            byte result = (byte)(temp & 0x00FF);
+
+            // If carry flag is set, it means a borror did not happen, otherwise it did happen
+            _flags.SetFlag(StatusFlag.Carry, temp > 255);
+
+            _flags.SetFlag(StatusFlag.Zero, result == 0);
+
+            _flags.SetFlag(StatusFlag.Negative, (temp & 1 << 7) == 0x0080);
+
+            // In the substraction, the sign check is done in the complement
+            _flags.SetFlag(StatusFlag.Overflow, ((accValue ^ result) & (complement ^ result) & 0x0080) == 0x0080);
+
+            _a.SetValue(result);
+        }
+
+        /// <summary>                                                                                    
         /// Loads a given value into the accumulator (LDA); it uses immediate address (the literal value is passed as argument to the instruction).
         /// </summary>
-        private void LDA_Immediate()
-        {
-            IncrementPC();
-            
-            byte value = _memory.Fetch(_currentPcAddress);
-            _a.SetValue(value);
+        private void LDA()
+        {            
+            //byte value = _memory.Fetch(_pcAddress);
+            _a.SetValue(_operand);
         }
 
         /// <summary>
         /// Stores the accumulator value (STA) in a given address (absolute address).
         /// </summary>
-        private void STA_Absolute()
+        private void STA()
         {
             IncrementPC();
-            byte lowByte = _memory.Fetch(_currentPcAddress);
+            byte lowByte = _memory.Fetch(_pcAddress);
 
             IncrementPC();
-            byte highByte = _memory.Fetch(_currentPcAddress);
+            byte highByte = _memory.Fetch(_pcAddress);
 
-            ushort absAddress = ByteManipulation.ParseBytes(lowByte, highByte);//Check if this is the way to merge two bytes (LOW_BYTE HIGH_BYTE)
+            ushort absAddress = ByteExtensions.ParseBytes(lowByte, highByte);//Check if this is the way to merge two bytes (LOW_BYTE HIGH_BYTE)
             byte acValue = _a.GetValue();
 
             _memory.Store(absAddress, acValue);
@@ -209,7 +322,7 @@ namespace NES
     }
 
 
-    public static class ByteManipulation
+    public static class ByteExtensions
     {
 
         /// <summary>
@@ -217,14 +330,13 @@ namespace NES
         /// </summary>
         /// <param name="lowByte">Low byte (least significant byte).</param>
         /// <param name="highByte">High byte (most significant byte).</param>
-        /// <returns>A 16 bit value parsed in the little endian format.</returns>
+        /// <returns>A 16 bit value.</returns>
         public static ushort ParseBytes(byte lowByte, byte highByte)
         {
             string highByteHex = highByte.ToString("x");
             string lowByteHex = lowByte.ToString("x");
 
-            // 6502 CPU is little endian (LOW_BYTE HIGH_BYTE)
-            return Convert.ToUInt16(lowByteHex + highByteHex, 16);
+            return Convert.ToUInt16(highByteHex + lowByteHex, 16);
         }
 
         /// <summary>
@@ -245,5 +357,7 @@ namespace NES
         /// <param name="val">The value.</param>
         /// <returns>True if it's positive; otherwise false.</returns>
         public static bool IsPositive(this byte val) => !val.IsNegative();
+
+        public static ushort Sum(byte x, byte y) => (ushort)(x + y);
     }
 }
