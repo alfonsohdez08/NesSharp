@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace NES
@@ -15,8 +16,6 @@ namespace NES
 
     class Flags: Register<byte>
     {
-        private const string FlagsLegend = "NVssDIZC";
-
         /// <summary>
         /// Initial value of the register (all flags disabled).
         /// </summary>
@@ -61,7 +60,7 @@ namespace NES
             byte flags = GetValue();
             int result = flags & mask;
 
-            return result == 1;
+            return result == mask;
         }
 
         /// <summary>
@@ -76,11 +75,15 @@ namespace NES
         /// <returns>A string representing the current state of the flags.</returns>
         public override string ToString()
         {
-            string flags = Convert.ToString(GetValue(), 2);
-            if (flags.Length < 8)
-                flags = flags.PadLeft(8 - flags.Length, '0');
+            var sb = new StringBuilder();
+            byte flags = GetValue();
 
-            var sb = new StringBuilder(flags);
+            var e = Enum.GetValues(typeof(StatusFlag)).Cast<StatusFlag>();
+            foreach (StatusFlag f in e)
+            {
+                int mask = (1 << (byte)f);
+                sb.AppendLine($"{f}: {(flags & mask) == mask}");
+            }
 
             return sb.ToString();
         }

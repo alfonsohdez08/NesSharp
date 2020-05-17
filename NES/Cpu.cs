@@ -155,7 +155,14 @@ namespace NES
                     ADC();
                     break;
                 case 0xE9:
+                    FetchOperand(AddressingMode.Immediate);
                     SBC();
+                    break;
+                case 0x38:
+                    SEC();
+                    break;
+                case 0x18:
+                    CLC();
                     break;
                 case 0x00:
                     return false;
@@ -249,7 +256,7 @@ namespace NES
 
             int temp = accValue + val + (_flags.GetFlag(StatusFlag.Carry) ? 1 : 0);
 
-            byte result = (byte)(temp & 0x00FF);
+            byte result = (byte)temp;
 
             // If result is greater than 255, enable the Carry flag
             _flags.SetFlag(StatusFlag.Carry, temp > 255);
@@ -289,10 +296,10 @@ namespace NES
 
             byte accValue = _a.GetValue();
             byte val = _operand;
-            byte complement = (byte)(val ^ 0x00FF);
+            byte complement = (byte)(~val);
 
             int temp = accValue + complement + (_flags.GetFlag(StatusFlag.Carry) ? 1 : 0);
-            byte result = (byte)(temp & 0x00FF);
+            byte result = (byte)temp;
 
             // If carry flag is set, it means a borror did not happen, otherwise it did happen
             _flags.SetFlag(StatusFlag.Carry, temp > 255);
@@ -311,8 +318,10 @@ namespace NES
         /// Loads a given value into the accumulator (LDA); it uses immediate address (the literal value is passed as argument to the instruction).
         /// </summary>
         private void LDA()
-        {            
-            //byte value = _memory.Fetch(_pcAddress);
+        {
+            _flags.SetFlag(StatusFlag.Zero, _operand == 0);
+            _flags.SetFlag(StatusFlag.Negative, (_operand & 1 << 7) == 0x0080);
+
             _a.SetValue(_operand);
         }
 
@@ -331,6 +340,22 @@ namespace NES
             byte acValue = _a.GetValue();
 
             _memory.Store(absAddress, acValue);
+        }
+
+        /// <summary>
+        /// Turn on the Carry Flag by setting 1.
+        /// </summary>
+        private void SEC()
+        {
+            _flags.SetFlag(StatusFlag.Carry, true);
+        }
+
+        /// <summary>
+        /// Clears the Carry Flag by setting 0.
+        /// </summary>
+        private void CLC()
+        {
+            _flags.SetFlag(StatusFlag.Carry, false);
         }
     }
 
