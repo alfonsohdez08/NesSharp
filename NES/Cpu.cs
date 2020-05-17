@@ -15,7 +15,9 @@ namespace NES
         Absolute,
         AbsoluteX,
         AbsoluteY,
-        Indirect
+        Indirect,
+        IndexedIndirect,
+        IndirectIndexed
     }
 
     /// <summary>
@@ -191,16 +193,16 @@ namespace NES
                     operand = _memory.Fetch(_memory.Fetch(_pcAddress));
                     break;
                 case AddressingMode.ZeroPageX:
-                    operand = _memory.Fetch(ByteExtensions.Sum(_memory.Fetch(_pcAddress), _x.GetValue())); //What would happen if by adding the X content cross the zero page 
+                    operand = _memory.Fetch((byte)ByteExtensions.Sum(_memory.Fetch(_pcAddress), _x.GetValue())); // Cast to byte in case the sum is greater than 255
                     break;
                 case AddressingMode.ZeroPageY:
-                    operand = _memory.Fetch(ByteExtensions.Sum(_memory.Fetch(_pcAddress), _y.GetValue()));
+                    operand = _memory.Fetch((byte)ByteExtensions.Sum(_memory.Fetch(_pcAddress), _y.GetValue())); // Cast to byte in case the sum is greater than 255
                     break;
                 case AddressingMode.Immediate:
                     operand = _memory.Fetch(_pcAddress);
                     break;
                 case AddressingMode.Relative:
-                    operand = _memory.Fetch(_pcAddress); // This would be an address offset that would be used for the branch instructions
+                    operand = _memory.Fetch(_pcAddress); // This would be an address offset (signed byte) that would be used for the branch instructions
                     break;
                 case AddressingMode.Absolute:
                 case AddressingMode.AbsoluteX:
@@ -216,12 +218,44 @@ namespace NES
 
                         addressParsed = ByteExtensions.ParseBytes(lowByte, highByte);
                     }
-                    if (mode == AddressingMode.Absolute || mode == AddressingMode.Indirect)
-                        operand = _memory.Fetch(addressParsed); // For Indirect mode, this would be an address
+                    if (mode == AddressingMode.Indirect)
+                    {
+                        // The content located in the address parsed is the LSB of the target address
+                        byte lowByte = _memory.Fetch(addressParsed++);
+                        byte highByte = _memory.Fetch(addressParsed);
+
+                        _programCounter.SetValue(ByteExtensions.ParseBytes(lowByte, highByte));
+
+                        operand = 0; // dummy value
+                    }
+                    else if (mode == AddressingMode.Absolute)
+                        operand = _memory.Fetch(addressParsed);
                     else if (mode == AddressingMode.AbsoluteX)
                         operand = _memory.Fetch((ushort)(addressParsed + _x.GetValue()));
                     else
                         operand = _memory.Fetch((ushort)(addressParsed + _y.GetValue()));
+                    break;
+                case AddressingMode.IndexedIndirect:
+                    {
+                        byte address = (byte)(_memory.Fetch(_pcAddress) + _x.GetValue()); // Wraps around the zero page
+
+                        byte lowByte = _memory.Fetch(address++);
+                        byte highByte = _memory.Fetch(address);
+
+                        operand = _memory.Fetch(ByteExtensions.ParseBytes(lowByte, highByte));
+                    }
+                    break;
+                case AddressingMode.IndirectIndexed:
+                    {
+                        byte zeroPageAddress = _memory.Fetch(_pcAddress);
+
+                        byte lowByte = _memory.Fetch(zeroPageAddress++);
+                        byte highByte = _memory.Fetch(zeroPageAddress);
+
+                        ushort address = (ushort)(ByteExtensions.ParseBytes(lowByte, highByte) + _y.GetValue());
+                        
+                        operand = _memory.Fetch(address);
+                    }
                     break;
                 default:
                     throw new NotImplementedException($"The given addressing mode is not supported: {mode.ToString()}.");
