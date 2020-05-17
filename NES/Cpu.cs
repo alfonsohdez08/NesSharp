@@ -193,10 +193,10 @@ namespace NES
                     operand = _memory.Fetch(_memory.Fetch(_pcAddress));
                     break;
                 case AddressingMode.ZeroPageX:
-                    operand = _memory.Fetch((byte)ByteExtensions.Sum(_memory.Fetch(_pcAddress), _x.GetValue())); // Cast to byte in case the sum is greater than 255
+                    operand = _memory.Fetch((byte)(_memory.Fetch(_pcAddress) + _x.GetValue())); // Cast to byte in case the sum is greater than 255
                     break;
                 case AddressingMode.ZeroPageY:
-                    operand = _memory.Fetch((byte)ByteExtensions.Sum(_memory.Fetch(_pcAddress), _y.GetValue())); // Cast to byte in case the sum is greater than 255
+                    operand = _memory.Fetch((byte)(_memory.Fetch(_pcAddress) + _y.GetValue())); // Cast to byte in case the sum is greater than 255
                     break;
                 case AddressingMode.Immediate:
                     operand = _memory.Fetch(_pcAddress);
@@ -220,7 +220,7 @@ namespace NES
                     }
                     if (mode == AddressingMode.Indirect)
                     {
-                        // The content located in the address parsed is the LSB of the target address
+                        // The content located in the address parsed is the LSB (Least Significant Byte) of the target address
                         byte lowByte = _memory.Fetch(addressParsed++);
                         byte highByte = _memory.Fetch(addressParsed);
 
@@ -420,7 +420,7 @@ namespace NES
         {
             byte mask = 1 << 7;
 
-            return (val & mask) == 128;
+            return (val & mask) == 0x0080;
         }
 
         /// <summary>
@@ -429,7 +429,5 @@ namespace NES
         /// <param name="val">The value.</param>
         /// <returns>True if it's positive; otherwise false.</returns>
         public static bool IsPositive(this byte val) => !val.IsNegative();
-
-        public static ushort Sum(byte x, byte y) => (ushort)(x + y);
     }
 }
