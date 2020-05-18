@@ -214,6 +214,106 @@ namespace NES
                     FetchOperand(AddressingMode.ZeroPage);
                     STA();
                     break;
+                case 0x95:
+                    FetchOperand(AddressingMode.ZeroPageX);
+                    STA();
+                    break;
+                case 0x8D:
+                    FetchOperand(AddressingMode.Absolute);
+                    STA();
+                    break;
+                case 0x9D:
+                    FetchOperand(AddressingMode.AbsoluteX);
+                    STA();
+                    break;
+                case 0x99:
+                    FetchOperand(AddressingMode.AbsoluteY);
+                    STA();
+                    break;
+                case 0x81:
+                    FetchOperand(AddressingMode.IndexedIndirect);
+                    STA();
+                    break;
+                case 0x91:
+                    FetchOperand(AddressingMode.IndirectIndexed);
+                    STA();
+                    break;
+                case 0x0A:
+                    ASL_ACC(); // Accumulator addressing mode
+                    break;
+                case 0x06:
+                    FetchOperand(AddressingMode.ZeroPage);
+                    ASL();
+                    break;
+                case 0x16:
+                    FetchOperand(AddressingMode.ZeroPageX);
+                    ASL();
+                    break;
+                case 0x0E:
+                    FetchOperand(AddressingMode.Absolute);
+                    ASL();
+                    break;
+                case 0x1E:
+                    FetchOperand(AddressingMode.AbsoluteX);
+                    ASL();
+                    break;
+                case 0x4A:
+                    LSR_ACC(); // Accumulator addressing mode
+                    break;
+                case 0x46:
+                    FetchOperand(AddressingMode.ZeroPage);
+                    LSR();
+                    break;
+                case 0x56:
+                    FetchOperand(AddressingMode.ZeroPageX);
+                    LSR();
+                    break;
+                case 0x4E:
+                    FetchOperand(AddressingMode.Absolute);
+                    LSR();
+                    break;
+                case 0x5E:
+                    FetchOperand(AddressingMode.Absolute);
+                    LSR();
+                    break;
+                case 0x2A:
+                    ROL_ACC(); // Accumulator addressing mode
+                    break;
+                case 0x26:
+                    FetchOperand(AddressingMode.ZeroPage);
+                    ROL();
+                    break;
+                case 0x36:
+                    FetchOperand(AddressingMode.ZeroPageX);
+                    ROL();
+                    break;
+                case 0x2E:
+                    FetchOperand(AddressingMode.Absolute);
+                    ROL();
+                    break;
+                case 0x3E:
+                    FetchOperand(AddressingMode.AbsoluteX);
+                    ROL();
+                    break;
+                case 0x6A:
+                    ROR_ACC(); // Accumulator addressing mode
+                    break;
+                case 0x66:
+                    FetchOperand(AddressingMode.ZeroPage);
+                    ROR();
+                    break;
+                case 0x76:
+                    FetchOperand(AddressingMode.ZeroPageX);
+                    ROR();
+                    break;
+                case 0x6E:
+                    FetchOperand(AddressingMode.Absolute);
+                    ROR();
+                    break;
+                case 0x7E:
+                    FetchOperand(AddressingMode.AbsoluteX);
+                    ROR();
+                    break;
                 case 0x00:
                     return false;
                 default:
@@ -425,6 +525,127 @@ namespace NES
         private void CLC()
         {
             _flags.SetFlag(StatusFlag.Carry, false);
+        }
+
+        /// <summary>
+        /// Shifts each bit of a memory content one place to the left.
+        /// </summary>
+        private void ASL()
+        {
+            byte val = _memory.Fetch(_operandAddress);
+            int result = val << 1;
+
+            _flags.SetFlag(StatusFlag.Carry, (val & 0x0080) == 0x0080);
+            _flags.SetFlag(StatusFlag.Negative, (result & 0x0080) == 0x0080);
+
+            _memory.Store(_operandAddress, (byte)result);
+        }
+
+        /// <summary>
+        /// Shifts each bit of current accumulator value one place to the left.
+        /// </summary>
+        private void ASL_ACC()
+        {
+            byte val = _a.GetValue();
+            int result = val << 1;
+
+            _flags.SetFlag(StatusFlag.Carry, (val & 0x0080) == 0x0080);
+            _flags.SetFlag(StatusFlag.Negative, (result & 0x0080) == 0x0080);
+            _flags.SetFlag(StatusFlag.Zero, result == 0);
+
+            _a.SetValue((byte)result);
+        }
+
+        /// <summary>
+        /// Shifts each bit of the memory content one place to the right.
+        /// </summary>
+        private void LSR()
+        {
+            byte val = _memory.Fetch(_operandAddress);
+            int result = val >> 1;
+
+            _flags.SetFlag(StatusFlag.Carry, (val & 0x01) == 0x01);
+            _flags.SetFlag(StatusFlag.Zero, result == 0);
+            _flags.SetFlag(StatusFlag.Negative, (result & 0x0080) == 0x0080);
+
+            _memory.Store(_operandAddress, (byte)result);
+        }
+
+        /// <summary>
+        /// Shifts each bit of current accumulator value one place to the right.
+        /// </summary>
+        private void LSR_ACC()
+        {
+            byte val = _a.GetValue();
+            int result = val >> 1;
+
+            _flags.SetFlag(StatusFlag.Carry, (val & 0x01) == 0x01);
+            _flags.SetFlag(StatusFlag.Zero, result == 0);
+            _flags.SetFlag(StatusFlag.Negative, (result & 0x0080) == 0x0080);
+
+            _a.SetValue((byte)result);
+        }
+
+        /// <summary>
+        /// Moves each of the bits of an memory content one place to the left.
+        /// </summary>
+        private void ROL()
+        {
+            byte val = _memory.Fetch(_operandAddress);
+            int result = val << 1;
+            result |= (_flags.GetFlag(StatusFlag.Carry) ? 0x01 : 0); // places the carry flag into the bit 0
+
+            _flags.SetFlag(StatusFlag.Carry, (val & 0x0080) == 0x0080);
+            _flags.SetFlag(StatusFlag.Negative, (result & 0x0080) == 0x0080);
+
+            _memory.Store(_operandAddress, (byte)result);
+        }
+
+        /// <summary>
+        /// Moves each of the bits of the accumulator value one place to the left.
+        /// </summary>
+        private void ROL_ACC()
+        {
+            byte val = _a.GetValue();
+            int result = val << 1;
+            result |= (_flags.GetFlag(StatusFlag.Carry) ? 0x01 : 0); // places the carry flag into the bit 0
+
+            _flags.SetFlag(StatusFlag.Carry, (val & 0x0080) == 0x0080);
+            _flags.SetFlag(StatusFlag.Negative, (result & 0x0080) == 0x0080);
+            _flags.SetFlag(StatusFlag.Zero, result == 0);
+
+            _a.SetValue((byte)result);
+        }
+
+        /// <summary>
+        /// Moves each of the bits of an memory content one place to the right.
+        /// </summary>
+        private void ROR()
+        {
+            byte val = _memory.Fetch(_operandAddress);
+            int result = val >> 1;
+            result |= (_flags.GetFlag(StatusFlag.Carry) ? 0x0080 : 0); // places the carry flag into bit no.7
+
+            _flags.SetFlag(StatusFlag.Carry, (val & 0x01) == 0x01);
+            _flags.SetFlag(StatusFlag.Negative, (result & 0x0080) == 0x0080);
+
+            _memory.Store(_operandAddress, (byte)result);
+        }
+
+        /// <summary>
+        /// Moves each of the bits of the accumulator value one place to the right.
+        /// </summary>
+        private void ROR_ACC()
+        {
+            byte val = _a.GetValue();
+            int result = val >> 1;
+            result |= (_flags.GetFlag(StatusFlag.Carry) ? 0x0080 : 0); // places the carry flag into bit no.7
+
+            _flags.SetFlag(StatusFlag.Carry, (val & 0x01) == 0x01);
+            _flags.SetFlag(StatusFlag.Zero, result == 0);
+            _flags.SetFlag(StatusFlag.Negative, (result & 0x0080) == 0x0080);
+
+            _a.SetValue((byte)result);
         }
     }
 
