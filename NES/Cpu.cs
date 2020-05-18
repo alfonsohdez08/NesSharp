@@ -67,9 +67,9 @@ namespace NES
         private readonly IMemory _memory;
 
         /// <summary>
-        /// Instruction's operand (set based on the instruction's addressing mode).
+        /// Instruction's operand memory address (the location in memory where resides the instruction's operand).
         /// </summary>
-        private byte _operand; 
+        private ushort _operandAddress; 
 
         /// <summary>
         /// Creates an instace of a 6502 CPU.
@@ -132,6 +132,14 @@ namespace NES
                     FetchOperand(AddressingMode.AbsoluteY);
                     LDA();
                     break;
+                case 0xA1:
+                    FetchOperand(AddressingMode.IndexedIndirect);
+                    LDA();
+                    break;
+                case 0xB1:
+                    FetchOperand(AddressingMode.IndirectIndexed);
+                    LDA();
+                    break;
                 case 0x69:
                     FetchOperand(AddressingMode.Immediate);
                     ADC();
@@ -156,8 +164,44 @@ namespace NES
                     FetchOperand(AddressingMode.AbsoluteY);
                     ADC();
                     break;
+                case 0x61:
+                    FetchOperand(AddressingMode.IndexedIndirect);
+                    ADC();
+                    break;
+                case 0x71:
+                    FetchOperand(AddressingMode.IndirectIndexed);
+                    ADC();
+                    break;
                 case 0xE9:
                     FetchOperand(AddressingMode.Immediate);
+                    SBC();
+                    break;
+                case 0xE5:
+                    FetchOperand(AddressingMode.ZeroPage);
+                    SBC();
+                    break;
+                case 0xF5:
+                    FetchOperand(AddressingMode.ZeroPageX);
+                    SBC();
+                    break;
+                case 0xED:
+                    FetchOperand(AddressingMode.Absolute);
+                    SBC();
+                    break;
+                case 0xFD:
+                    FetchOperand(AddressingMode.AbsoluteX);
+                    SBC();
+                    break;
+                case 0xF9:
+                    FetchOperand(AddressingMode.AbsoluteY);
+                    SBC();
+                    break;
+                case 0xE1:
+                    FetchOperand(AddressingMode.IndexedIndirect);
+                    SBC();
+                    break;
+                case 0xF1:
+                    FetchOperand(AddressingMode.IndirectIndexed);
                     SBC();
                     break;
                 case 0x38:
@@ -165,6 +209,10 @@ namespace NES
                     break;
                 case 0x18:
                     CLC();
+                    break;
+                case 0x85:
+                    FetchOperand(AddressingMode.ZeroPage);
+                    STA();
                     break;
                 case 0x00:
                     return false;
@@ -183,26 +231,24 @@ namespace NES
         /// <param name="mode">The instruction's addressing mode.</param>
         private void FetchOperand(AddressingMode mode)
         {
-            byte operand;
+            ushort operandAddress;
             
             IncrementPC();
 
             switch (mode)
             {
                 case AddressingMode.ZeroPage:
-                    operand = _memory.Fetch(_memory.Fetch(_pcAddress));
+                    operandAddress = _memory.Fetch(_pcAddress);
                     break;
                 case AddressingMode.ZeroPageX:
-                    operand = _memory.Fetch((byte)(_memory.Fetch(_pcAddress) + _x.GetValue())); // Cast to byte in case the sum is greater than 255
+                    operandAddress = (byte)(_memory.Fetch(_pcAddress) + _x.GetValue()); // If carry in the high byte (result greater than 255), requires an additiona cycle
                     break;
                 case AddressingMode.ZeroPageY:
-                    operand = _memory.Fetch((byte)(_memory.Fetch(_pcAddress) + _y.GetValue())); // Cast to byte in case the sum is greater than 255
+                    operandAddress = (byte)(_memory.Fetch(_pcAddress) + _y.GetValue()); // If carry in the high byte (result greater than 255), requires an additiona cycle
                     break;
                 case AddressingMode.Immediate:
-                    operand = _memory.Fetch(_pcAddress);
-                    break;
                 case AddressingMode.Relative:
-                    operand = _memory.Fetch(_pcAddress); // This would be an address offset (signed byte) that would be used for the branch instructions
+                    operandAddress = _pcAddress;
                     break;
                 case AddressingMode.Absolute:
                 case AddressingMode.AbsoluteX:
@@ -224,16 +270,14 @@ namespace NES
                         byte lowByte = _memory.Fetch(addressParsed++);
                         byte highByte = _memory.Fetch(addressParsed);
 
-                        _programCounter.SetValue(ByteExtensions.ParseBytes(lowByte, highByte));
-
-                        operand = 0; // dummy value
+                        operandAddress = ByteExtensions.ParseBytes(lowByte, highByte);
                     }
                     else if (mode == AddressingMode.Absolute)
-                        operand = _memory.Fetch(addressParsed);
+                        operandAddress = addressParsed;
                     else if (mode == AddressingMode.AbsoluteX)
-                        operand = _memory.Fetch((ushort)(addressParsed + _x.GetValue()));
+                        operandAddress = (ushort)(addressParsed + _x.GetValue());
                     else
-                        operand = _memory.Fetch((ushort)(addressParsed + _y.GetValue()));
+                        operandAddress = (ushort)(addressParsed + _y.GetValue());
                     break;
                 case AddressingMode.IndexedIndirect:
                     {
@@ -242,7 +286,7 @@ namespace NES
                         byte lowByte = _memory.Fetch(address++);
                         byte highByte = _memory.Fetch(address);
 
-                        operand = _memory.Fetch(ByteExtensions.ParseBytes(lowByte, highByte));
+                        operandAddress = ByteExtensions.ParseBytes(lowByte, highByte);
                     }
                     break;
                 case AddressingMode.IndirectIndexed:
@@ -252,16 +296,14 @@ namespace NES
                         byte lowByte = _memory.Fetch(zeroPageAddress++);
                         byte highByte = _memory.Fetch(zeroPageAddress);
 
-                        ushort address = (ushort)(ByteExtensions.ParseBytes(lowByte, highByte) + _y.GetValue());
-                        
-                        operand = _memory.Fetch(address);
+                        operandAddress = (ushort)(ByteExtensions.ParseBytes(lowByte, highByte) + _y.GetValue());
                     }
                     break;
                 default:
                     throw new NotImplementedException($"The given addressing mode is not supported: {mode.ToString()}.");
             }
 
-            _operand = operand;
+            _operandAddress = operandAddress;
         }
 
         #endregion
@@ -286,7 +328,7 @@ namespace NES
              */
 
             byte accValue = _a.GetValue();
-            byte val = _operand;
+            byte val = _memory.Fetch(_operandAddress);
 
             int temp = accValue + val + (_flags.GetFlag(StatusFlag.Carry) ? 1 : 0);
 
@@ -296,7 +338,7 @@ namespace NES
             _flags.SetFlag(StatusFlag.Carry, temp > 255);
 
             // If the bit no. 7 is set, then enable the Negative flag
-            _flags.SetFlag(StatusFlag.Negative, (result & (1 << 7)) == 0x0080);
+            _flags.SetFlag(StatusFlag.Negative, result.IsNegative());
 
             // If result equals 0, enable the Zero flag
             _flags.SetFlag(StatusFlag.Zero, result == 0);
@@ -329,7 +371,7 @@ namespace NES
              */
 
             byte accValue = _a.GetValue();
-            byte val = _operand;
+            byte val = _memory.Fetch(_operandAddress);
             byte complement = (byte)(~val);
 
             int temp = accValue + complement + (_flags.GetFlag(StatusFlag.Carry) ? 1 : 0);
@@ -340,7 +382,7 @@ namespace NES
 
             _flags.SetFlag(StatusFlag.Zero, result == 0);
 
-            _flags.SetFlag(StatusFlag.Negative, (temp & 1 << 7) == 0x0080);
+            _flags.SetFlag(StatusFlag.Negative, result.IsNegative());
 
             // In the substraction, the sign check is done in the complement
             _flags.SetFlag(StatusFlag.Overflow, ((accValue ^ result) & (complement ^ result) & 0x0080) == 0x0080);
@@ -349,31 +391,24 @@ namespace NES
         }
 
         /// <summary>                                                                                    
-        /// Loads a given value into the accumulator (LDA); it uses immediate address (the literal value is passed as argument to the instruction).
+        /// Loads a value located in an address into the accumulator.
         /// </summary>
         private void LDA()
         {
-            _flags.SetFlag(StatusFlag.Zero, _operand == 0);
-            _flags.SetFlag(StatusFlag.Negative, (_operand & 1 << 7) == 0x0080);
+            _a.SetValue(_memory.Fetch(_operandAddress));
 
-            _a.SetValue(_operand);
+            _flags.SetFlag(StatusFlag.Zero, _a.GetValue() == 0);
+            _flags.SetFlag(StatusFlag.Negative, _a.GetValue().IsNegative());
         }
 
         /// <summary>
-        /// Stores the accumulator value (STA) in a given address (absolute address).
+        /// Stores the accumulator value into memory.
         /// </summary>
         private void STA()
         {
-            IncrementPC();
-            byte lowByte = _memory.Fetch(_pcAddress);
+            byte accValue = _a.GetValue();
 
-            IncrementPC();
-            byte highByte = _memory.Fetch(_pcAddress);
-
-            ushort absAddress = ByteExtensions.ParseBytes(lowByte, highByte);//Check if this is the way to merge two bytes (LOW_BYTE HIGH_BYTE)
-            byte acValue = _a.GetValue();
-
-            _memory.Store(absAddress, acValue);
+            _memory.Store(_operandAddress, accValue);
         }
 
         /// <summary>
@@ -422,12 +457,5 @@ namespace NES
 
             return (val & mask) == 0x0080;
         }
-
-        /// <summary>
-        /// Checks if the given value is positive (the bit no. 7 is "off").
-        /// </summary>
-        /// <param name="val">The value.</param>
-        /// <returns>True if it's positive; otherwise false.</returns>
-        public static bool IsPositive(this byte val) => !val.IsNegative();
     }
 }
