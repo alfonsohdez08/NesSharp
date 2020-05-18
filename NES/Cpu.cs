@@ -314,6 +314,102 @@ namespace NES
                     FetchOperand(AddressingMode.AbsoluteX);
                     ROR();
                     break;
+                case 0x29:
+                    FetchOperand(AddressingMode.Immediate);
+                    AND();
+                    break;
+                case 0x25:
+                    FetchOperand(AddressingMode.ZeroPage);
+                    AND();
+                    break;
+                case 0x35:
+                    FetchOperand(AddressingMode.ZeroPageX);
+                    AND();
+                    break;
+                case 0x2D:
+                    FetchOperand(AddressingMode.Absolute);
+                    AND();
+                    break;
+                case 0x3D:
+                    FetchOperand(AddressingMode.AbsoluteX);
+                    AND();
+                    break;
+                case 0x39:
+                    FetchOperand(AddressingMode.AbsoluteY);
+                    AND();
+                    break;
+                case 0x21:
+                    FetchOperand(AddressingMode.IndexedIndirect);
+                    AND();
+                    break;
+                case 0x31:
+                    FetchOperand(AddressingMode.IndirectIndexed);
+                    AND();
+                    break;
+                case 0x49:
+                    FetchOperand(AddressingMode.Immediate);
+                    EOR();
+                    break;
+                case 0x45:
+                    FetchOperand(AddressingMode.ZeroPage);
+                    EOR();
+                    break;
+                case 0x55:
+                    FetchOperand(AddressingMode.ZeroPageX);
+                    EOR();
+                    break;
+                case 0x4D:
+                    FetchOperand(AddressingMode.Absolute);
+                    EOR();
+                    break;
+                case 0x5D:
+                    FetchOperand(AddressingMode.AbsoluteX);
+                    EOR();
+                    break;
+                case 0x59:
+                    FetchOperand(AddressingMode.AbsoluteY);
+                    EOR();
+                    break;
+                case 0x41:
+                    FetchOperand(AddressingMode.IndexedIndirect);
+                    EOR();
+                    break;
+                case 0x51:
+                    FetchOperand(AddressingMode.IndirectIndexed);
+                    EOR();
+                    break;
+                case 0x09:
+                    FetchOperand(AddressingMode.Immediate);
+                    ORA();
+                    break;
+                case 0x05:
+                    FetchOperand(AddressingMode.ZeroPage);
+                    ORA();
+                    break;
+                case 0x15:
+                    FetchOperand(AddressingMode.ZeroPageX);
+                    ORA();
+                    break;
+                case 0x0D:
+                    FetchOperand(AddressingMode.Absolute);
+                    ORA();
+                    break;
+                case 0x1D:
+                    FetchOperand(AddressingMode.AbsoluteX);
+                    ORA();
+                    break;
+                case 0x19:
+                    FetchOperand(AddressingMode.AbsoluteY);
+                    ORA();
+                    break;
+                case 0x01:
+                    FetchOperand(AddressingMode.IndexedIndirect);
+                    ORA();
+                    break;
+                case 0x11:
+                    FetchOperand(AddressingMode.IndirectIndexed);
+                    ORA();
+                    break;
                 case 0x00:
                     return false;
                 default:
@@ -537,6 +633,7 @@ namespace NES
 
             _flags.SetFlag(StatusFlag.Carry, (val & 0x0080) == 0x0080);
             _flags.SetFlag(StatusFlag.Negative, (result & 0x0080) == 0x0080);
+            _flags.SetFlag(StatusFlag.Zero, result == 0);
 
             _memory.Store(_operandAddress, (byte)result);
         }
@@ -597,6 +694,7 @@ namespace NES
 
             _flags.SetFlag(StatusFlag.Carry, (val & 0x0080) == 0x0080);
             _flags.SetFlag(StatusFlag.Negative, (result & 0x0080) == 0x0080);
+            _flags.SetFlag(StatusFlag.Zero, result == 0);
 
             _memory.Store(_operandAddress, (byte)result);
         }
@@ -628,6 +726,7 @@ namespace NES
 
             _flags.SetFlag(StatusFlag.Carry, (val & 0x01) == 0x01);
             _flags.SetFlag(StatusFlag.Negative, (result & 0x0080) == 0x0080);
+            _flags.SetFlag(StatusFlag.Zero, result == 0);
 
             _memory.Store(_operandAddress, (byte)result);
         }
@@ -642,6 +741,48 @@ namespace NES
             result |= (_flags.GetFlag(StatusFlag.Carry) ? 0x0080 : 0); // places the carry flag into bit no.7
 
             _flags.SetFlag(StatusFlag.Carry, (val & 0x01) == 0x01);
+            _flags.SetFlag(StatusFlag.Zero, result == 0);
+            _flags.SetFlag(StatusFlag.Negative, (result & 0x0080) == 0x0080);
+
+            _a.SetValue((byte)result);
+        }
+
+        /// <summary>
+        /// Performs a logical AND operation between the accumulator value and a value fetched from memory.
+        /// </summary>
+        private void AND()
+        {
+            byte val = _memory.Fetch(_operandAddress);
+            int result = val & _a.GetValue();
+
+            _flags.SetFlag(StatusFlag.Zero, result == 0);
+            _flags.SetFlag(StatusFlag.Negative, (result & 0x0080) == 0x0080);
+
+            _a.SetValue((byte)result);
+        }
+
+        /// <summary>
+        /// Performs a logical Exclusive OR (NOR) operation between the accumulator value and a value fetched from memory.
+        /// </summary>
+        private void EOR()
+        {
+            byte val = _memory.Fetch(_operandAddress);
+            int result = val ^ _a.GetValue();
+
+            _flags.SetFlag(StatusFlag.Zero, result == 0);
+            _flags.SetFlag(StatusFlag.Negative, (result & 0x0080) == 0x0080);
+
+            _a.SetValue((byte)result);
+        }
+
+        /// <summary>
+        /// Performs a logical Inclusive OR operation between the accumulator value and a value fetched from memory.
+        /// </summary>
+        private void ORA()
+        {
+            byte val = _memory.Fetch(_operandAddress);
+            int result = val | _a.GetValue();
+
             _flags.SetFlag(StatusFlag.Zero, result == 0);
             _flags.SetFlag(StatusFlag.Negative, (result & 0x0080) == 0x0080);
 
