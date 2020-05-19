@@ -815,13 +815,10 @@ namespace NES
         private void ASL()
         {
             byte val = _memory.Fetch(_operandAddress);
-            int result = val << 1;
+            
+            byte result = ShiftLeft(val);
 
-            _flags.SetFlag(StatusFlag.Carry, (val & 0x0080) == 0x0080);
-            _flags.SetFlag(StatusFlag.Negative, (result & 0x0080) == 0x0080);
-            _flags.SetFlag(StatusFlag.Zero, result == 0);
-
-            _memory.Store(_operandAddress, (byte)result);
+            _memory.Store(_operandAddress, result);
         }
 
         /// <summary>
@@ -830,13 +827,26 @@ namespace NES
         private void ASL_ACC()
         {
             byte val = _a.GetValue();
+            
+            byte result = ShiftLeft(val);
+
+            _a.SetValue(result);
+        }
+
+        /// <summary>
+        /// Performs a shift operation (left direction) in the given value (updates the CPU flags).
+        /// </summary>
+        /// <param name="val">The value.</param>
+        /// <returns>The value after performing the left shift.</returns>
+        private byte ShiftLeft(byte val)
+        {
             int result = val << 1;
 
             _flags.SetFlag(StatusFlag.Carry, (val & 0x0080) == 0x0080);
             _flags.SetFlag(StatusFlag.Negative, (result & 0x0080) == 0x0080);
             _flags.SetFlag(StatusFlag.Zero, result == 0);
 
-            _a.SetValue((byte)result);
+            return (byte)result;
         }
 
         /// <summary>
@@ -845,13 +855,10 @@ namespace NES
         private void LSR()
         {
             byte val = _memory.Fetch(_operandAddress);
-            int result = val >> 1;
+            
+            byte result = ShiftRight(val);
 
-            _flags.SetFlag(StatusFlag.Carry, (val & 0x01) == 0x01);
-            _flags.SetFlag(StatusFlag.Zero, result == 0);
-            _flags.SetFlag(StatusFlag.Negative, (result & 0x0080) == 0x0080);
-
-            _memory.Store(_operandAddress, (byte)result);
+            _memory.Store(_operandAddress, result);
         }
 
         /// <summary>
@@ -860,13 +867,26 @@ namespace NES
         private void LSR_ACC()
         {
             byte val = _a.GetValue();
+            
+            byte result = ShiftRight(val);
+
+            _a.SetValue(result);
+        }
+
+        /// <summary>
+        /// Performs a shift operation (right direction) in the given value (updates the CPU flags).
+        /// </summary>
+        /// <param name="val">The value.</param>
+        /// <returns>The value after performing the right shift.</returns>
+        private byte ShiftRight(byte val)
+        {
             int result = val >> 1;
 
             _flags.SetFlag(StatusFlag.Carry, (val & 0x01) == 0x01);
             _flags.SetFlag(StatusFlag.Zero, result == 0);
             _flags.SetFlag(StatusFlag.Negative, (result & 0x0080) == 0x0080);
 
-            _a.SetValue((byte)result);
+            return (byte)result;
         }
 
         /// <summary>
@@ -875,14 +895,10 @@ namespace NES
         private void ROL()
         {
             byte val = _memory.Fetch(_operandAddress);
-            int result = val << 1;
-            result |= (_flags.GetFlag(StatusFlag.Carry) ? 0x01 : 0); // places the carry flag into the bit 0
+            
+            byte result = RotateLeft(val);
 
-            _flags.SetFlag(StatusFlag.Carry, (val & 0x0080) == 0x0080);
-            _flags.SetFlag(StatusFlag.Negative, (result & 0x0080) == 0x0080);
-            _flags.SetFlag(StatusFlag.Zero, result == 0);
-
-            _memory.Store(_operandAddress, (byte)result);
+            _memory.Store(_operandAddress, result);
         }
 
         /// <summary>
@@ -891,6 +907,19 @@ namespace NES
         private void ROL_ACC()
         {
             byte val = _a.GetValue();
+            
+            byte result = RotateLeft(val);
+
+            _a.SetValue(result);
+        }
+
+        /// <summary>
+        /// "Rotates" (shift) to the left side the given value (updates the CPU flags).
+        /// </summary>
+        /// <param name="val">The value.</param>
+        /// <returns>The value after performing the left side rotation (shift).</returns>
+        private byte RotateLeft(byte val)
+        {
             int result = val << 1;
             result |= (_flags.GetFlag(StatusFlag.Carry) ? 0x01 : 0); // places the carry flag into the bit 0
 
@@ -898,7 +927,7 @@ namespace NES
             _flags.SetFlag(StatusFlag.Negative, (result & 0x0080) == 0x0080);
             _flags.SetFlag(StatusFlag.Zero, result == 0);
 
-            _a.SetValue((byte)result);
+            return (byte)result;
         }
 
         /// <summary>
@@ -907,14 +936,10 @@ namespace NES
         private void ROR()
         {
             byte val = _memory.Fetch(_operandAddress);
-            int result = val >> 1;
-            result |= (_flags.GetFlag(StatusFlag.Carry) ? 0x0080 : 0); // places the carry flag into bit no.7
+            
+            byte result = RotateRight(val);
 
-            _flags.SetFlag(StatusFlag.Carry, (val & 0x01) == 0x01);
-            _flags.SetFlag(StatusFlag.Negative, (result & 0x0080) == 0x0080);
-            _flags.SetFlag(StatusFlag.Zero, result == 0);
-
-            _memory.Store(_operandAddress, (byte)result);
+            _memory.Store(_operandAddress, result);
         }
 
         /// <summary>
@@ -923,6 +948,19 @@ namespace NES
         private void ROR_ACC()
         {
             byte val = _a.GetValue();
+            
+            byte result = RotateRight(val);
+
+            _a.SetValue(result);
+        }
+
+        /// <summary>
+        /// "Rotates" (shift) to the right side the given value (updates the CPU flags).
+        /// </summary>
+        /// <param name="val">The value.</param>
+        /// <returns>The value after performing the right side rotation (shift).</returns>
+        private byte RotateRight(byte val)
+        {
             int result = val >> 1;
             result |= (_flags.GetFlag(StatusFlag.Carry) ? 0x0080 : 0); // places the carry flag into bit no.7
 
@@ -930,7 +968,7 @@ namespace NES
             _flags.SetFlag(StatusFlag.Zero, result == 0);
             _flags.SetFlag(StatusFlag.Negative, (result & 0x0080) == 0x0080);
 
-            _a.SetValue((byte)result);
+            return (byte)result;
         }
 
         /// <summary>
