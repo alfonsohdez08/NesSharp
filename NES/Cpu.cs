@@ -16,8 +16,10 @@ namespace NES
         AbsoluteX,
         AbsoluteY,
         Indirect,
-        IndexedIndirect,
-        IndirectIndexed
+        IndirectX,
+        IndirectY,
+        Implied,
+        Accumulator
     }
 
     /// <summary>
@@ -25,7 +27,29 @@ namespace NES
     /// </summary>
     class Cpu
     {
-        #region 8-bits registers
+
+        #region Instruction Set Operation Codes Matrix
+        public static readonly Instruction[][] OpCodesMatrix = new Instruction[16][]
+        {
+            new Instruction[]{ new Instruction("BRK", AddressingMode.Implied, 7), new Instruction("ORA", AddressingMode.IndirectX, 6), null, null, null, new Instruction("ORA", AddressingMode.ZeroPage, 3), new Instruction("ASL", AddressingMode.ZeroPage, 5), null, new Instruction("PHP", AddressingMode.Implied, 3), new Instruction("ORA", AddressingMode.Immediate, 2), new Instruction("ASL", AddressingMode.Accumulator, 2), null, null, new Instruction("ORA", AddressingMode.Absolute, 4), new Instruction("ASL", AddressingMode.Absolute, 6), null},
+            new Instruction[]{ new Instruction("BPL", AddressingMode.Relative, 2), new Instruction("ORA", AddressingMode.IndirectY, 5), null, null, null, new Instruction("ORA", AddressingMode.ZeroPageX, 4), new Instruction("ASL", AddressingMode.ZeroPageX, 6), null, new Instruction("CLC", AddressingMode.Implied, 2), new Instruction("ORA", AddressingMode.AbsoluteY, 4), null, null, null, new Instruction("ORA", AddressingMode.AbsoluteX, 4), new Instruction("ASL", AddressingMode.AbsoluteX, 7), null},
+            new Instruction[]{ new Instruction("JSR", AddressingMode.Absolute, 6), new Instruction("AND", AddressingMode.IndirectX, 6), null, null, new Instruction("BIT", AddressingMode.ZeroPage, 3), new Instruction("AND", AddressingMode.ZeroPage, 3), new Instruction("ROL", AddressingMode.ZeroPage, 5), null, new Instruction("PLP", AddressingMode.Implied, 4), new Instruction("AND", AddressingMode.Immediate, 2), new Instruction("ROL", AddressingMode.Accumulator, 2), null, new Instruction("BIT", AddressingMode.Absolute, 4), new Instruction("AND", AddressingMode.Absolute, 4), new Instruction("ROL", AddressingMode.Absolute, 6), null},
+            new Instruction[]{ new Instruction("BMI", AddressingMode.Relative, 2), new Instruction("AND", AddressingMode.IndirectY, 5), null, null, null, new Instruction("AND", AddressingMode.ZeroPageX, 4), new Instruction("ROL", AddressingMode.ZeroPageX, 6), null, new Instruction("SEC", AddressingMode.Implied, 2), new Instruction("AND", AddressingMode.AbsoluteY, 4), null, null, null, new Instruction("AND", AddressingMode.AbsoluteX, 4), new Instruction("ROL", AddressingMode.AbsoluteX, 7), null},
+            new Instruction[]{ new Instruction("RTI", AddressingMode.Implied, 6), new Instruction("EOR", AddressingMode.IndirectX, 6), null, null, null, new Instruction("EOR", AddressingMode.ZeroPage, 3), new Instruction("LSR", AddressingMode.ZeroPage, 5), null, new Instruction("PHA", AddressingMode.Implied, 3), new Instruction("EOR", AddressingMode.Immediate, 2), new Instruction("LSR", AddressingMode.Accumulator, 2), null, new Instruction("JMP", AddressingMode.Absolute, 3), new Instruction("EOR", AddressingMode.Absolute, 4), new Instruction("LSR", AddressingMode.Absolute, 6), null},
+            new Instruction[]{ new Instruction("BVC", AddressingMode.Relative, 2), new Instruction("EOR", AddressingMode.IndirectY, 5), null, null, null, new Instruction("EOR", AddressingMode.ZeroPageX, 4), new Instruction("LSR", AddressingMode.ZeroPageX, 6), null, new Instruction("CLI", AddressingMode.Implied, 2), new Instruction("EOR", AddressingMode.AbsoluteY, 4), null, null, null, new Instruction("EOR", AddressingMode.AbsoluteX, 4), new Instruction("LSR", AddressingMode.AbsoluteX, 7), null},
+            new Instruction[]{ new Instruction("RTS", AddressingMode.Implied, 6), new Instruction("ADC", AddressingMode.IndirectX, 6), null, null, null, new Instruction("ADC", AddressingMode.ZeroPage, 3), new Instruction("ROR", AddressingMode.ZeroPage, 5), null, new Instruction("PLA", AddressingMode.Implied, 4), new Instruction("ADC", AddressingMode.Immediate, 2), new Instruction("ROR", AddressingMode.Accumulator, 2), null, new Instruction("JMP", AddressingMode.Indirect, 5), new Instruction("ADC", AddressingMode.Absolute, 4), new Instruction("ROR", AddressingMode.Absolute, 6), null},
+            new Instruction[]{ new Instruction("BVS", AddressingMode.Relative, 2), new Instruction("ADC", AddressingMode.IndirectY, 5), null, null, null, new Instruction("ADC", AddressingMode.ZeroPageX, 4), new Instruction("ROR", AddressingMode.ZeroPageX, 6), null, new Instruction("SEI", AddressingMode.Implied, 2), new Instruction("ADC", AddressingMode.AbsoluteY, 4), null, null, null, new Instruction("ADC", AddressingMode.AbsoluteX, 4), new Instruction("ROR", AddressingMode.AbsoluteX, 7), null},
+            new Instruction[]{ null, new Instruction("STA", AddressingMode.IndirectX, 6), null, null, new Instruction("STY", AddressingMode.ZeroPage, 3), new Instruction("STA", AddressingMode.ZeroPage, 3), new Instruction("STX", AddressingMode.ZeroPage, 3), null, new Instruction("DEY", AddressingMode.Implied, 2), null, new Instruction("TXA", AddressingMode.Implied, 2), null, new Instruction("STY", AddressingMode.Absolute, 4), new Instruction("STA", AddressingMode.Absolute, 4), new Instruction("STX", AddressingMode.Absolute, 4), null},
+            new Instruction[]{ new Instruction("BCC", AddressingMode.Relative, 2), new Instruction("STA", AddressingMode.IndirectY, 6), null, null, new Instruction("STY", AddressingMode.ZeroPageX, 4), new Instruction("STA", AddressingMode.ZeroPageX, 4), new Instruction("STX", AddressingMode.ZeroPageY, 4), null, new Instruction("TYA", AddressingMode.Implied, 2), new Instruction("STA", AddressingMode.AbsoluteY, 5), new Instruction("TXS", AddressingMode.Implied, 2), null, new Instruction("STA", AddressingMode.AbsoluteX, 5), null, null},
+            new Instruction[]{ new Instruction("LDY", AddressingMode.Immediate, 2), new Instruction("LDA", AddressingMode.IndirectX, 6), new Instruction("LDX", AddressingMode.Immediate, 2), null, new Instruction("LDY", AddressingMode.ZeroPage, 3), new Instruction("LDA", AddressingMode.ZeroPage, 3), new Instruction("LDX", AddressingMode.ZeroPage, 3), null, new Instruction("TAY", AddressingMode.Implied, 2), new Instruction("LDA", AddressingMode.Immediate, 2), new Instruction("TAX", AddressingMode.Implied, 2), null, new Instruction("LDY", AddressingMode.Absolute, 4), new Instruction("LDA", AddressingMode.Absolute, 4), new Instruction("LDX", AddressingMode.Absolute, 4), null},
+            new Instruction[]{ new Instruction("BCS", AddressingMode.Relative, 2), new Instruction("LDA", AddressingMode.IndirectY, 5), null, null, new Instruction("LDY", AddressingMode.ZeroPageX, 4), new Instruction("LDA", AddressingMode.ZeroPageX, 4), new Instruction("LDX", AddressingMode.ZeroPageY, 4), null, new Instruction("CLV", AddressingMode.Implied, 2), new Instruction("LDA", AddressingMode.AbsoluteY, 4), new Instruction("TSX", AddressingMode.Implied, 2), null, new Instruction("LDY", AddressingMode.AbsoluteX, 4), new Instruction("LDA", AddressingMode.AbsoluteX, 4), new Instruction("LDX", AddressingMode.AbsoluteY, 4), null},
+            new Instruction[]{ new Instruction("CPY", AddressingMode.Immediate, 2), new Instruction("CMP", AddressingMode.IndirectX, 6), null, null, new Instruction("CPY", AddressingMode.ZeroPage, 3), new Instruction("CMP", AddressingMode.ZeroPage, 3), new Instruction("DEC", AddressingMode.ZeroPage, 5), null, new Instruction("INY", AddressingMode.Implied, 2), new Instruction("CMP", AddressingMode.Immediate, 2), new Instruction("DEX", AddressingMode.Implied, 2), null, new Instruction("CPY", AddressingMode.Absolute, 4), new Instruction("CMP", AddressingMode.Absolute, 4), new Instruction("DEC", AddressingMode.Absolute, 6), null},
+            new Instruction[]{ new Instruction("BNE", AddressingMode.Relative, 2), new Instruction("CMP", AddressingMode.IndirectY, 5), null, null, null, new Instruction("CMP", AddressingMode.ZeroPageX, 4), new Instruction("DEC", AddressingMode.ZeroPageX, 6), null, new Instruction("CLD", AddressingMode.Implied, 2), new Instruction("CMP", AddressingMode.AbsoluteY, 4), null, null, null, new Instruction("CMP", AddressingMode.AbsoluteX, 4), new Instruction("DEC", AddressingMode.AbsoluteX, 7), null},
+            new Instruction[]{ new Instruction("CPX", AddressingMode.Immediate, 2), new Instruction("SBC", AddressingMode.IndirectX, 6), null, null, new Instruction("CPX", AddressingMode.ZeroPage, 3), new Instruction("SBC", AddressingMode.ZeroPage, 3), new Instruction("INC", AddressingMode.ZeroPage, 5), null, new Instruction("INX", AddressingMode.Implied, 2), new Instruction("SBC", AddressingMode.Immediate, 2), new Instruction("NOP", AddressingMode.Implied, 2), null, new Instruction("CPX", AddressingMode.Absolute, 4), new Instruction("SBC", AddressingMode.Absolute, 4), new Instruction("INC", AddressingMode.Absolute, 6), null},
+            new Instruction[]{ new Instruction("BEQ", AddressingMode.Relative, 2), new Instruction("SBC", AddressingMode.IndirectY, 5), null, null, null, new Instruction("SBC", AddressingMode.ZeroPageX, 4), new Instruction("INC", AddressingMode.ZeroPageX, 6), null, new Instruction("SED", AddressingMode.Implied, 2), new Instruction("SBC", AddressingMode.AbsoluteY, 4), null, null, null, new Instruction("SBC", AddressingMode.AbsoluteX, 4), new Instruction("INC", AddressingMode.AbsoluteX, 7), null}
+        };
+        #endregion
+
         /// <summary>
         /// Accumulators.
         /// </summary>
@@ -50,16 +74,13 @@ namespace NES
         /// Holds the address of the outer 
         /// </summary>
         private readonly Register<byte> _stackPointer = new Register<byte>();
-        #endregion
 
-        #region 16-bits register
         /// <summary>
         /// The Program Counter register (holds the memory address of the next instruction).
         /// </summary>
         private readonly Register<ushort> _programCounter;
-        
+
         private ushort _pcAddress => _programCounter.GetValue();
-        #endregion
 
         /// <summary>
         /// The CPU's memory.
@@ -69,7 +90,14 @@ namespace NES
         /// <summary>
         /// Instruction's operand memory address (the location in memory where resides the instruction's operand).
         /// </summary>
-        private ushort _operandAddress; 
+        private ushort _operandAddress;
+
+        public byte Accumulator => _a.GetValue();
+        public byte X => _x.GetValue();
+        public byte Y => _y.GetValue();
+        public byte Flags => _flags.GetValue();
+        public byte StackPointer => _stackPointer.GetValue();
+        public ushort ProgramCounter => _programCounter.GetValue();
 
         /// <summary>
         /// Creates an instace of a 6502 CPU.
@@ -87,7 +115,7 @@ namespace NES
         /// </summary>
         public void Start()
         {
-            // Each time a machine cycle is elapsed, the program counter would be incremeted
+            // Each time a machine cycle is elapsed, the program counter would be incremented
             while (Cycle())
                 IncrementPC();
         }
@@ -133,11 +161,11 @@ namespace NES
                     LDA();
                     break;
                 case 0xA1:
-                    FetchOperand(AddressingMode.IndexedIndirect);
+                    FetchOperand(AddressingMode.IndirectX);
                     LDA();
                     break;
                 case 0xB1:
-                    FetchOperand(AddressingMode.IndirectIndexed);
+                    FetchOperand(AddressingMode.IndirectY);
                     LDA();
                     break;
                 case 0x69:
@@ -165,11 +193,11 @@ namespace NES
                     ADC();
                     break;
                 case 0x61:
-                    FetchOperand(AddressingMode.IndexedIndirect);
+                    FetchOperand(AddressingMode.IndirectX);
                     ADC();
                     break;
                 case 0x71:
-                    FetchOperand(AddressingMode.IndirectIndexed);
+                    FetchOperand(AddressingMode.IndirectY);
                     ADC();
                     break;
                 case 0xE9:
@@ -197,11 +225,11 @@ namespace NES
                     SBC();
                     break;
                 case 0xE1:
-                    FetchOperand(AddressingMode.IndexedIndirect);
+                    FetchOperand(AddressingMode.IndirectX);
                     SBC();
                     break;
                 case 0xF1:
-                    FetchOperand(AddressingMode.IndirectIndexed);
+                    FetchOperand(AddressingMode.IndirectY);
                     SBC();
                     break;
                 case 0x38:
@@ -231,11 +259,11 @@ namespace NES
                     STA();
                     break;
                 case 0x81:
-                    FetchOperand(AddressingMode.IndexedIndirect);
+                    FetchOperand(AddressingMode.IndirectX);
                     STA();
                     break;
                 case 0x91:
-                    FetchOperand(AddressingMode.IndirectIndexed);
+                    FetchOperand(AddressingMode.IndirectY);
                     STA();
                     break;
                 case 0x0A:
@@ -339,11 +367,11 @@ namespace NES
                     AND();
                     break;
                 case 0x21:
-                    FetchOperand(AddressingMode.IndexedIndirect);
+                    FetchOperand(AddressingMode.IndirectX);
                     AND();
                     break;
                 case 0x31:
-                    FetchOperand(AddressingMode.IndirectIndexed);
+                    FetchOperand(AddressingMode.IndirectY);
                     AND();
                     break;
                 case 0x49:
@@ -371,11 +399,11 @@ namespace NES
                     EOR();
                     break;
                 case 0x41:
-                    FetchOperand(AddressingMode.IndexedIndirect);
+                    FetchOperand(AddressingMode.IndirectX);
                     EOR();
                     break;
                 case 0x51:
-                    FetchOperand(AddressingMode.IndirectIndexed);
+                    FetchOperand(AddressingMode.IndirectY);
                     EOR();
                     break;
                 case 0x09:
@@ -403,11 +431,11 @@ namespace NES
                     ORA();
                     break;
                 case 0x01:
-                    FetchOperand(AddressingMode.IndexedIndirect);
+                    FetchOperand(AddressingMode.IndirectX);
                     ORA();
                     break;
                 case 0x11:
-                    FetchOperand(AddressingMode.IndirectIndexed);
+                    FetchOperand(AddressingMode.IndirectY);
                     ORA();
                     break;
                 case 0x00:
@@ -475,7 +503,7 @@ namespace NES
                     else
                         operandAddress = (ushort)(addressParsed + _y.GetValue());
                     break;
-                case AddressingMode.IndexedIndirect:
+                case AddressingMode.IndirectX:
                     {
                         byte address = (byte)(_memory.Fetch(_pcAddress) + _x.GetValue()); // Wraps around the zero page
 
@@ -485,7 +513,7 @@ namespace NES
                         operandAddress = ByteExtensions.ParseBytes(lowByte, highByte);
                     }
                     break;
-                case AddressingMode.IndirectIndexed:
+                case AddressingMode.IndirectY:
                     {
                         byte zeroPageAddress = _memory.Fetch(_pcAddress);
 
@@ -818,6 +846,39 @@ namespace NES
             byte mask = 1 << 7;
 
             return (val & mask) == 0x0080;
+        }
+    }
+
+    /// <summary>
+    /// Represents a CPU instruction (including its mnemonic, addressing mode and machine cycles).
+    /// </summary>
+    class Instruction
+    {
+        /// <summary>
+        /// The mnemonic code that represents the underlying instruction.
+        /// </summary>
+        public string Mnemonic { get; private set; }
+
+        /// <summary>
+        /// The addressing mode of the instruction.
+        /// </summary>
+        public AddressingMode AddressingMode { get; private set; }
+
+        /// <summary>
+        /// The amount of machine cycles required in order to execute the instruction.
+        /// </summary>
+        public byte MachineCycles { get; private set; }
+
+        /// <summary>
+        /// The instruction executor delegate.
+        /// </summary>
+        public Action Execute { get; private set; }
+
+        public Instruction(string mnemonic, AddressingMode addressingMode, byte machineCycles)
+        {
+            Mnemonic = mnemonic;
+            AddressingMode = addressingMode;
+            MachineCycles = machineCycles;
         }
     }
 }
