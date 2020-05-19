@@ -737,12 +737,16 @@ namespace NES
 
         private void SBC()
         {
-            /*
-                The substraction M - N can be represented as: M + (-N) = M + (256 - N) = M + (2 complement of N)
-                Because there's not a borrow flag, we use the carry flag as our borrow flag by using its complement: B = 1 - C
-                The substraction of N from M is expressed as:
-                    M - N - B = M + (-N) - (1 - C) = M + (2 complement of N) - 1 + C
-                    M + (256 - N) - 1 + C = M + (255 - N) + C = M + (1 complement of N) + C
+            /* The one complement of a number N is defined as N - 255. In binary, this is achieved by
+             * flipping each bit of the binary representation of N. The two complement is just the one complement
+             * plus one: 2 complement = 1 complement + 1 = (255 - N) + 1 = 256 - N. The two complement is used
+             * for represent negative numbers.
+             * 
+             * The substraction M - N can be represented as: M + (-N) = M + (256 - N) = M + (2 complement of N)
+             * due to there's not a borrow flag, we use the carry flag as our borrow flag by using its complement: B = 1 - C
+             * The substraction of N from M is expressed as:
+             *  M - N - B = M + (-N) - (1 - C) = M + (2 complement of N) - 1 + C
+             *  M + (256 - N) - 1 + C = M + (255 - N) + C = M + (1 complement of N) + C
              */
 
             /* Same story as ADC: overflow happens when the result can't fit into a signed byte: RESULT < -128 OR RESULT > 127
