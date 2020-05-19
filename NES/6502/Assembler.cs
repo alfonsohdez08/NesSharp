@@ -29,13 +29,6 @@ namespace NES._6502
 
             return programAssembled.ToArray();
         }
-    }
-
-    class Instruction
-    {
-        public string Mnemonic { get; private set; }
-        public string AddressingMode { get; set; }
-        
 
         private static Instruction Parse(string fullInstruction)
         {

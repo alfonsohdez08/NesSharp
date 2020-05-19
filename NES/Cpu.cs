@@ -28,25 +28,84 @@ namespace NES
     class Cpu
     {
 
+        #region Mnemonics
+        public const string ADC_INSTRUCTION = "ADC";
+        public const string AND_INSTRUCTION = "AND";
+        public const string ASL_INSTRUCTION = "ASL";
+        public const string BCC_INSTRUCTION = "BCC";
+        public const string BCS_INSTRUCTION = "BCS";
+        public const string BEQ_INSTRUCTION = "BEQ";
+        public const string BIT_INSTRUCTION = "BIT";
+        public const string BMI_INSTRUCTION = "BMI";
+        public const string BNE_INSTRUCTION = "BNE";
+        public const string BPL_INSTRUCTION = "BPL";
+        public const string BRK_INSTRUCTION = "BRK";
+        public const string BVC_INSTRUCTION = "BVC";
+        public const string BVS_INSTRUCTION = "BVS";
+        public const string CLC_INSTRUCTION = "CLC";
+        public const string CLD_INSTRUCTION = "CLD";
+        public const string CLI_INSTRUCTION = "CLI";
+        public const string CLV_INSTRUCTION = "CLV";
+        public const string CMP_INSTRUCTION = "CMP";
+        public const string CPX_INSTRUCTION = "CPX";
+        public const string CPY_INSTRUCTION = "CPY";
+        public const string DEC_INSTRUCTION = "DEC";
+        public const string DEX_INSTRUCTION = "DEX";
+        public const string DEY_INSTRUCTION = "DEY";
+        public const string EOR_INSTRUCTION = "EOR";
+        public const string INC_INSTRUCTION = "INC";
+        public const string INX_INSTRUCTION = "INX";
+        public const string INY_INSTRUCTION = "INY";
+        public const string JMP_INSTRUCTION = "JMP";
+        public const string JSR_INSTRUCTION = "JSR";
+        public const string LDA_INSTRUCTION = "LDA";
+        public const string LDX_INSTRUCTION = "LDX";
+        public const string LDY_INSTRUCTION = "LDY";
+        public const string LSR_INSTRUCTION = "LSR";
+        public const string NOP_INSTRUCTION = "NOP";
+        public const string ORA_INSTRUCTION = "ORA";
+        public const string PHA_INSTRUCTION = "PHA";
+        public const string PHP_INSTRUCTION = "PHP";
+        public const string PLA_INSTRUCTION = "PLA";
+        public const string PLP_INSTRUCTION = "PLP";
+        public const string ROL_INSTRUCTION = "ROL";
+        public const string ROR_INSTRUCTION = "ROR";
+        public const string RTI_INSTRUCTION = "RTI";
+        public const string RTS_INSTRUCTION = "RTS";
+        public const string SBC_INSTRUCTION = "SBC";
+        public const string SEC_INSTRUCTION = "SEC";
+        public const string SED_INSTRUCTION = "SED";
+        public const string SEI_INSTRUCTION = "SEI";
+        public const string STA_INSTRUCTION = "STA";
+        public const string STX_INSTRUCTION = "STX";
+        public const string STY_INSTRUCTION = "STY";
+        public const string TAX_INSTRUCTION = "TAX";
+        public const string TAY_INSTRUCTION = "TAY";
+        public const string TSX_INSTRUCTION = "TSX";
+        public const string TXA_INSTRUCTION = "TXA";
+        public const string TXS_INSTRUCTION = "TXS";
+        public const string TYA_INSTRUCTION = "TYA";
+        #endregion
+
         #region Instruction Set Operation Codes Matrix
-        public static readonly Instruction[][] OpCodesMatrix = new Instruction[16][]
-        {
-            new Instruction[]{ new Instruction("BRK", AddressingMode.Implied, 7), new Instruction("ORA", AddressingMode.IndirectX, 6), null, null, null, new Instruction("ORA", AddressingMode.ZeroPage, 3), new Instruction("ASL", AddressingMode.ZeroPage, 5), null, new Instruction("PHP", AddressingMode.Implied, 3), new Instruction("ORA", AddressingMode.Immediate, 2), new Instruction("ASL", AddressingMode.Accumulator, 2), null, null, new Instruction("ORA", AddressingMode.Absolute, 4), new Instruction("ASL", AddressingMode.Absolute, 6), null},            
-            new Instruction[]{ new Instruction("BPL", AddressingMode.Relative, 2), new Instruction("ORA", AddressingMode.IndirectY, 5), null, null, null, new Instruction("ORA", AddressingMode.ZeroPageX, 4), new Instruction("ASL", AddressingMode.ZeroPageX, 6), null, new Instruction("CLC", AddressingMode.Implied, 2), new Instruction("ORA", AddressingMode.AbsoluteY, 4), null, null, null, new Instruction("ORA", AddressingMode.AbsoluteX, 4), new Instruction("ASL", AddressingMode.AbsoluteX, 7), null},            
-            new Instruction[]{ new Instruction("JSR", AddressingMode.Absolute, 6), new Instruction("AND", AddressingMode.IndirectX, 6), null, null, new Instruction("BIT", AddressingMode.ZeroPage, 3), new Instruction("AND", AddressingMode.ZeroPage, 3), new Instruction("ROL", AddressingMode.ZeroPage, 5), null, new Instruction("PLP", AddressingMode.Implied, 4), new Instruction("AND", AddressingMode.Immediate, 2), new Instruction("ROL", AddressingMode.Accumulator, 2), null, new Instruction("BIT", AddressingMode.Absolute, 4), new Instruction("AND", AddressingMode.Absolute, 4), new Instruction("ROL", AddressingMode.Absolute, 6), null},
-            new Instruction[]{ new Instruction("BMI", AddressingMode.Relative, 2), new Instruction("AND", AddressingMode.IndirectY, 5), null, null, null, new Instruction("AND", AddressingMode.ZeroPageX, 4), new Instruction("ROL", AddressingMode.ZeroPageX, 6), null, new Instruction("SEC", AddressingMode.Implied, 2), new Instruction("AND", AddressingMode.AbsoluteY, 4), null, null, null, new Instruction("AND", AddressingMode.AbsoluteX, 4), new Instruction("ROL", AddressingMode.AbsoluteX, 7), null},
-            new Instruction[]{ new Instruction("RTI", AddressingMode.Implied, 6), new Instruction("EOR", AddressingMode.IndirectX, 6), null, null, null, new Instruction("EOR", AddressingMode.ZeroPage, 3), new Instruction("LSR", AddressingMode.ZeroPage, 5), null, new Instruction("PHA", AddressingMode.Implied, 3), new Instruction("EOR", AddressingMode.Immediate, 2), new Instruction("LSR", AddressingMode.Accumulator, 2), null, new Instruction("JMP", AddressingMode.Absolute, 3), new Instruction("EOR", AddressingMode.Absolute, 4), new Instruction("LSR", AddressingMode.Absolute, 6), null},
-            new Instruction[]{ new Instruction("BVC", AddressingMode.Relative, 2), new Instruction("EOR", AddressingMode.IndirectY, 5), null, null, null, new Instruction("EOR", AddressingMode.ZeroPageX, 4), new Instruction("LSR", AddressingMode.ZeroPageX, 6), null, new Instruction("CLI", AddressingMode.Implied, 2), new Instruction("EOR", AddressingMode.AbsoluteY, 4), null, null, null, new Instruction("EOR", AddressingMode.AbsoluteX, 4), new Instruction("LSR", AddressingMode.AbsoluteX, 7), null},
-            new Instruction[]{ new Instruction("RTS", AddressingMode.Implied, 6), new Instruction("ADC", AddressingMode.IndirectX, 6), null, null, null, new Instruction("ADC", AddressingMode.ZeroPage, 3), new Instruction("ROR", AddressingMode.ZeroPage, 5), null, new Instruction("PLA", AddressingMode.Implied, 4), new Instruction("ADC", AddressingMode.Immediate, 2), new Instruction("ROR", AddressingMode.Accumulator, 2), null, new Instruction("JMP", AddressingMode.Indirect, 5), new Instruction("ADC", AddressingMode.Absolute, 4), new Instruction("ROR", AddressingMode.Absolute, 6), null},
-            new Instruction[]{ new Instruction("BVS", AddressingMode.Relative, 2), new Instruction("ADC", AddressingMode.IndirectY, 5), null, null, null, new Instruction("ADC", AddressingMode.ZeroPageX, 4), new Instruction("ROR", AddressingMode.ZeroPageX, 6), null, new Instruction("SEI", AddressingMode.Implied, 2), new Instruction("ADC", AddressingMode.AbsoluteY, 4), null, null, null, new Instruction("ADC", AddressingMode.AbsoluteX, 4), new Instruction("ROR", AddressingMode.AbsoluteX, 7), null},
-            new Instruction[]{ null, new Instruction("STA", AddressingMode.IndirectX, 6), null, null, new Instruction("STY", AddressingMode.ZeroPage, 3), new Instruction("STA", AddressingMode.ZeroPage, 3), new Instruction("STX", AddressingMode.ZeroPage, 3), null, new Instruction("DEY", AddressingMode.Implied, 2), null, new Instruction("TXA", AddressingMode.Implied, 2), null, new Instruction("STY", AddressingMode.Absolute, 4), new Instruction("STA", AddressingMode.Absolute, 4), new Instruction("STX", AddressingMode.Absolute, 4), null},
-            new Instruction[]{ new Instruction("BCC", AddressingMode.Relative, 2), new Instruction("STA", AddressingMode.IndirectY, 6), null, null, new Instruction("STY", AddressingMode.ZeroPageX, 4), new Instruction("STA", AddressingMode.ZeroPageX, 4), new Instruction("STX", AddressingMode.ZeroPageY, 4), null, new Instruction("TYA", AddressingMode.Implied, 2), new Instruction("STA", AddressingMode.AbsoluteY, 5), new Instruction("TXS", AddressingMode.Implied, 2), null, null, new Instruction("STA", AddressingMode.AbsoluteX, 5), null, null},
-            new Instruction[]{ new Instruction("LDY", AddressingMode.Immediate, 2), new Instruction("LDA", AddressingMode.IndirectX, 6), new Instruction("LDX", AddressingMode.Immediate, 2), null, new Instruction("LDY", AddressingMode.ZeroPage, 3), new Instruction("LDA", AddressingMode.ZeroPage, 3), new Instruction("LDX", AddressingMode.ZeroPage, 3), null, new Instruction("TAY", AddressingMode.Implied, 2), new Instruction("LDA", AddressingMode.Immediate, 2), new Instruction("TAX", AddressingMode.Implied, 2), null, new Instruction("LDY", AddressingMode.Absolute, 4), new Instruction("LDA", AddressingMode.Absolute, 4), new Instruction("LDX", AddressingMode.Absolute, 4), null},
-            new Instruction[]{ new Instruction("BCS", AddressingMode.Relative, 2), new Instruction("LDA", AddressingMode.IndirectY, 5), null, null, new Instruction("LDY", AddressingMode.ZeroPageX, 4), new Instruction("LDA", AddressingMode.ZeroPageX, 4), new Instruction("LDX", AddressingMode.ZeroPageY, 4), null, new Instruction("CLV", AddressingMode.Implied, 2), new Instruction("LDA", AddressingMode.AbsoluteY, 4), new Instruction("TSX", AddressingMode.Implied, 2), null, new Instruction("LDY", AddressingMode.AbsoluteX, 4), new Instruction("LDA", AddressingMode.AbsoluteX, 4), new Instruction("LDX", AddressingMode.AbsoluteY, 4), null},
-            new Instruction[]{ new Instruction("CPY", AddressingMode.Immediate, 2), new Instruction("CMP", AddressingMode.IndirectX, 6), null, null, new Instruction("CPY", AddressingMode.ZeroPage, 3), new Instruction("CMP", AddressingMode.ZeroPage, 3), new Instruction("DEC", AddressingMode.ZeroPage, 5), null, new Instruction("INY", AddressingMode.Implied, 2), new Instruction("CMP", AddressingMode.Immediate, 2), new Instruction("DEX", AddressingMode.Implied, 2), null, new Instruction("CPY", AddressingMode.Absolute, 4), new Instruction("CMP", AddressingMode.Absolute, 4), new Instruction("DEC", AddressingMode.Absolute, 6), null},
-            new Instruction[]{ new Instruction("BNE", AddressingMode.Relative, 2), new Instruction("CMP", AddressingMode.IndirectY, 5), null, null, null, new Instruction("CMP", AddressingMode.ZeroPageX, 4), new Instruction("DEC", AddressingMode.ZeroPageX, 6), null, new Instruction("CLD", AddressingMode.Implied, 2), new Instruction("CMP", AddressingMode.AbsoluteY, 4), null, null, null, new Instruction("CMP", AddressingMode.AbsoluteX, 4), new Instruction("DEC", AddressingMode.AbsoluteX, 7), null},
-            new Instruction[]{ new Instruction("CPX", AddressingMode.Immediate, 2), new Instruction("SBC", AddressingMode.IndirectX, 6), null, null, new Instruction("CPX", AddressingMode.ZeroPage, 3), new Instruction("SBC", AddressingMode.ZeroPage, 3), new Instruction("INC", AddressingMode.ZeroPage, 5), null, new Instruction("INX", AddressingMode.Implied, 2), new Instruction("SBC", AddressingMode.Immediate, 2), new Instruction("NOP", AddressingMode.Implied, 2), null, new Instruction("CPX", AddressingMode.Absolute, 4), new Instruction("SBC", AddressingMode.Absolute, 4), new Instruction("INC", AddressingMode.Absolute, 6), null},
-            new Instruction[]{ new Instruction("BEQ", AddressingMode.Relative, 2), new Instruction("SBC", AddressingMode.IndirectY, 5), null, null, null, new Instruction("SBC", AddressingMode.ZeroPageX, 4), new Instruction("INC", AddressingMode.ZeroPageX, 6), null, new Instruction("SED", AddressingMode.Implied, 2), new Instruction("SBC", AddressingMode.AbsoluteY, 4), null, null, null, new Instruction("SBC", AddressingMode.AbsoluteX, 4), new Instruction("INC", AddressingMode.AbsoluteX, 7), null}
+        public static readonly Instruction[] OpCodes = new Instruction[256]
+             {
+            new Instruction(BRK_INSTRUCTION, AddressingMode.Implied, 7), new Instruction(ORA_INSTRUCTION, AddressingMode.IndirectX, 6), null, null, null, new Instruction(ORA_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(ASL_INSTRUCTION, AddressingMode.ZeroPage, 5), null, new Instruction(PHP_INSTRUCTION, AddressingMode.Implied, 3), new Instruction(ORA_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(ASL_INSTRUCTION, AddressingMode.Accumulator, 2), null, null, new Instruction(ORA_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(ASL_INSTRUCTION, AddressingMode.Absolute, 6), null,
+            new Instruction(BPL_INSTRUCTION, AddressingMode.Relative, 2), new Instruction(ORA_INSTRUCTION, AddressingMode.IndirectY, 5), null, null, null, new Instruction(ORA_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(ASL_INSTRUCTION, AddressingMode.ZeroPageX, 6), null, new Instruction(CLC_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(ORA_INSTRUCTION, AddressingMode.AbsoluteY, 4), null, null, null, new Instruction(ORA_INSTRUCTION, AddressingMode.AbsoluteX, 4), new Instruction(ASL_INSTRUCTION, AddressingMode.AbsoluteX, 7), null,
+            new Instruction(JSR_INSTRUCTION, AddressingMode.Absolute, 6), new Instruction(AND_INSTRUCTION, AddressingMode.IndirectX, 6), null, null, new Instruction(BIT_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(AND_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(ROL_INSTRUCTION, AddressingMode.ZeroPage, 5), null, new Instruction(PLP_INSTRUCTION, AddressingMode.Implied, 4), new Instruction(AND_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(ROL_INSTRUCTION, AddressingMode.Accumulator, 2), null, new Instruction(BIT_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(AND_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(ROL_INSTRUCTION, AddressingMode.Absolute, 6), null,
+            new Instruction(BMI_INSTRUCTION, AddressingMode.Relative, 2), new Instruction(AND_INSTRUCTION, AddressingMode.IndirectY, 5), null, null, null, new Instruction(AND_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(ROL_INSTRUCTION, AddressingMode.ZeroPageX, 6), null, new Instruction(SEC_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(AND_INSTRUCTION, AddressingMode.AbsoluteY, 4), null, null, null, new Instruction(AND_INSTRUCTION, AddressingMode.AbsoluteX, 4), new Instruction(ROL_INSTRUCTION, AddressingMode.AbsoluteX, 7), null,
+            new Instruction(RTI_INSTRUCTION, AddressingMode.Implied, 6), new Instruction(EOR_INSTRUCTION, AddressingMode.IndirectX, 6), null, null, null, new Instruction(EOR_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(LSR_INSTRUCTION, AddressingMode.ZeroPage, 5), null, new Instruction(PHA_INSTRUCTION, AddressingMode.Implied, 3), new Instruction(EOR_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(LSR_INSTRUCTION, AddressingMode.Accumulator, 2), null, new Instruction(JMP_INSTRUCTION, AddressingMode.Absolute, 3), new Instruction(EOR_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(LSR_INSTRUCTION, AddressingMode.Absolute, 6), null,
+            new Instruction(BVC_INSTRUCTION, AddressingMode.Relative, 2), new Instruction(EOR_INSTRUCTION, AddressingMode.IndirectY, 5), null, null, null, new Instruction(EOR_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(LSR_INSTRUCTION, AddressingMode.ZeroPageX, 6), null, new Instruction(CLI_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(EOR_INSTRUCTION, AddressingMode.AbsoluteY, 4), null, null, null, new Instruction(EOR_INSTRUCTION, AddressingMode.AbsoluteX, 4), new Instruction(LSR_INSTRUCTION, AddressingMode.AbsoluteX, 7), null,
+            new Instruction(RTS_INSTRUCTION, AddressingMode.Implied, 6), new Instruction(ADC_INSTRUCTION, AddressingMode.IndirectX, 6), null, null, null, new Instruction(ADC_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(ROR_INSTRUCTION, AddressingMode.ZeroPage, 5), null, new Instruction(PLA_INSTRUCTION, AddressingMode.Implied, 4), new Instruction(ADC_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(ROR_INSTRUCTION, AddressingMode.Accumulator, 2), null, new Instruction(JMP_INSTRUCTION, AddressingMode.Indirect, 5), new Instruction(ADC_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(ROR_INSTRUCTION, AddressingMode.Absolute, 6), null,
+            new Instruction(BVS_INSTRUCTION, AddressingMode.Relative, 2), new Instruction(ADC_INSTRUCTION, AddressingMode.IndirectY, 5), null, null, null, new Instruction(ADC_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(ROR_INSTRUCTION, AddressingMode.ZeroPageX, 6), null, new Instruction(SEI_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(ADC_INSTRUCTION, AddressingMode.AbsoluteY, 4), null, null, null, new Instruction(ADC_INSTRUCTION, AddressingMode.AbsoluteX, 4), new Instruction(ROR_INSTRUCTION, AddressingMode.AbsoluteX, 7), null,
+            null, new Instruction(STA_INSTRUCTION, AddressingMode.IndirectX, 6), null, null, new Instruction(STY_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(STA_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(STX_INSTRUCTION, AddressingMode.ZeroPage, 3), null, new Instruction(DEY_INSTRUCTION, AddressingMode.Implied, 2), null, new Instruction(TXA_INSTRUCTION, AddressingMode.Implied, 2), null, new Instruction(STY_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(STA_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(STX_INSTRUCTION, AddressingMode.Absolute, 4), null,
+            new Instruction(BCC_INSTRUCTION, AddressingMode.Relative, 2), new Instruction(STA_INSTRUCTION, AddressingMode.IndirectY, 6), null, null, new Instruction(STY_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(STA_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(STX_INSTRUCTION, AddressingMode.ZeroPageY, 4), null, new Instruction(TYA_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(STA_INSTRUCTION, AddressingMode.AbsoluteY, 5), new Instruction(TXS_INSTRUCTION, AddressingMode.Implied, 2), null, null, new Instruction(STA_INSTRUCTION, AddressingMode.AbsoluteX, 5), null, null,
+            new Instruction(LDY_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(LDA_INSTRUCTION, AddressingMode.IndirectX, 6), new Instruction(LDX_INSTRUCTION, AddressingMode.Immediate, 2), null, new Instruction(LDY_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(LDA_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(LDX_INSTRUCTION, AddressingMode.ZeroPage, 3), null, new Instruction(TAY_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(LDA_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(TAX_INSTRUCTION, AddressingMode.Implied, 2), null, new Instruction(LDY_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(LDA_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(LDX_INSTRUCTION, AddressingMode.Absolute, 4), null,
+            new Instruction(BCS_INSTRUCTION, AddressingMode.Relative, 2), new Instruction(LDA_INSTRUCTION, AddressingMode.IndirectY, 5), null, null, new Instruction(LDY_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(LDA_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(LDX_INSTRUCTION, AddressingMode.ZeroPageY, 4), null, new Instruction(CLV_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(LDA_INSTRUCTION, AddressingMode.AbsoluteY, 4), new Instruction(TSX_INSTRUCTION, AddressingMode.Implied, 2), null, new Instruction(LDY_INSTRUCTION, AddressingMode.AbsoluteX, 4), new Instruction(LDA_INSTRUCTION, AddressingMode.AbsoluteX, 4), new Instruction(LDX_INSTRUCTION, AddressingMode.AbsoluteY, 4), null,
+            new Instruction(CPY_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(CMP_INSTRUCTION, AddressingMode.IndirectX, 6), null, null, new Instruction(CPY_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(CMP_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(DEC_INSTRUCTION, AddressingMode.ZeroPage, 5), null, new Instruction(INY_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(CMP_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(DEX_INSTRUCTION, AddressingMode.Implied, 2), null, new Instruction(CPY_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(CMP_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(DEC_INSTRUCTION, AddressingMode.Absolute, 6), null,
+            new Instruction(BNE_INSTRUCTION, AddressingMode.Relative, 2), new Instruction(CMP_INSTRUCTION, AddressingMode.IndirectY, 5), null, null, null, new Instruction(CMP_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(DEC_INSTRUCTION, AddressingMode.ZeroPageX, 6), null, new Instruction(CLD_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(CMP_INSTRUCTION, AddressingMode.AbsoluteY, 4), null, null, null, new Instruction(CMP_INSTRUCTION, AddressingMode.AbsoluteX, 4), new Instruction(DEC_INSTRUCTION, AddressingMode.AbsoluteX, 7), null,
+            new Instruction(CPX_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(SBC_INSTRUCTION, AddressingMode.IndirectX, 6), null, null, new Instruction(CPX_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(SBC_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(INC_INSTRUCTION, AddressingMode.ZeroPage, 5), null, new Instruction(INX_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(SBC_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(NOP_INSTRUCTION, AddressingMode.Implied, 2), null, new Instruction(CPX_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(SBC_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(INC_INSTRUCTION, AddressingMode.Absolute, 6), null,
+            new Instruction(BEQ_INSTRUCTION, AddressingMode.Relative, 2), new Instruction(SBC_INSTRUCTION, AddressingMode.IndirectY, 5), null, null, null, new Instruction(SBC_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(INC_INSTRUCTION, AddressingMode.ZeroPageX, 6), null, new Instruction(SED_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(SBC_INSTRUCTION, AddressingMode.AbsoluteY, 4), null, null, null, new Instruction(SBC_INSTRUCTION, AddressingMode.AbsoluteX, 4), new Instruction(INC_INSTRUCTION, AddressingMode.AbsoluteX, 7), null
         };
         #endregion
 
@@ -132,319 +191,415 @@ namespace NES
 
             // Fetchs the OpCode from the memory
             byte opCode = _memory.Fetch(_pcAddress);
+            Instruction instruction = OpCodes[opCode];
+            if (instruction == null) // Illegal opcode
+                return true;
 
-            // Decodes and executes the OpCode
-            switch (opCode)
+            FetchOperand(instruction.AddressingMode);
+
+            // Executes the instruction based on its mnemonic code
+            switch (instruction.Mnemonic)
             {
-                case 0xA9:
-                    FetchOperand(AddressingMode.Immediate);
-                    LDA();
-                    break;
-                case 0xA5:
-                    FetchOperand(AddressingMode.ZeroPage);
-                    LDA();
-                    break;
-                case 0xB5:
-                    FetchOperand(AddressingMode.ZeroPageX);
-                    LDA();
-                    break;
-                case 0xAD:
-                    FetchOperand(AddressingMode.Absolute);
-                    LDA();
-                    break;
-                case 0xBD:
-                    FetchOperand(AddressingMode.AbsoluteX);
-                    LDA();
-                    break;
-                case 0xB9:
-                    FetchOperand(AddressingMode.AbsoluteY);
-                    LDA();
-                    break;
-                case 0xA1:
-                    FetchOperand(AddressingMode.IndirectX);
-                    LDA();
-                    break;
-                case 0xB1:
-                    FetchOperand(AddressingMode.IndirectY);
-                    LDA();
-                    break;
-                case 0x69:
-                    FetchOperand(AddressingMode.Immediate);
+                case ADC_INSTRUCTION:
                     ADC();
                     break;
-                case 0x65:
-                    FetchOperand(AddressingMode.ZeroPage);
-                    ADC();
+                case AND_INSTRUCTION:
+                    AND();
                     break;
-                case 0x75:
-                    FetchOperand(AddressingMode.ZeroPageX);
-                    ADC();
+                case ASL_INSTRUCTION:
+                    if (instruction.AddressingMode == AddressingMode.Accumulator)
+                        ASL_ACC();
+                    else
+                        ASL();
                     break;
-                case 0x6D:
-                    FetchOperand(AddressingMode.Absolute);
-                    ADC();
+                case BCC_INSTRUCTION:
+                    BCC();
                     break;
-                case 0x7D:
-                    FetchOperand(AddressingMode.AbsoluteX);
-                    ADC();
+                case BCS_INSTRUCTION:
+                    BCS();
                     break;
-                case 0x79:
-                    FetchOperand(AddressingMode.AbsoluteY);
-                    ADC();
+                case BEQ_INSTRUCTION:
+                    BEQ();
                     break;
-                case 0x61:
-                    FetchOperand(AddressingMode.IndirectX);
-                    ADC();
+                case BIT_INSTRUCTION:
+                    BIT();
                     break;
-                case 0x71:
-                    FetchOperand(AddressingMode.IndirectY);
-                    ADC();
+                case BMI_INSTRUCTION:
+                    BMI();
                     break;
-                case 0xE9:
-                    FetchOperand(AddressingMode.Immediate);
-                    SBC();
+                case BNE_INSTRUCTION:
+                    BNE();
                     break;
-                case 0xE5:
-                    FetchOperand(AddressingMode.ZeroPage);
-                    SBC();
+                case BPL_INSTRUCTION:
+                    BPL();
                     break;
-                case 0xF5:
-                    FetchOperand(AddressingMode.ZeroPageX);
-                    SBC();
+                case BRK_INSTRUCTION:
+                    BRK();
                     break;
-                case 0xED:
-                    FetchOperand(AddressingMode.Absolute);
-                    SBC();
+                case BVC_INSTRUCTION:
+                    BVC();
                     break;
-                case 0xFD:
-                    FetchOperand(AddressingMode.AbsoluteX);
-                    SBC();
+                case BVS_INSTRUCTION:
+                    BVS();
                     break;
-                case 0xF9:
-                    FetchOperand(AddressingMode.AbsoluteY);
-                    SBC();
-                    break;
-                case 0xE1:
-                    FetchOperand(AddressingMode.IndirectX);
-                    SBC();
-                    break;
-                case 0xF1:
-                    FetchOperand(AddressingMode.IndirectY);
-                    SBC();
-                    break;
-                case 0x38:
-                    SEC();
-                    break;
-                case 0x18:
+                case CLC_INSTRUCTION:
                     CLC();
                     break;
-                case 0x85:
-                    FetchOperand(AddressingMode.ZeroPage);
+                case CLD_INSTRUCTION:
+                    CLD();
+                    break;
+                case CLI_INSTRUCTION:
+                    CLI();
+                    break;
+                case CLV_INSTRUCTION:
+                    CLV();
+                    break;
+                case CMP_INSTRUCTION:
+                    CMP();
+                    break;
+                case CPX_INSTRUCTION:
+                    CPX();
+                    break;
+                case CPY_INSTRUCTION:
+                    CPY();
+                    break;
+                case DEC_INSTRUCTION:
+                    DEC();
+                    break;
+                case DEX_INSTRUCTION:
+                    DEX();
+                    break;
+                case DEY_INSTRUCTION:
+                    DEY();
+                    break;
+                case EOR_INSTRUCTION:
+                    EOR();
+                    break;
+                case INC_INSTRUCTION:
+                    INC();
+                    break;
+                case INX_INSTRUCTION:
+                    INX();
+                    break;
+                case INY_INSTRUCTION:
+                    INY();
+                    break;
+                case JMP_INSTRUCTION:
+                    JMP();
+                    break;
+                case JSR_INSTRUCTION:
+                    JSR();
+                    break;
+                case LDA_INSTRUCTION:
+                    LDA();
+                    break;
+                case LDX_INSTRUCTION:
+                    LDX();
+                    break;
+                case LDY_INSTRUCTION:
+                    LDY();
+                    break;
+                case LSR_INSTRUCTION:
+                    if (instruction.AddressingMode == AddressingMode.Accumulator)
+                        LSR_ACC();
+                    else
+                        LSR();
+                    break;
+                case NOP_INSTRUCTION:
+                    NOP();
+                    break;
+                case ORA_INSTRUCTION:
+                    ORA();
+                    break;
+                case PHA_INSTRUCTION:
+                    PHA();
+                    break;
+                case PHP_INSTRUCTION:
+                    PHP();
+                    break;
+                case PLA_INSTRUCTION:
+                    PLA();
+                    break;
+                case PLP_INSTRUCTION:
+                    PLP();
+                    break;
+                case ROL_INSTRUCTION:
+                    if (instruction.AddressingMode == AddressingMode.Accumulator)
+                        ROL_ACC();
+                    else
+                        ROL();
+                    break;
+                case ROR_INSTRUCTION:
+                    if (instruction.AddressingMode == AddressingMode.Accumulator)
+                        ROR_ACC();
+                    else
+                        ROR();
+                    break;
+                case RTI_INSTRUCTION:
+                    RTI();
+                    break;
+                case RTS_INSTRUCTION:
+                    RTS();
+                    break;
+                case SBC_INSTRUCTION:
+                    SBC();
+                    break;
+                case SEC_INSTRUCTION:
+                    SEC();
+                    break;
+                case SED_INSTRUCTION:
+                    SED();
+                    break;
+                case SEI_INSTRUCTION:
+                    SEI();
+                    break;
+                case STA_INSTRUCTION:
                     STA();
                     break;
-                case 0x95:
-                    FetchOperand(AddressingMode.ZeroPageX);
-                    STA();
+                case STX_INSTRUCTION:
+                    STX();
                     break;
-                case 0x8D:
-                    FetchOperand(AddressingMode.Absolute);
-                    STA();
+                case STY_INSTRUCTION:
+                    STY();
                     break;
-                case 0x9D:
-                    FetchOperand(AddressingMode.AbsoluteX);
-                    STA();
+                case TAX_INSTRUCTION:
+                    TAX();
                     break;
-                case 0x99:
-                    FetchOperand(AddressingMode.AbsoluteY);
-                    STA();
+                case TAY_INSTRUCTION:
+                    TAY();
                     break;
-                case 0x81:
-                    FetchOperand(AddressingMode.IndirectX);
-                    STA();
+                case TSX_INSTRUCTION:
+                    TSX();
                     break;
-                case 0x91:
-                    FetchOperand(AddressingMode.IndirectY);
-                    STA();
+                case TXA_INSTRUCTION:
+                    TXA();
                     break;
-                case 0x0A:
-                    ASL_ACC(); // Accumulator addressing mode
+                case TXS_INSTRUCTION:
+                    TXS();
                     break;
-                case 0x06:
-                    FetchOperand(AddressingMode.ZeroPage);
-                    ASL();
+                case TYA_INSTRUCTION:
+                    TYA();
                     break;
-                case 0x16:
-                    FetchOperand(AddressingMode.ZeroPageX);
-                    ASL();
-                    break;
-                case 0x0E:
-                    FetchOperand(AddressingMode.Absolute);
-                    ASL();
-                    break;
-                case 0x1E:
-                    FetchOperand(AddressingMode.AbsoluteX);
-                    ASL();
-                    break;
-                case 0x4A:
-                    LSR_ACC(); // Accumulator addressing mode
-                    break;
-                case 0x46:
-                    FetchOperand(AddressingMode.ZeroPage);
-                    LSR();
-                    break;
-                case 0x56:
-                    FetchOperand(AddressingMode.ZeroPageX);
-                    LSR();
-                    break;
-                case 0x4E:
-                    FetchOperand(AddressingMode.Absolute);
-                    LSR();
-                    break;
-                case 0x5E:
-                    FetchOperand(AddressingMode.Absolute);
-                    LSR();
-                    break;
-                case 0x2A:
-                    ROL_ACC(); // Accumulator addressing mode
-                    break;
-                case 0x26:
-                    FetchOperand(AddressingMode.ZeroPage);
-                    ROL();
-                    break;
-                case 0x36:
-                    FetchOperand(AddressingMode.ZeroPageX);
-                    ROL();
-                    break;
-                case 0x2E:
-                    FetchOperand(AddressingMode.Absolute);
-                    ROL();
-                    break;
-                case 0x3E:
-                    FetchOperand(AddressingMode.AbsoluteX);
-                    ROL();
-                    break;
-                case 0x6A:
-                    ROR_ACC(); // Accumulator addressing mode
-                    break;
-                case 0x66:
-                    FetchOperand(AddressingMode.ZeroPage);
-                    ROR();
-                    break;
-                case 0x76:
-                    FetchOperand(AddressingMode.ZeroPageX);
-                    ROR();
-                    break;
-                case 0x6E:
-                    FetchOperand(AddressingMode.Absolute);
-                    ROR();
-                    break;
-                case 0x7E:
-                    FetchOperand(AddressingMode.AbsoluteX);
-                    ROR();
-                    break;
-                case 0x29:
-                    FetchOperand(AddressingMode.Immediate);
-                    AND();
-                    break;
-                case 0x25:
-                    FetchOperand(AddressingMode.ZeroPage);
-                    AND();
-                    break;
-                case 0x35:
-                    FetchOperand(AddressingMode.ZeroPageX);
-                    AND();
-                    break;
-                case 0x2D:
-                    FetchOperand(AddressingMode.Absolute);
-                    AND();
-                    break;
-                case 0x3D:
-                    FetchOperand(AddressingMode.AbsoluteX);
-                    AND();
-                    break;
-                case 0x39:
-                    FetchOperand(AddressingMode.AbsoluteY);
-                    AND();
-                    break;
-                case 0x21:
-                    FetchOperand(AddressingMode.IndirectX);
-                    AND();
-                    break;
-                case 0x31:
-                    FetchOperand(AddressingMode.IndirectY);
-                    AND();
-                    break;
-                case 0x49:
-                    FetchOperand(AddressingMode.Immediate);
-                    EOR();
-                    break;
-                case 0x45:
-                    FetchOperand(AddressingMode.ZeroPage);
-                    EOR();
-                    break;
-                case 0x55:
-                    FetchOperand(AddressingMode.ZeroPageX);
-                    EOR();
-                    break;
-                case 0x4D:
-                    FetchOperand(AddressingMode.Absolute);
-                    EOR();
-                    break;
-                case 0x5D:
-                    FetchOperand(AddressingMode.AbsoluteX);
-                    EOR();
-                    break;
-                case 0x59:
-                    FetchOperand(AddressingMode.AbsoluteY);
-                    EOR();
-                    break;
-                case 0x41:
-                    FetchOperand(AddressingMode.IndirectX);
-                    EOR();
-                    break;
-                case 0x51:
-                    FetchOperand(AddressingMode.IndirectY);
-                    EOR();
-                    break;
-                case 0x09:
-                    FetchOperand(AddressingMode.Immediate);
-                    ORA();
-                    break;
-                case 0x05:
-                    FetchOperand(AddressingMode.ZeroPage);
-                    ORA();
-                    break;
-                case 0x15:
-                    FetchOperand(AddressingMode.ZeroPageX);
-                    ORA();
-                    break;
-                case 0x0D:
-                    FetchOperand(AddressingMode.Absolute);
-                    ORA();
-                    break;
-                case 0x1D:
-                    FetchOperand(AddressingMode.AbsoluteX);
-                    ORA();
-                    break;
-                case 0x19:
-                    FetchOperand(AddressingMode.AbsoluteY);
-                    ORA();
-                    break;
-                case 0x01:
-                    FetchOperand(AddressingMode.IndirectX);
-                    ORA();
-                    break;
-                case 0x11:
-                    FetchOperand(AddressingMode.IndirectY);
-                    ORA();
-                    break;
-                case 0x00:
-                    return false;
                 default:
-                    throw new NotSupportedException($"OpCode not supported: {opCode.ToString("X")}");
+                    throw new NotImplementedException();
             }
 
             return true;
+        }
+
+        private void TYA()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void TXS()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void TXA()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void TSX()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void TAY()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void TAX()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void STY()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void STX()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void SEI()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void SED()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void RTI()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void RTS()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void PLP()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void PLA()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void PHP()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void PHA()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void NOP()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void LDY()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void LDX()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void JSR()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void JMP()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void INY()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void INX()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void INC()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void DEY()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void DEX()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void DEC()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void CPY()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void CPX()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void CMP()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void CLV()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void CLI()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void CLD()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void BVS()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void BVC()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void BPL()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void BRK()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void BNE()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void BMI()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void BIT()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void BEQ()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void BCS()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void BCC()
+        {
+            throw new NotImplementedException();
         }
 
         #region Addressing modes
@@ -455,6 +610,9 @@ namespace NES
         /// <param name="mode">The instruction's addressing mode.</param>
         private void FetchOperand(AddressingMode mode)
         {
+            if (mode == AddressingMode.Accumulator)
+                return;
+
             ushort operandAddress;
             
             IncrementPC();
