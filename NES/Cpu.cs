@@ -150,7 +150,6 @@ namespace NES
         /// Instruction's operand memory address (the location in memory where resides the instruction's operand).
         /// </summary>
         private ushort _operandAddress;
-
         public byte Accumulator => _a.GetValue();
         public byte X => _x.GetValue();
         public byte Y => _y.GetValue();
