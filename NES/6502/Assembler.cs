@@ -79,9 +79,11 @@ namespace NES._6502
             string mnemonic = tokens[0];
             string operand = tokens[1];
 
-            AddressingMode addrMode = ParseAddressingMode(operand);
-            
-            return FindInstruction(mnemonic, addrMode);
+            //AddressingMode addrMode = ParseAddressingMode(operand);
+
+            throw new NotImplementedException();
+
+            //return FindInstruction(mnemonic, addrMode);
         }
 
 
