@@ -130,8 +130,8 @@ namespace NES._6502
                         //byte highByte = (byte)(val >> 8 & 0xFF);
 
                         // 6502 CPU is little endian (low byte first and then high byte)
-                        hexValues.Add(lowByte.ToString("x"));
-                        hexValues.Add(highByte.ToString("x"));
+                        hexValues.Add(GetHex(lowByte));
+                        hexValues.Add(GetHex(highByte));
                     }
                     break;
                 case AddressingMode.Immediate:
@@ -143,9 +143,19 @@ namespace NES._6502
                 case AddressingMode.ZeroPageY:
                     {
                         Match m = _8BitRegexPattern.Match(instructionOperand);
-                        hexValues.Add(m.Value);
+                        byte b = Convert.ToByte(m.Value, 16);
+
+                        hexValues.Add(GetHex(b));
                     }
                     break;
+            }
+            
+            static string GetHex(byte b)
+            {
+                string h = b.ToString("x");
+                if (h.Length == 1) // puts a zero in case the hex representation is only one digit (just for convention)
+                    h = $"0{h}";
+                return h;
             }
             
             return hexValues.ToArray();
