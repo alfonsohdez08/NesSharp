@@ -13,19 +13,19 @@ namespace NES._6502
         private static readonly RegexOptions RegexOpts = RegexOptions.IgnoreCase | RegexOptions.ECMAScript;
         private static readonly Dictionary<AddressingMode, Regex> AddrModeRegexPatterns = new Dictionary<AddressingMode, Regex>()
         {
-            {AddressingMode.Accumulator, new Regex(@"(a| ){1}(\r\n|\n)", RegexOpts)},
-            {AddressingMode.Absolute, new Regex(@"\$([0-9]|[a-f]){1,4}(\r\n|\n)", RegexOpts)},
-            {AddressingMode.AbsoluteX, new Regex(@"\$([0-9]|[a-f]){1,4},x(\r\n|\n)", RegexOpts)},
-            {AddressingMode.AbsoluteY, new Regex(@"\$([0-9]|[a-f]){1,4},y(\r\n|\n)", RegexOpts)},
-            {AddressingMode.Immediate, new Regex(@"^#\$([0-9]|[a-f]){1,2}(\r\n|\n)", RegexOpts)},
-            {AddressingMode.Implied, null},
-            {AddressingMode.Indirect, new Regex(@"\(\$([0-9]|[a-f]){1,4}\)(\r\n|\n)", RegexOpts)},
-            {AddressingMode.IndirectX, new Regex(@"\(\$([0-9]|[a-f]){1,2},x\)(\r\n|\n)", RegexOpts)},
-            {AddressingMode.IndirectY, new Regex(@"\(\$([0-9]|[a-f]){1,2}\),y(\r\n|\n)", RegexOpts)},
-            {AddressingMode.Relative, new Regex(@"^\$([0-9]|[a-f]){1,2}(\r\n|\n)", RegexOpts)},
-            {AddressingMode.ZeroPage, new Regex(@"^\$([0-9]|[a-f]){1,2}(\r\n|\n)", RegexOpts)},
-            {AddressingMode.ZeroPageX, new Regex(@"^\$([0-9]|[a-f]){1,2},x(\r\n|\n)", RegexOpts)},
-            {AddressingMode.ZeroPageY, new Regex(@"^\$([0-9]|[a-f]){1,2},y(\r\n|\n)", RegexOpts)},
+            {AddressingMode.Accumulator, new Regex(@"^(a| ){1}$", RegexOpts)},
+            {AddressingMode.Absolute, new Regex(@"^\$([0-9]|[a-f]){1,4}$", RegexOpts)},
+            {AddressingMode.AbsoluteX, new Regex(@"^\$([0-9]|[a-f]){1,4},x$", RegexOpts)},
+            {AddressingMode.AbsoluteY, new Regex(@"^\$([0-9]|[a-f]){1,4},y$", RegexOpts)},
+            {AddressingMode.Immediate, new Regex(@"^#\$([0-9]|[a-f]){1,2}$", RegexOpts)},
+            {AddressingMode.Indirect, new Regex(@"^\(\$([0-9]|[a-f]){1,4}\)$", RegexOpts)},
+            {AddressingMode.IndirectX, new Regex(@"^\(\$([0-9]|[a-f]){1,2},x\)$", RegexOpts)},
+            {AddressingMode.IndirectY, new Regex(@"^\(\$([0-9]|[a-f]){1,2}\),y$", RegexOpts)},
+            {AddressingMode.Relative, new Regex(@"^\$([0-9]|[a-f]){1,2}$", RegexOpts)},
+            {AddressingMode.ZeroPage, new Regex(@"^\$([0-9]|[a-f]){1,2}$", RegexOpts)},
+            {AddressingMode.ZeroPageX, new Regex(@"^\$([0-9]|[a-f]){1,2},x$", RegexOpts)},
+            {AddressingMode.ZeroPageY, new Regex(@"^\$([0-9]|[a-f]){1,2},y$", RegexOpts)},
+            {AddressingMode.Implied, null}
         };
 
         private static readonly Regex _16BitRegexPattern = new Regex(@"([0-9]|[a-f]){1,4}", RegexOpts);
@@ -64,7 +64,6 @@ namespace NES._6502
                     continue;
 
                 line = line.Split(';')[0]; // Strips the comments next to the instruction (a comment is started by using semi colon)
-                line += '\n'; // Add new line feed
 
                 string[] instructionHex = ParseInstruction(line);
                 programAssembled.AddRange(instructionHex);
@@ -106,7 +105,7 @@ namespace NES._6502
         {
             for (int index = 0; index < Cpu.OpCodes.Length; index++)
                 if (Cpu.OpCodes[index]?.Mnemonic == mnemonic && Cpu.OpCodes[index].AddressingMode == addressingMode)
-                    return index.ToString("x");
+                    return GetHex((byte)index);
 
             throw new InvalidOperationException("Can not find the instruction based on the mnemonic and addressing mode specified.");
         }
@@ -148,15 +147,7 @@ namespace NES._6502
                         hexValues.Add(GetHex(b));
                     }
                     break;
-            }
-            
-            static string GetHex(byte b)
-            {
-                string h = b.ToString("x");
-                if (h.Length == 1) // puts a zero in case the hex representation is only one digit (just for convention)
-                    h = $"0{h}";
-                return h;
-            }
+            }           
             
             return hexValues.ToArray();
         }
@@ -166,7 +157,7 @@ namespace NES._6502
             if (!MnemonicAddrModes.ContainsKey(mnemonic))
                 throw new ArgumentException($"The given mnemonic {mnemonic} does not exist.");
 
-            //operand = StripSpaces(operand);
+            operand = StripSpaces(operand);
 
             HashSet<AddressingMode> addrModes = MnemonicAddrModes[mnemonic];
             if (addrModes.Count == 1)
@@ -182,6 +173,14 @@ namespace NES._6502
             static string StripSpaces(string s) => s.TrimStart().TrimEnd();
 
             throw new InvalidOperationException($"Can not identify the addressing mode for the mnemonic {mnemonic} based on the provided operand {operand}");
+        }
+
+        private static string GetHex(byte b)
+        {
+            string h = b.ToString("x");
+            if (h.Length == 1) // puts a zero in case the hex representation is only one digit (just for convention)
+                h = $"0{h}";
+            return h;
         }
     }
 }
