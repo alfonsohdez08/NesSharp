@@ -34,7 +34,7 @@ namespace NES
             sb.AppendLine("lda #$01");
             sb.AppendLine("sta $10A");
 
-            string[] hexDump = Assembler.Assemble(sb.ToString());
+            ProgramAssembled programAssembled = Assembler.Assemble(sb.ToString());
 
             Console.ReadLine();
         }

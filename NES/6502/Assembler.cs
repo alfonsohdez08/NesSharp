@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 
 namespace NES._6502
 {
-    static class Assembler
+    internal static class Assembler
     {
         private static readonly Dictionary<string, HashSet<AddressingMode>> MnemonicAddrModes;
 
@@ -48,13 +48,14 @@ namespace NES._6502
         }
 
         /// <summary>
-        /// Assembles a program.
+        /// Assembles a program for a 6502 CPU.
         /// </summary>
         /// <param name="program">The program.</param>
-        /// <returns>A set of hexadecimal values where each value represents either an instruction or an instruction operand.</returns>
-        public static string[] Assemble(string program)
+        /// <returns>The program assembled.</returns>
+        public static ProgramAssembled Assemble(string program)
         {
-            var programAssembled = new List<string>();
+            var programHexDump = new List<string>();
+            var instructions = new List<InstructionAssembled>();
 
             string[] lines = program.Split("\r\n");
             for (int i = 0; i < lines.Length; i++)
@@ -65,14 +66,24 @@ namespace NES._6502
 
                 line = line.Split(';')[0]; // Strips the comments next to the instruction (a comment is started by using semi colon)
 
-                string[] instructionHex = ParseInstruction(line);
-                programAssembled.AddRange(instructionHex);
+                (string, AddressingMode, string[]) instruction = ParseInstruction(line);
+                var instructionAssembled = new InstructionAssembled(instruction.Item1, instruction.Item2, instruction.Item3, lines[i]);
+
+                instructions.Add(instructionAssembled);
+                programHexDump.AddRange(instruction.Item3);
             }
 
-            return programAssembled.ToArray();
+            var programAssembled = new ProgramAssembled(program, programHexDump.ToArray(), instructions);
+
+            return programAssembled;
         }
 
-        private static string[] ParseInstruction(string instructionLine)
+        /// <summary>
+        /// Parses a line of the program (holds the program's instruction).
+        /// </summary>
+        /// <param name="instructionLine">A program's instruction.</param>
+        /// <returns>The mnemonic that represents the given instruction along with its addressing mode and hexadecimal dump.</returns>
+        private static (string, AddressingMode, string[]) ParseInstruction(string instructionLine)
         {
             var hexDump = new List<string>();
 
@@ -95,12 +106,18 @@ namespace NES._6502
             string instructionHex = GetInstructionHexValue(mnemonic, addressingMode);
             hexDump.Add(instructionHex);
 
-            string[] operandHex = GetInstructionOperandHexValue(operand, addressingMode);
+            string[] operandHex = GetOperandHexDump(operand, addressingMode);
             hexDump.AddRange(operandHex);
 
-            return hexDump.ToArray();
+            return (mnemonic, addressingMode, hexDump.ToArray());
         }
 
+        /// <summary>
+        /// Retrieves the hexadecimal value of a instruction based on its mnemonic and addressing mode.
+        /// </summary>
+        /// <param name="mnemonic">The instruction's mnemonic.</param>
+        /// <param name="addressingMode">The instruction's addressing mode.</param>
+        /// <returns>The hexadecimal value based on the OpCodes matrix for the 6502 CPU.</returns>
         private static string GetInstructionHexValue(string mnemonic, AddressingMode addressingMode)
         {
             for (int index = 0; index < Cpu.OpCodes.Length; index++)
@@ -110,7 +127,13 @@ namespace NES._6502
             throw new InvalidOperationException("Can not find the instruction based on the mnemonic and addressing mode specified.");
         }
 
-        private static string[] GetInstructionOperandHexValue(string instructionOperand, AddressingMode addrMode)
+        /// <summary>
+        /// Retrieves the hexadecimal dump for the instruction operand based on its addressing mode.
+        /// </summary>
+        /// <param name="instructionOperand">The raw instruction operand.</param>
+        /// <param name="addrMode">The instruction's addressing mode.</param>
+        /// <returns>The hexadecimal dump of the given instruction operand.</returns>
+        private static string[] GetOperandHexDump(string instructionOperand, AddressingMode addrMode)
         {
             var hexValues = new List<string>();
 
@@ -152,6 +175,12 @@ namespace NES._6502
             return hexValues.ToArray();
         }
 
+        /// <summary>
+        /// Determines the addressing mode for a given mnemonic and operand.
+        /// </summary>
+        /// <param name="mnemonic">The instruction's mnemonic.</param>
+        /// <param name="operand">The instruction's operand.</param>
+        /// <returns>The addressing mode for the given instruction.</returns>
         private static AddressingMode ParseAddressingMode(string mnemonic, string operand)
         {
             if (!MnemonicAddrModes.ContainsKey(mnemonic))
@@ -175,12 +204,53 @@ namespace NES._6502
             throw new InvalidOperationException($"Can not identify the addressing mode for the mnemonic {mnemonic} based on the provided operand {operand}");
         }
 
+        /// <summary>
+        /// Retrieves the hexadecimal representation of a given byte.
+        /// </summary>
+        /// <param name="b">8 bit value.</param>
+        /// <returns>The hexadecimal representation of the given byte.</returns>
         private static string GetHex(byte b)
         {
             string h = b.ToString("x");
             if (h.Length == 1) // puts a zero in case the hex representation is only one digit (just for convention)
                 h = $"0{h}";
             return h;
+        }
+    }
+
+    /// <summary>
+    /// Contains the information about the program assembled (hexadecimal dump, instructions parsed, and the raw program).
+    /// </summary>
+    class ProgramAssembled
+    {
+        public string[] HexadecimalDump { get; private set; }
+        public IReadOnlyCollection<InstructionAssembled> Instructions { get; private set; }
+        public string ProgramDissassembled { get; private set; }
+
+        public ProgramAssembled(string program, string[] programHexDump, List<InstructionAssembled> instructions)
+        {
+            ProgramDissassembled = program;
+            HexadecimalDump = programHexDump;
+            Instructions = instructions.AsReadOnly();
+        }
+    }
+
+    /// <summary>
+    /// Contains information about the instruction assembled (mnemonic code, addressing mode, hexadecimal dump, and the raw instruction line).
+    /// </summary>
+    class InstructionAssembled
+    {
+        public string Mnemonic { get; private set; }
+        public AddressingMode AddressingMode { get; private set; }
+        public string[] HexadecimalDump { get; private set; }
+        public string RawInstructionLine { get; private set; }
+
+        public InstructionAssembled(string mnemonic, AddressingMode addressingMode, string[] hexDump, string rawInstructionLine)
+        {
+            Mnemonic = mnemonic;
+            AddressingMode = addressingMode;
+            HexadecimalDump = hexDump;
+            RawInstructionLine = rawInstructionLine;
         }
     }
 }
