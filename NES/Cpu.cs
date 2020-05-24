@@ -1029,10 +1029,13 @@ namespace NES
         /// <returns>A 16 bit value.</returns>
         public static ushort ParseBytes(byte lowByte, byte highByte)
         {
-            string highByteHex = highByte.ToString("x");
-            string lowByteHex = lowByte.ToString("x");
+            //string highByteHex = highByte.ToString("x");
+            //string lowByteHex = lowByte.ToString("x");
 
-            return Convert.ToUInt16(highByteHex + lowByteHex, 16);
+            // https://stackoverflow.com/questions/6090561/how-to-use-high-and-low-bytes
+            return (ushort)(lowByte | highByte << 8);
+
+            //return Convert.ToUInt16(highByteHex + lowByteHex, 16);
         }
 
         /// <summary>

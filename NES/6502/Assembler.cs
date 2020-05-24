@@ -12,20 +12,23 @@ namespace NES._6502
         private static readonly RegexOptions RegexOpts = RegexOptions.IgnoreCase | RegexOptions.ECMAScript;
         private static readonly Dictionary<AddressingMode, Regex> AddrModeRegexPatterns = new Dictionary<AddressingMode, Regex>()
         {
-            {AddressingMode.Accumulator, new Regex(@"(a| ){1}\n", RegexOpts)},
-            {AddressingMode.Absolute, new Regex(@"\$([0-9]|[a-f]){1,4}\n", RegexOpts)},
-            {AddressingMode.AbsoluteX, new Regex(@"\$([0-9]|[a-f]){1,4},x\n", RegexOpts)},
-            {AddressingMode.AbsoluteY, new Regex(@"\$([0-9]|[a-f]){1,4},y\n", RegexOpts)},
-            {AddressingMode.Immediate, new Regex(@"#\$([0-9]|[a-f]){1,2}\n", RegexOpts)},
+            {AddressingMode.Accumulator, new Regex(@"(a| ){1}(\r\n|\n)", RegexOpts)},
+            {AddressingMode.Absolute, new Regex(@"\$([0-9]|[a-f]){1,4}(\r\n|\n)", RegexOpts)},
+            {AddressingMode.AbsoluteX, new Regex(@"\$([0-9]|[a-f]){1,4},x(\r\n|\n)", RegexOpts)},
+            {AddressingMode.AbsoluteY, new Regex(@"\$([0-9]|[a-f]){1,4},y(\r\n|\n)", RegexOpts)},
+            {AddressingMode.Immediate, new Regex(@"#\$([0-9]|[a-f]){1,2}(\r\n|\n)", RegexOpts)},
             {AddressingMode.Implied, null},
-            {AddressingMode.Indirect, new Regex(@"\(\$([0-9]|[a-f]){1,4}\)\n", RegexOpts)},
-            {AddressingMode.IndirectX, new Regex(@"\(\$([0-9]|[a-f]){1,2},x\)\n", RegexOpts)},
-            {AddressingMode.IndirectY, new Regex(@"\(\$([0-9]|[a-f]){1,2}\),y\n", RegexOpts)},
-            {AddressingMode.Relative, new Regex(@"\$([0-9]|[a-f]){1,2}\n", RegexOpts)},
-            {AddressingMode.ZeroPage, new Regex(@"\$([0-9]|[a-f]){1,2}\n", RegexOpts)},
-            {AddressingMode.ZeroPageX, new Regex(@"\$([0-9]|[a-f]){1,2},x\n", RegexOpts)},
-            {AddressingMode.ZeroPageY, new Regex(@"\$([0-9]|[a-f]){1,2},y\n", RegexOpts)},
+            {AddressingMode.Indirect, new Regex(@"\(\$([0-9]|[a-f]){1,4}\)(\r\n|\n)", RegexOpts)},
+            {AddressingMode.IndirectX, new Regex(@"\(\$([0-9]|[a-f]){1,2},x\)(\r\n|\n)", RegexOpts)},
+            {AddressingMode.IndirectY, new Regex(@"\(\$([0-9]|[a-f]){1,2}\),y(\r\n|\n)", RegexOpts)},
+            {AddressingMode.Relative, new Regex(@"\$([0-9]|[a-f]){1,2}(\r\n|\n)", RegexOpts)},
+            {AddressingMode.ZeroPage, new Regex(@"\$([0-9]|[a-f]){1,2}(\r\n|\n)", RegexOpts)},
+            {AddressingMode.ZeroPageX, new Regex(@"\$([0-9]|[a-f]){1,2},x(\r\n|\n)", RegexOpts)},
+            {AddressingMode.ZeroPageY, new Regex(@"\$([0-9]|[a-f]){1,2},y(\r\n|\n)", RegexOpts)},
         };
+
+        private static readonly Regex _16BitRegexPattern = new Regex(@"([0-9]|[a-f]){1,4}");
+        private static readonly Regex _8BitRegexPattern = new Regex(@"([0-9]|[a-f]){1,2}");
 
         static Assembler()
         {
@@ -43,12 +46,6 @@ namespace NES._6502
             }
         }
 
-        //private static Dictionary<Regex, AddressingMode> _regexAddr = new Dictionary<Regex, AddressingMode>()
-        //{
-        //    {new Regex("A"), AddressingMode.Accumulator},
-        //    { new Regex(""), AddressingMode.Absolute }
-        //};
-
         /// <summary>
         /// Assembles a program.
         /// </summary>
@@ -64,44 +61,86 @@ namespace NES._6502
                 string line = lines[i];
                 line = line.Split(';')[0]; // Strips the comments next to the instruction (a comment is started by using semi colon)
 
-
+                string[] instructionHex = ParseInstruction(line);
+                programAssembled.AddRange(instructionHex);
             }
 
             return programAssembled.ToArray();
         }
 
-        private static Instruction Parse(string fullInstruction)
+        private static string[] ParseInstruction(string instructionLine)
         {
-            string[] tokens = fullInstruction.Split(' ');
+            var hexDump = new List<string>();
+
+            // Splits the whole instruction by whitespace
+            string[] tokens = instructionLine.Split(' ');
             if (tokens.Length == 0)
-                throw new ArgumentException($"Can not recoginze the given instruction: {fullInstruction}");
+                throw new ArgumentException($"Can not recognize the given instruction: {instructionLine}");
+
+            if (tokens.Length > 2)
+                throw new ArgumentException("The instruction isn't delimitted correctly. Ensure you specify a single whitespace between the mnemonic and the instruction operand.");
 
             string mnemonic = tokens[0];
+
+            // Operand would not be supplied when using implied addressing mode
             string operand = tokens[1];
+            AddressingMode addressingMode = ParseAddressingMode(mnemonic, operand);
 
-            //AddressingMode addrMode = ParseAddressingMode(operand);
+            string instructionHex = GetInstructionHexValue(mnemonic, addressingMode);
+            hexDump.Add(instructionHex);
 
-            throw new NotImplementedException();
+            string[] operandHex = GetInstructionOperandHexValue(operand, addressingMode);
+            hexDump.AddRange(operandHex);
 
-            //return FindInstruction(mnemonic, addrMode);
+            return hexDump.ToArray();
         }
 
-
-        /// <summary>
-        /// Finds the instruction based on its mnemonic code and addressing mode.
-        /// </summary>
-        /// <param name="mnemonic">The instruction's mnemonic.</param>
-        /// <param name="addrMode">The instruction's addressing mode.</param>
-        /// <returns>The 6502 CPU instruction.</returns>
-        private static Instruction FindInstruction(string mnemonic, AddressingMode addrMode)
+        private static string GetInstructionHexValue(string mnemonic, AddressingMode addressingMode)
         {
-            //for (int index = 0; index < Cpu.OpCodes.Length; index++)
-            //    if (Cpu.OpCodes[index]?.Mnemonic == mnemonic && Cpu.OpCodes[index].AddressingMode == addrMode)
-            //        return Cpu.OpCodes[index];
+            for (int index = 0; index < Cpu.OpCodes.Length; index++)
+                if (Cpu.OpCodes[index]?.Mnemonic == mnemonic && Cpu.OpCodes[index].AddressingMode == addressingMode)
+                    return index.ToString("x");
 
+            throw new InvalidOperationException("Can not find the instruction based on the mnemonic and addressing mode specified.");
+        }
 
+        private static string[] GetInstructionOperandHexValue(string instructionOperand, AddressingMode addrMode)
+        {
+            var hexValues = new List<string>();
 
-            throw new InvalidOperationException($"Did not find an instruction identified by the mnemonic {mnemonic} and addressing mode {addrMode}.");
+            switch (addrMode)
+            {
+                case AddressingMode.Absolute:
+                case AddressingMode.AbsoluteX:
+                case AddressingMode.AbsoluteY:
+                case AddressingMode.Indirect:
+                    {
+                        Match m = _16BitRegexPattern.Match(instructionOperand);
+                        short val = Convert.ToInt16(m.Value, 16);
+                        byte lowByte = (byte)val;
+                        byte highByte = (byte)(val >> 8);
+                        //byte lowByte = (byte)(val & 0xFF);
+                        //byte highByte = (byte)(val >> 8 & 0xFF);
+
+                        hexValues.Add(lowByte.ToString("x"));
+                        hexValues.Add(highByte.ToString("x"));
+                    }
+                    break;
+                case AddressingMode.Immediate:
+                case AddressingMode.IndirectX:
+                case AddressingMode.IndirectY:
+                case AddressingMode.Relative:
+                case AddressingMode.ZeroPage:
+                case AddressingMode.ZeroPageX:
+                case AddressingMode.ZeroPageY:
+                    {
+                        Match m = _8BitRegexPattern.Match(instructionOperand);
+                        hexValues.Add(m.Value);
+                    }
+                    break;
+            }
+            
+            return hexValues.ToArray();
         }
 
         private static AddressingMode ParseAddressingMode(string mnemonic, string operand)
@@ -109,10 +148,62 @@ namespace NES._6502
             if (!MnemonicAddrModes.ContainsKey(mnemonic))
                 throw new ArgumentException($"The given mnemonic {mnemonic} does not exist.");
 
+            operand = StripSpaces(operand);
+
             HashSet<AddressingMode> addrModes = MnemonicAddrModes[mnemonic];
+            foreach (AddressingMode addrMode in addrModes)
+            {
+                Regex regex = AddrModeRegexPatterns[addrMode];
+                if (regex.IsMatch(operand))
+                    return addrMode;
+            }
 
+            static string StripSpaces(string s) => s.TrimStart().TrimEnd();
 
+            throw new InvalidOperationException($"Can not identify the addressing mode for the mnemonic {mnemonic} based on the provided operand {operand}");
+        }
+    }
+
+    class CpuInstruction : Instruction
+    {
+        /// <summary>
+        /// The representation of the instruction in hexadecimal.
+        /// </summary>
+        public string InstructionHex => InstructionDecimal.ToString("X");
+
+        /// <summary>
+        /// The representation of the instruction in decimal.
+        /// </summary>
+        public int InstructionDecimal { get; private set; }
+
+        public string[] GetHexInstruction()
+        {
             throw new NotImplementedException();
+        }
+
+        private string[] ParseOperand(string operand, AddressingMode addressingMode)
+        {
+            operand = StripDollarSign(operand);
+            var hexValues = new List<string>();
+
+            switch (addressingMode)
+            {
+                case AddressingMode.Immediate:
+                case AddressingMode.ZeroPage:
+                case AddressingMode.ZeroPageX:
+                case AddressingMode.ZeroPageY:
+                    hexValues.Add(operand);
+                    break;
+            }
+
+            static string StripDollarSign(string s) => s.Replace("$", "");
+
+            return hexValues.ToArray();
+        }
+
+        public CpuInstruction(Instruction instruction, int instructionDecimalValue, string operand): base(instruction.Mnemonic, instruction.AddressingMode, instruction.MachineCycles)
+        {
+            InstructionDecimal = instructionDecimalValue;
         }
     }
 }
