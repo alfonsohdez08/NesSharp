@@ -17,4 +17,8 @@
     <ProjectReference Include="..\NES\NES.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="CPU\" />
+  </ItemGroup>
+
 </Project>

@@ -13,7 +13,7 @@ namespace NES._6502
         private static readonly RegexOptions RegexOpts = RegexOptions.IgnoreCase | RegexOptions.ECMAScript;
         private static readonly Dictionary<AddressingMode, Regex> AddrModeRegexPatterns = new Dictionary<AddressingMode, Regex>()
         {
-            {AddressingMode.Accumulator, new Regex(@"^(a| ){1}$", RegexOpts)},
+            {AddressingMode.Accumulator, new Regex(@"^a$", RegexOpts)},// TODO: should i change the match count for 2 bytes operand from {1,4} to {3,4} ?
             {AddressingMode.Absolute, new Regex(@"^\$([0-9]|[a-f]){1,4}$", RegexOpts)},
             {AddressingMode.AbsoluteX, new Regex(@"^\$([0-9]|[a-f]){1,4},x$", RegexOpts)},
             {AddressingMode.AbsoluteY, new Regex(@"^\$([0-9]|[a-f]){1,4},y$", RegexOpts)},
@@ -198,6 +198,9 @@ namespace NES._6502
                 if (regex.IsMatch(operand))
                     return addrMode;
             }
+
+            if ((string.IsNullOrEmpty(operand) || string.IsNullOrWhiteSpace(operand)) && addrModes.Contains(AddressingMode.Accumulator))
+                return AddressingMode.Accumulator;
 
             static string StripSpaces(string s) => s.TrimStart().TrimEnd();
 
