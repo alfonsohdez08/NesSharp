@@ -843,13 +843,13 @@ namespace NES
         /// <returns>The value after performing the left shift.</returns>
         private byte ShiftLeft(byte val)
         {
-            int result = val << 1;
+            byte result = (byte)(val << 1);
 
             _flags.SetFlag(StatusFlag.Carry, (val & 0x0080) == 0x0080);
-            _flags.SetFlag(StatusFlag.Negative, (result & 0x0080) == 0x0080);
+            _flags.SetFlag(StatusFlag.Negative, result.IsNegative());
             _flags.SetFlag(StatusFlag.Zero, result == 0);
 
-            return (byte)result;
+            return result;
         }
 
         /// <summary>
@@ -883,13 +883,13 @@ namespace NES
         /// <returns>The value after performing the right shift.</returns>
         private byte ShiftRight(byte val)
         {
-            int result = val >> 1;
+            byte result = (byte)(val >> 1);
 
             _flags.SetFlag(StatusFlag.Carry, (val & 0x01) == 0x01);
             _flags.SetFlag(StatusFlag.Zero, result == 0);
-            _flags.SetFlag(StatusFlag.Negative, (result & 0x0080) == 0x0080);
+            _flags.SetFlag(StatusFlag.Negative, result.IsNegative());
 
-            return (byte)result;
+            return result;
         }
 
         /// <summary>
@@ -923,14 +923,15 @@ namespace NES
         /// <returns>The value after performing the left side rotation (shift).</returns>
         private byte RotateLeft(byte val)
         {
-            int result = val << 1;
-            result |= (_flags.GetFlag(StatusFlag.Carry) ? 0x01 : 0); // places the carry flag into the bit 0
+            int r = val << 1;
+            r |= (_flags.GetFlag(StatusFlag.Carry) ? 0x01 : 0); // places the carry flag into the bit 0
+            byte result = (byte)r;
 
             _flags.SetFlag(StatusFlag.Carry, (val & 0x0080) == 0x0080);
-            _flags.SetFlag(StatusFlag.Negative, (result & 0x0080) == 0x0080);
+            _flags.SetFlag(StatusFlag.Negative, result.IsNegative());
             _flags.SetFlag(StatusFlag.Zero, result == 0);
 
-            return (byte)result;
+            return result;
         }
 
         /// <summary>
@@ -964,14 +965,15 @@ namespace NES
         /// <returns>The value after performing the right side rotation (shift).</returns>
         private byte RotateRight(byte val)
         {
-            int result = val >> 1;
-            result |= (_flags.GetFlag(StatusFlag.Carry) ? 0x0080 : 0); // places the carry flag into bit no.7
+            int r = val >> 1;
+            r |= (_flags.GetFlag(StatusFlag.Carry) ? 0x0080 : 0); // places the carry flag into bit no.7
+            byte result = (byte)r;
 
             _flags.SetFlag(StatusFlag.Carry, (val & 0x01) == 0x01);
             _flags.SetFlag(StatusFlag.Zero, result == 0);
-            _flags.SetFlag(StatusFlag.Negative, (result & 0x0080) == 0x0080);
+            _flags.SetFlag(StatusFlag.Negative, result.IsNegative());
 
-            return (byte)result;
+            return result;
         }
 
         /// <summary>
@@ -994,12 +996,12 @@ namespace NES
         private void EOR()
         {
             byte val = _memory.Fetch(_operandAddress);
-            int result = val ^ _a.GetValue();
+            byte result = (byte)(val ^ _a.GetValue());
 
             _flags.SetFlag(StatusFlag.Zero, result == 0);
-            _flags.SetFlag(StatusFlag.Negative, (result & 0x0080) == 0x0080);
+            _flags.SetFlag(StatusFlag.Negative, result.IsNegative());
 
-            _a.SetValue((byte)result);
+            _a.SetValue(result);
         }
 
         /// <summary>
@@ -1008,12 +1010,12 @@ namespace NES
         private void ORA()
         {
             byte val = _memory.Fetch(_operandAddress);
-            int result = val | _a.GetValue();
+            byte result = (byte)(val | _a.GetValue());
 
             _flags.SetFlag(StatusFlag.Zero, result == 0);
-            _flags.SetFlag(StatusFlag.Negative, (result & 0x0080) == 0x0080);
+            _flags.SetFlag(StatusFlag.Negative, result.IsNegative());
 
-            _a.SetValue((byte)result);
+            _a.SetValue(result);
         }
     }
 
