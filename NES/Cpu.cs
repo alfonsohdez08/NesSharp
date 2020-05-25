@@ -1,6 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
+using static NES.ByteExtensions;
 
 namespace NES
 {
@@ -499,47 +498,59 @@ namespace NES
         /// </summary>
         private void RTI()
         {
-            ushort address = ParseStackAddress((byte)(_stackPointer.GetValue() + 1));
-
-            byte flags = _memory.Fetch(address++);
+            byte flags = Pop();
             _flags.SetValue(flags);
 
-            byte pcLowByte = _memory.Fetch(address++);
-            byte pcHighByte = _memory.Fetch(address);
+            byte pcLowByte = Pop();
+            byte pcHighByte = Pop();
+            _programCounter.SetValue(ParseBytes(pcLowByte, pcHighByte));
 
-            _programCounter.SetValue(ByteExtensions.ParseBytes(pcLowByte, pcHighByte));
-            _stackPointer.SetValue((byte)(_stackPointer.GetValue() + 3));
+            //ushort address = ParseStackAddress((byte)(_stackPointer.GetValue() + 1));
+
+            //byte flags = _memory.Fetch(address++);
+            //_flags.SetValue(flags);
+
+            //byte pcLowByte = _memory.Fetch(address++);
+            //byte pcHighByte = _memory.Fetch(address);
+            //_stackPointer.SetValue((byte)(_stackPointer.GetValue() + 3));
         }
 
         /// <summary>
-        /// Performs two pops operation into the stack in order to fetch: low byte and then high byte of the program counter, and then 
-        /// sets into the program counter (minus 1).
+        /// Pops the low byte and high byte of the program counter (set when jumping into a routine).
         /// </summary>
         private void RTS()
         {
-            ushort address = ParseStackAddress((byte)(_stackPointer.GetValue() + 1));
+            byte pcLowByte = Pop();
+            byte pcHighByte = Pop();
 
-            byte pcLowByte = _memory.Fetch(address++);
-            byte pcHighByte = _memory.Fetch(address);
-
-            ushort pcAddress = (ushort)(ByteExtensions.ParseBytes(pcLowByte, pcHighByte) - 1);
+            ushort pcAddress = (ushort)(ParseBytes(pcLowByte, pcHighByte) + 1);
             _programCounter.SetValue(pcAddress);
 
-            _stackPointer.SetValue((byte)(_stackPointer.GetValue() + 2));
+            //ushort address = ParseStackAddress((byte)(_stackPointer.GetValue() + 1));
+
+            //byte pcLowByte = _memory.Fetch(address++);
+            //byte pcHighByte = _memory.Fetch(address);
+
+            //ushort pcAddress = (ushort)(ParseBytes(pcLowByte, pcHighByte) - 1);
+            //_programCounter.SetValue(pcAddress);
+
+            //_stackPointer.SetValue((byte)(_stackPointer.GetValue() + 2));
         }
 
         /// <summary>
-        /// Pops/pulls a byte from the stack (which is in this case the processor status flag).
+        /// Pops/pulls the processor status flags from the stack.
         /// </summary>
         private void PLP()
         {
-            byte stackPointer = _stackPointer.GetValue();
-            ushort address = ParseStackAddress(++stackPointer);
+            _flags.SetValue(Pop());
 
-            byte flags = _memory.Fetch(address);
+            //byte stackPointer = _stackPointer.GetValue();
+            //ushort address = ParseStackAddress(++stackPointer);
 
-            _flags.SetValue(flags);
-            _stackPointer.SetValue(stackPointer);
+            //byte flags = _memory.Fetch(address);
+
+            //_flags.SetValue(flags);
+            //_stackPointer.SetValue(stackPointer);
         }
 
         /// <summary>
@@ -547,16 +558,23 @@ namespace NES
         /// </summary>
         private void PLA()
         {
-            byte stackPointer = _stackPointer.GetValue();
-            ushort address = ParseStackAddress(++stackPointer);
-
-            byte val = _memory.Fetch(address);
+            byte val = Pop();
 
             _flags.SetFlag(StatusFlag.Zero, val == 0);
             _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
 
             _a.SetValue(val);
-            _stackPointer.SetValue(stackPointer);
+
+            //byte stackPointer = _stackPointer.GetValue();
+            //ushort address = ParseStackAddress(++stackPointer);
+
+            //byte val = _memory.Fetch(address);
+
+            //_flags.SetFlag(StatusFlag.Zero, val == 0);
+            //_flags.SetFlag(StatusFlag.Negative, val.IsNegative());
+
+            //_a.SetValue(val);
+            //_stackPointer.SetValue(stackPointer);
         }
 
         /// <summary>
@@ -564,12 +582,14 @@ namespace NES
         /// </summary>
         private void PHP()
         {
-            byte stackPointer = _stackPointer.GetValue();
-            ushort address = ParseStackAddress(stackPointer);
+            Push(_flags.GetValue());
 
-            _memory.Store(address, _flags.GetValue());
+            //byte stackPointer = _stackPointer.GetValue();
+            //ushort address = ParseStackAddress(stackPointer);
 
-            _stackPointer.SetValue((byte)(stackPointer - 1));
+            //_memory.Store(address, _flags.GetValue());
+
+            //_stackPointer.SetValue((byte)(stackPointer - 1));
         }
 
         /// <summary>
@@ -577,12 +597,14 @@ namespace NES
         /// </summary>
         private void PHA()
         {
-            byte stackPointer = _stackPointer.GetValue();
-            ushort address = ParseStackAddress(stackPointer);
+            Push(_a.GetValue());
 
-            _memory.Store(address, _a.GetValue());
+            //byte stackPointer = _stackPointer.GetValue();
+            //ushort address = ParseStackAddress(stackPointer);
 
-            _stackPointer.SetValue((byte)(stackPointer - 1));
+            //_memory.Store(address, _a.GetValue());
+
+            //_stackPointer.SetValue((byte)(stackPointer - 1));
         }
 
         /// <summary>
@@ -625,13 +647,23 @@ namespace NES
         private void JSR()
         {
             ushort returnAddress = _programCounter.GetValue();
-            ushort stackPointerAddr = ParseStackAddress(_stackPointer.GetValue());
-            _memory.Store(stackPointerAddr--, (byte)(returnAddress >> 8));
-            _memory.Store(stackPointerAddr, (byte)(returnAddress));
 
-            _stackPointer.SetValue((byte)(_stackPointer.GetValue() - 2));
+            // Pushes the high byte
+            Push(returnAddress.GetHighByte());
+
+            // Pushes the low byte
+            Push(returnAddress.GetLowByte());
 
             _programCounter.SetValue(_operandAddress);
+
+            //ushort returnAddress = _programCounter.GetValue();
+            //ushort stackPointerAddr = ParseStackAddress(_stackPointer.GetValue());
+            //_memory.Store(stackPointerAddr--, (byte)(returnAddress >> 8));
+            //_memory.Store(stackPointerAddr, (byte)(returnAddress));
+
+            //_stackPointer.SetValue((byte)(_stackPointer.GetValue() - 2));
+
+            //_programCounter.SetValue(_operandAddress);
         }
 
         /// <summary>
@@ -1253,7 +1285,7 @@ namespace NES
 
                         byte highByte = _memory.Fetch(_pcAddress);
 
-                        addressParsed = ByteExtensions.ParseBytes(lowByte, highByte);
+                        addressParsed = ParseBytes(lowByte, highByte);
                     }
                     if (mode == AddressingMode.Indirect)
                     {
@@ -1261,7 +1293,7 @@ namespace NES
                         byte lowByte = _memory.Fetch(addressParsed++);
                         byte highByte = _memory.Fetch(addressParsed);
 
-                        operandAddress = ByteExtensions.ParseBytes(lowByte, highByte);
+                        operandAddress = ParseBytes(lowByte, highByte);
                     }
                     else if (mode == AddressingMode.Absolute)
                         operandAddress = addressParsed;
@@ -1277,7 +1309,7 @@ namespace NES
                         byte lowByte = _memory.Fetch(address++);
                         byte highByte = _memory.Fetch(address);
 
-                        operandAddress = ByteExtensions.ParseBytes(lowByte, highByte);
+                        operandAddress = ParseBytes(lowByte, highByte);
                     }
                     break;
                 case AddressingMode.IndirectY:
@@ -1287,7 +1319,7 @@ namespace NES
                         byte lowByte = _memory.Fetch(zeroPageAddress++);
                         byte highByte = _memory.Fetch(zeroPageAddress);
 
-                        operandAddress = (ushort)(ByteExtensions.ParseBytes(lowByte, highByte) + _y.GetValue());
+                        operandAddress = (ushort)(ParseBytes(lowByte, highByte) + _y.GetValue());
                     }
                     break;
                 default:
@@ -1316,39 +1348,41 @@ namespace NES
         {
             return (ushort)(0x0100 | stackPointerAddress);
         }
-    }
-
-
-    public static class ByteExtensions
-    {
 
         /// <summary>
-        /// Parse low byte and high byte in order to format it based on little endian format.
+        /// Pushes a value onto the stack (it updates the stack pointer after pushing the value).
         /// </summary>
-        /// <param name="lowByte">Low byte (least significant byte).</param>
-        /// <param name="highByte">High byte (most significant byte).</param>
-        /// <returns>A 16 bit value.</returns>
-        public static ushort ParseBytes(byte lowByte, byte highByte)
+        /// <param name="b">The value that would be pushed into the stack.</param>
+        private void Push(byte b)
         {
-            //string highByteHex = highByte.ToString("x");
-            //string lowByteHex = lowByte.ToString("x");
+            byte stackPointer = _stackPointer.GetValue();
 
-            // https://stackoverflow.com/questions/6090561/how-to-use-high-and-low-bytes
-            return (ushort)(lowByte | highByte << 8);
+            /* When pushing a byte onto the stack, the stack pointer is decremented by one (the stack pointer groes down). Also the stack pointer
+             * points to the next available slot in the stack's memory page.
+             */
+            ushort address = ParseStackAddress(stackPointer--);
 
-            //return Convert.ToUInt16(highByteHex + lowByteHex, 16);
+            _memory.Store(address, b);
+
+            _stackPointer.SetValue(stackPointer);
         }
 
         /// <summary>
-        /// Checks if the given value is negative (the bit no. 7 is "on").
+        /// Pops a value from the stack (it updates the stack pointer after popping the value).
         /// </summary>
-        /// <param name="val">The value.</param>
-        /// <returns>True if it's negative; otherwise false.</returns>
-        public static bool IsNegative(this byte val)
+        /// <returns>The top value in the stack.</returns>
+        private byte Pop()
         {
-            byte mask = 1 << 7;
+            byte stackPointer = _stackPointer.GetValue();
 
-            return (val & mask) == 0x0080;
+            // When popping a byte from the stack, the stack pointer is incremented by one
+            ushort address = ParseStackAddress(++stackPointer);
+
+            byte val = _memory.Fetch(address);
+
+            _stackPointer.SetValue(stackPointer);
+
+            return val;
         }
     }
 
