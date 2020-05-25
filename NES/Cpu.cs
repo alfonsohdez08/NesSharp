@@ -132,6 +132,7 @@ namespace NES
         /// <summary>
         /// Holds the address of the outer 
         /// </summary>
+        // TODO: implement Peek, Push, Pop 
         private readonly Register<byte> _stackPointer = new Register<byte>();
 
         /// <summary>
@@ -153,12 +154,16 @@ namespace NES
         public byte Accumulator => _a.GetValue();
         public byte X => _x.GetValue();
         public byte Y => _y.GetValue();
-        public byte Flags => _flags.GetValue();
+        public bool Negative => _flags.GetFlag(StatusFlag.Negative);
+        public bool Zero => _flags.GetFlag(StatusFlag.Zero);
+        public bool Overflow => _flags.GetFlag(StatusFlag.Overflow);
+        public bool Interrupt => _flags.GetFlag(StatusFlag.Interrupt);
+        public bool Carry => _flags.GetFlag(StatusFlag.Carry);
         public byte StackPointer => _stackPointer.GetValue();
         public ushort ProgramCounter => _programCounter.GetValue();
 
         /// <summary>
-        /// Creates an instace of a 6502 CPU.
+        /// Creates an instance of a 6502 CPU.
         /// </summary>
         /// <param name="memory">Memory with program already loaded.</param>
         /// <param name="startingAddress">Address where the program starts.</param>
@@ -386,49 +391,101 @@ namespace NES
             return true;
         }
 
+        /// <summary>
+        /// Transfers the content of the register Y to the Accumulator.
+        /// </summary>
         private void TYA()
         {
-            throw new NotImplementedException();
+            byte val = _y.GetValue();
+
+            _flags.SetFlag(StatusFlag.Zero, val == 0);
+            _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
+
+            _a.SetValue(val);
         }
 
+        /// <summary>
+        /// Transfers the content of the register X to Stack Pointer register.
+        /// </summary>
         private void TXS()
         {
-            throw new NotImplementedException();
+            _stackPointer.SetValue(_x.GetValue());
         }
 
+        /// <summary>
+        /// Transfers the content of the register X to the Accumulator.
+        /// </summary>
         private void TXA()
         {
-            throw new NotImplementedException();
+            byte val = _x.GetValue();
+
+            _flags.SetFlag(StatusFlag.Zero, val == 0);
+            _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
+
+            _a.SetValue(_x.GetValue());
         }
 
+        /// <summary>
+        /// Transfers the content of the Stack Pointer register to the X register.
+        /// </summary>
         private void TSX()
         {
-            throw new NotImplementedException();
+            byte val = _stackPointer.GetValue();
+
+            _flags.SetFlag(StatusFlag.Zero, val == 0);
+            _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
+
+            _x.SetValue(val);
         }
 
+        /// <summary>
+        /// Transfers the content of Acummulator to the register Y.
+        /// </summary>
         private void TAY()
         {
-            throw new NotImplementedException();
+            byte val = _a.GetValue();
+
+            _flags.SetFlag(StatusFlag.Zero, val == 0);
+            _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
+
+            _y.SetValue(val);
         }
 
+        /// <summary>
+        /// Transfers the content of Acummulator to the register X.
+        /// </summary>
         private void TAX()
         {
-            throw new NotImplementedException();
+            byte val = _a.GetValue();
+
+            _flags.SetFlag(StatusFlag.Zero, val == 0);
+            _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
+
+            _x.SetValue(val);
         }
 
+        /// <summary>
+        /// Stores the content of the register Y to a memory slot.
+        /// </summary>
         private void STY()
         {
-            throw new NotImplementedException();
+            _memory.Store(_operandAddress, _y.GetValue());
         }
 
+        /// <summary>
+        /// Stores the content of the register Y to a memory slot.
+        /// </summary>
         private void STX()
         {
-            throw new NotImplementedException();
+            _memory.Store(_operandAddress, _x.GetValue());
         }
 
+        /// <summary>
+        /// Sets the interrupt flag to true.
+        /// </summary>
         private void SEI()
         {
-            throw new NotImplementedException();
+            _flags.SetFlag(StatusFlag.Interrupt, true);
         }
 
         private void SED()
@@ -436,114 +493,283 @@ namespace NES
             throw new NotImplementedException();
         }
 
+        /// <summary>
+        /// Pops/pulls the processor flags and the program counter from the stack (first pop is the processor flags, then the next 2 pops operations 
+        /// are for fetch the low byte and high byte of the program counter).
+        /// </summary>
         private void RTI()
         {
-            throw new NotImplementedException();
+            ushort address = ParseStackAddress((byte)(_stackPointer.GetValue() + 1));
+
+            byte flags = _memory.Fetch(address++);
+            _flags.SetValue(flags);
+
+            byte pcLowByte = _memory.Fetch(address++);
+            byte pcHighByte = _memory.Fetch(address);
+
+            _programCounter.SetValue(ByteExtensions.ParseBytes(pcLowByte, pcHighByte));
+            _stackPointer.SetValue((byte)(_stackPointer.GetValue() + 3));
         }
 
+        /// <summary>
+        /// Performs two pops operation into the stack in order to fetch: low byte and then high byte of the program counter, and then 
+        /// sets into the program counter (minus 1).
+        /// </summary>
         private void RTS()
         {
-            throw new NotImplementedException();
+            ushort address = ParseStackAddress((byte)(_stackPointer.GetValue() + 1));
+
+            byte pcLowByte = _memory.Fetch(address++);
+            byte pcHighByte = _memory.Fetch(address);
+
+            ushort pcAddress = (ushort)(ByteExtensions.ParseBytes(pcLowByte, pcHighByte) - 1);
+            _programCounter.SetValue(pcAddress);
+
+            _stackPointer.SetValue((byte)(_stackPointer.GetValue() + 2));
         }
 
+        /// <summary>
+        /// Pops/pulls a byte from the stack (which is in this case the processor status flag).
+        /// </summary>
         private void PLP()
         {
-            throw new NotImplementedException();
+            byte stackPointer = _stackPointer.GetValue();
+            ushort address = ParseStackAddress(++stackPointer);
+
+            byte flags = _memory.Fetch(address);
+
+            _flags.SetValue(flags);
+            _stackPointer.SetValue(stackPointer);
         }
 
+        /// <summary>
+        /// Pops/pulls a byte from the stack and store into the Accumulator.
+        /// </summary>
         private void PLA()
         {
-            throw new NotImplementedException();
+            byte stackPointer = _stackPointer.GetValue();
+            ushort address = ParseStackAddress(++stackPointer);
+
+            byte val = _memory.Fetch(address);
+
+            _flags.SetFlag(StatusFlag.Zero, val == 0);
+            _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
+
+            _a.SetValue(val);
+            _stackPointer.SetValue(stackPointer);
         }
 
+        /// <summary>
+        /// Pushes a copy of the processor status flag into the stack.
+        /// </summary>
         private void PHP()
         {
-            throw new NotImplementedException();
+            byte stackPointer = _stackPointer.GetValue();
+            ushort address = ParseStackAddress(stackPointer);
+
+            _memory.Store(address, _flags.GetValue());
+
+            _stackPointer.SetValue((byte)(stackPointer - 1));
         }
 
+        /// <summary>
+        /// Pushes a copy of the accumulator into the stack.
+        /// </summary>
         private void PHA()
         {
-            throw new NotImplementedException();
+            byte stackPointer = _stackPointer.GetValue();
+            ushort address = ParseStackAddress(stackPointer);
+
+            _memory.Store(address, _a.GetValue());
+
+            _stackPointer.SetValue((byte)(stackPointer - 1));
         }
 
+        /// <summary>
+        /// Doesn't do anything.
+        /// </summary>
         private void NOP()
         {
-            throw new NotImplementedException();
+            //IncrementPC();
         }
 
+        /// <summary>
+        /// Loads a value into the register Y.
+        /// </summary>
         private void LDY()
         {
-            throw new NotImplementedException();
+            byte val = _memory.Fetch(_operandAddress);
+
+            _flags.SetFlag(StatusFlag.Zero, val == 0);
+            _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
+
+            _y.SetValue(val);
         }
 
+        /// <summary>
+        /// Loads a value into the register X.
+        /// </summary>
         private void LDX()
         {
-            throw new NotImplementedException();
+            byte val = _memory.Fetch(_operandAddress);
+
+            _flags.SetFlag(StatusFlag.Zero, val == 0);
+            _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
+
+            _x.SetValue(val);
         }
 
+        /// <summary>
+        /// Pushes the program counter address minus one into the stack and sets the program counter to the target memory address.
+        /// </summary>
         private void JSR()
         {
-            throw new NotImplementedException();
+            ushort returnAddress = _programCounter.GetValue();
+            ushort stackPointerAddr = ParseStackAddress(_stackPointer.GetValue());
+            _memory.Store(stackPointerAddr--, (byte)(returnAddress >> 8));
+            _memory.Store(stackPointerAddr, (byte)(returnAddress));
+
+            _stackPointer.SetValue((byte)(_stackPointer.GetValue() - 2));
+
+            _programCounter.SetValue(_operandAddress);
         }
 
+        /// <summary>
+        /// Sets the program counter to the address specified in the JMP instruction.
+        /// </summary>
         private void JMP()
         {
-            throw new NotImplementedException();
+            _programCounter.SetValue(_operandAddress);
         }
 
+        /// <summary>
+        /// Increments the register Y by one.
+        /// </summary>
         private void INY()
         {
-            throw new NotImplementedException();
+            byte val = (byte)(_y.GetValue() + 1);
+
+            _flags.SetFlag(StatusFlag.Zero, val == 0);
+            _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
+
+            _y.SetValue(val);
         }
 
+        /// <summary>
+        /// Increments the register X by one.
+        /// </summary>
         private void INX()
         {
-            throw new NotImplementedException();
+            byte val = (byte)(_x.GetValue() + 1);
+
+            _flags.SetFlag(StatusFlag.Zero, val == 0);
+            _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
+
+            _x.SetValue(val);
         }
 
+        /// <summary>
+        /// Increments by one the value allocated in the memory adddress specified.
+        /// </summary>
         private void INC()
         {
-            throw new NotImplementedException();
+            byte val = (byte)(_memory.Fetch(_operandAddress) + 1);
+
+            _flags.SetFlag(StatusFlag.Zero, val == 0);
+            _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
+
+            _memory.Store(_operandAddress, val);
         }
 
+        /// <summary>
+        /// Decrements the register Y by one.
+        /// </summary>
         private void DEY()
         {
-            throw new NotImplementedException();
+            byte val = (byte)(_y.GetValue() - 1);
+
+            _flags.SetFlag(StatusFlag.Zero, val == 0);
+            _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
+
+            _y.SetValue(val);
         }
 
+        /// <summary>
+        /// Decrements the register X by one.
+        /// </summary>
         private void DEX()
         {
-            throw new NotImplementedException();
+            byte val = (byte)(_x.GetValue() - 1);
+
+            _flags.SetFlag(StatusFlag.Zero, val == 0);
+            _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
+
+            _x.SetValue(val);
         }
 
+        /// <summary>
+        /// Decrements by one the value allocated in the memory address specified.
+        /// </summary>
         private void DEC()
         {
-            throw new NotImplementedException();
+            byte val = (byte)(_memory.Fetch(_operandAddress) - 1);
+
+            _flags.SetFlag(StatusFlag.Zero, val == 0);
+            _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
+
+            _memory.Store(_operandAddress, val);
         }
 
+        /// <summary>
+        /// Compares the content of the register Y against a value held in memory.
+        /// </summary>
         private void CPY()
         {
-            throw new NotImplementedException();
+            Compares(_y.GetValue(), _memory.Fetch(_operandAddress));
         }
 
+        /// <summary>
+        /// Compares the content of the register X against a value held in memory.
+        /// </summary>
         private void CPX()
         {
-            throw new NotImplementedException();
+            Compares(_x.GetValue(), _memory.Fetch(_operandAddress));
         }
 
+        /// <summary>
+        /// Compares the content of the accumulator against a value held in memory.
+        /// </summary>
         private void CMP()
         {
-            throw new NotImplementedException();
+            Compares(_a.GetValue(), _memory.Fetch(_operandAddress));
         }
 
+        /// <summary>
+        /// Compares two bytes and updates the CPU flags based on the result.
+        /// </summary>
+        /// <param name="register">A value coming from a register (Accumulator, X, Y).</param>
+        /// <param name="memory">A value held in memory.</param>
+        private void Compares(byte register, byte memory)
+        {
+            _flags.SetFlag(StatusFlag.Carry, register >= memory);
+            _flags.SetFlag(StatusFlag.Zero, register == memory);
+            _flags.SetFlag(StatusFlag.Negative, ((byte)(register - memory)).IsNegative());
+        }
+
+        /// <summary>
+        /// Clears the overflow flag (by setting to false).
+        /// </summary>
         private void CLV()
         {
-            throw new NotImplementedException();
+            _flags.SetFlag(StatusFlag.Overflow, false);
         }
 
+        /// <summary>
+        /// Clears the interrupt flag (by setting to false).
+        /// </summary>
         private void CLI()
         {
-            throw new NotImplementedException();
+            _flags.SetFlag(StatusFlag.Interrupt, false);
         }
 
         private void CLD()
@@ -551,150 +777,117 @@ namespace NES
             throw new NotImplementedException();
         }
 
+        /// <summary>
+        /// Adds the address (a signed number) in scope to the program counter if overflow flag is set.
+        /// </summary>
         private void BVS()
         {
-            throw new NotImplementedException();
+            if (_flags.GetFlag(StatusFlag.Overflow))
+                _programCounter.SetValue((ushort)(_programCounter.GetValue() + (sbyte)_operandAddress));
         }
 
+        /// <summary>
+        /// Adds the address (a signed number) in scope to the program counter if overflow flag is not set.
+        /// </summary>
         private void BVC()
         {
-            throw new NotImplementedException();
+            if (!_flags.GetFlag(StatusFlag.Overflow))
+                _programCounter.SetValue((ushort)(_programCounter.GetValue() + (sbyte)_operandAddress));
         }
 
+        /// <summary>
+        /// Adds the address (a signed number) in scope to the program counter if negative flag is not set.
+        /// </summary>
         private void BPL()
         {
-            throw new NotImplementedException();
+            if (!_flags.GetFlag(StatusFlag.Negative))
+                _programCounter.SetValue((ushort)(_programCounter.GetValue() + (sbyte)_operandAddress));
         }
 
+        /// <summary>
+        /// Forces CPU interruption.
+        /// </summary>
         private void BRK()
         {
-            throw new NotImplementedException();
+            // TODO: review this impl
+            ushort pcAddress = _programCounter.GetValue();
+            byte pcLowByte = (byte)pcAddress;
+            byte pcHighByte = (byte)(pcAddress >> 8);
+
+            ushort stackPointerAddr = ParseStackAddress(_stackPointer.GetValue());
+            _memory.Store(stackPointerAddr--, pcHighByte);
+            _memory.Store(stackPointerAddr--, pcLowByte);
+
+            _memory.Store(stackPointerAddr, _flags.GetValue());
+
+            _flags.SetFlag(StatusFlag.Break1, true);
+            _flags.SetFlag(StatusFlag.Break2, true);
+
+            _stackPointer.SetValue((byte)(_stackPointer.GetValue() - 3));
+            _flags.SetFlag(StatusFlag.Interrupt, true);
+
+            // interrupt vector
+            _programCounter.SetValue(0xFFFF);
         }
 
+        /// <summary>
+        /// Adds the address (a signed number) in scope to the program counter if zero flag is not set.
+        /// </summary>
         private void BNE()
         {
-            throw new NotImplementedException();
+            if (!_flags.GetFlag(StatusFlag.Zero))
+                _programCounter.SetValue((ushort)(_programCounter.GetValue() + (sbyte)_operandAddress));
         }
 
+        /// <summary>
+        /// Adds the address (a signed number) in scope to the program counter if negative flag is set.
+        /// </summary>
         private void BMI()
         {
-            throw new NotImplementedException();
+            if (_flags.GetFlag(StatusFlag.Negative))
+                _programCounter.SetValue((ushort)(_programCounter.GetValue() + (sbyte)_operandAddress));
         }
 
+        /// <summary>
+        /// This instructions is used to test if one or more bits are set in a target memory location. The mask pattern in A is ANDed with the value 
+        /// in memory to set or clear the zero flag, but the result is not kept. Bits 7 and 6 of the value from memory are copied into the N and V flags.
+        /// (source: http://www.obelisk.me.uk/6502/reference.html#BIT)
+        /// </summary>
         private void BIT()
         {
-            throw new NotImplementedException();
+            byte accumulator = _a.GetValue();
+            byte memory = _memory.Fetch(_operandAddress);
+
+            _flags.SetFlag(StatusFlag.Zero, (accumulator & memory) == 0);
+            _flags.SetFlag(StatusFlag.Overflow, (memory & 0x0040) == 0x0040); // bit no. 6 from the memory value
+            _flags.SetFlag(StatusFlag.Negative, memory.IsNegative());
         }
 
+        /// <summary>
+        /// Adds the address (a signed number) in scope to the program counter if zero flag is set.
+        /// </summary>
         private void BEQ()
         {
-            throw new NotImplementedException();
+            if (_flags.GetFlag(StatusFlag.Zero))
+                _programCounter.SetValue((ushort)(_programCounter.GetValue() + (sbyte)_operandAddress));
         }
 
+        /// <summary>
+        /// Adds the address (a signed number) in scope to the program counter if carry flag is set.
+        /// </summary>
         private void BCS()
         {
-            throw new NotImplementedException();
+            if (_flags.GetFlag(StatusFlag.Carry))
+                _programCounter.SetValue((ushort)(_programCounter.GetValue() + (sbyte)_operandAddress));
         }
 
+        /// <summary>
+        /// Adds the address (a signed number) in scope to the program counter if carry flag is not set.
+        /// </summary>
         private void BCC()
         {
-            throw new NotImplementedException();
-        }
-
-        #region Addressing modes
-
-        /// <summary>
-        /// Fetchs the instruction operand based on the instruction addressing mode.
-        /// </summary>
-        /// <param name="mode">The instruction's addressing mode.</param>
-        private void FetchOperand(AddressingMode mode)
-        {
-            if (mode == AddressingMode.Accumulator)
-                return;
-
-            ushort operandAddress;
-            
-            IncrementPC();
-
-            switch (mode)
-            {
-                case AddressingMode.ZeroPage:
-                    operandAddress = _memory.Fetch(_pcAddress);
-                    break;
-                case AddressingMode.ZeroPageX:
-                    operandAddress = (byte)(_memory.Fetch(_pcAddress) + _x.GetValue()); // If carry in the high byte (result greater than 255), requires an additiona cycle
-                    break;
-                case AddressingMode.ZeroPageY:
-                    operandAddress = (byte)(_memory.Fetch(_pcAddress) + _y.GetValue()); // If carry in the high byte (result greater than 255), requires an additiona cycle
-                    break;
-                case AddressingMode.Immediate:
-                case AddressingMode.Relative:
-                    operandAddress = _pcAddress;
-                    break;
-                case AddressingMode.Absolute:
-                case AddressingMode.AbsoluteX:
-                case AddressingMode.AbsoluteY:
-                case AddressingMode.Indirect:
-                    ushort addressParsed;
-                    {
-                        byte lowByte = _memory.Fetch(_pcAddress);
-
-                        IncrementPC();
-
-                        byte highByte = _memory.Fetch(_pcAddress);
-
-                        addressParsed = ByteExtensions.ParseBytes(lowByte, highByte);
-                    }
-                    if (mode == AddressingMode.Indirect)
-                    {
-                        // The content located in the address parsed is the LSB (Least Significant Byte) of the target address
-                        byte lowByte = _memory.Fetch(addressParsed++);
-                        byte highByte = _memory.Fetch(addressParsed);
-
-                        operandAddress = ByteExtensions.ParseBytes(lowByte, highByte);
-                    }
-                    else if (mode == AddressingMode.Absolute)
-                        operandAddress = addressParsed;
-                    else if (mode == AddressingMode.AbsoluteX)
-                        operandAddress = (ushort)(addressParsed + _x.GetValue());
-                    else
-                        operandAddress = (ushort)(addressParsed + _y.GetValue());
-                    break;
-                case AddressingMode.IndirectX:
-                    {
-                        byte address = (byte)(_memory.Fetch(_pcAddress) + _x.GetValue()); // Wraps around the zero page
-
-                        byte lowByte = _memory.Fetch(address++);
-                        byte highByte = _memory.Fetch(address);
-
-                        operandAddress = ByteExtensions.ParseBytes(lowByte, highByte);
-                    }
-                    break;
-                case AddressingMode.IndirectY:
-                    {
-                        byte zeroPageAddress = _memory.Fetch(_pcAddress);
-
-                        byte lowByte = _memory.Fetch(zeroPageAddress++);
-                        byte highByte = _memory.Fetch(zeroPageAddress);
-
-                        operandAddress = (ushort)(ByteExtensions.ParseBytes(lowByte, highByte) + _y.GetValue());
-                    }
-                    break;
-                default:
-                    throw new NotImplementedException($"The given addressing mode is not supported: {mode.ToString()}.");
-            }
-
-            _operandAddress = operandAddress;
-        }
-
-        #endregion
-
-        /// <summary>
-        /// Increments the address allocated in the Program Counter.
-        /// </summary>
-        private void IncrementPC()
-        {
-            _programCounter.SetValue((ushort)(_pcAddress + 1));
+            if (!_flags.GetFlag(StatusFlag.Carry))
+                _programCounter.SetValue((ushort)(_programCounter.GetValue() + (sbyte)_operandAddress));
         }
 
         /// <summary>
@@ -1016,6 +1209,112 @@ namespace NES
             _flags.SetFlag(StatusFlag.Negative, result.IsNegative());
 
             _a.SetValue(result);
+        }
+
+        #region Addressing modes
+
+        /// <summary>
+        /// Fetchs the instruction operand based on the instruction addressing mode.
+        /// </summary>
+        /// <param name="mode">The instruction's addressing mode.</param>
+        private void FetchOperand(AddressingMode mode)
+        {
+            if (mode == AddressingMode.Accumulator || mode == AddressingMode.Implied)
+                return;
+
+            ushort operandAddress;
+
+            IncrementPC();
+
+            switch (mode)
+            {
+                case AddressingMode.ZeroPage:
+                    operandAddress = _memory.Fetch(_pcAddress);
+                    break;
+                case AddressingMode.ZeroPageX:
+                    operandAddress = (byte)(_memory.Fetch(_pcAddress) + _x.GetValue()); // If carry in the high byte (result greater than 255), requires an additiona cycle
+                    break;
+                case AddressingMode.ZeroPageY:
+                    operandAddress = (byte)(_memory.Fetch(_pcAddress) + _y.GetValue()); // If carry in the high byte (result greater than 255), requires an additiona cycle
+                    break;
+                case AddressingMode.Immediate:
+                case AddressingMode.Relative:
+                    operandAddress = _pcAddress;
+                    break;
+                case AddressingMode.Absolute:
+                case AddressingMode.AbsoluteX:
+                case AddressingMode.AbsoluteY:
+                case AddressingMode.Indirect:
+                    ushort addressParsed;
+                    {
+                        byte lowByte = _memory.Fetch(_pcAddress);
+
+                        IncrementPC();
+
+                        byte highByte = _memory.Fetch(_pcAddress);
+
+                        addressParsed = ByteExtensions.ParseBytes(lowByte, highByte);
+                    }
+                    if (mode == AddressingMode.Indirect)
+                    {
+                        // The content located in the address parsed is the LSB (Least Significant Byte) of the target address
+                        byte lowByte = _memory.Fetch(addressParsed++);
+                        byte highByte = _memory.Fetch(addressParsed);
+
+                        operandAddress = ByteExtensions.ParseBytes(lowByte, highByte);
+                    }
+                    else if (mode == AddressingMode.Absolute)
+                        operandAddress = addressParsed;
+                    else if (mode == AddressingMode.AbsoluteX)
+                        operandAddress = (ushort)(addressParsed + _x.GetValue());
+                    else
+                        operandAddress = (ushort)(addressParsed + _y.GetValue());
+                    break;
+                case AddressingMode.IndirectX:
+                    {
+                        byte address = (byte)(_memory.Fetch(_pcAddress) + _x.GetValue()); // Wraps around the zero page
+
+                        byte lowByte = _memory.Fetch(address++);
+                        byte highByte = _memory.Fetch(address);
+
+                        operandAddress = ByteExtensions.ParseBytes(lowByte, highByte);
+                    }
+                    break;
+                case AddressingMode.IndirectY:
+                    {
+                        byte zeroPageAddress = _memory.Fetch(_pcAddress);
+
+                        byte lowByte = _memory.Fetch(zeroPageAddress++);
+                        byte highByte = _memory.Fetch(zeroPageAddress);
+
+                        operandAddress = (ushort)(ByteExtensions.ParseBytes(lowByte, highByte) + _y.GetValue());
+                    }
+                    break;
+                default:
+                    throw new NotImplementedException($"The given addressing mode is not supported: {mode.ToString()}.");
+            }
+
+            _operandAddress = operandAddress;
+        }
+
+        #endregion
+
+        /// <summary>
+        /// Increments the address allocated in the Program Counter.
+        /// </summary>
+        private void IncrementPC()
+        {
+            _programCounter.SetValue((ushort)(_pcAddress + 1));
+        }
+
+        /// <summary>
+        /// Parses the address for a stack operation (the stack uses the second page (page 1) from the CPU memory).
+        /// </summary>
+        /// <param name="stackPointerAddress">The address where the stack points.</param>
+        /// <returns>An address somewhere in the page 1.</returns>
+        private static ushort ParseStackAddress(byte stackPointerAddress)
+        {
+            return (ushort)(0x0100 | stackPointerAddress);
         }
     }
 

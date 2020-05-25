@@ -1,6 +1,7 @@
 ﻿using NES._6502;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 
 namespace NES
@@ -30,11 +31,15 @@ namespace NES
 
             //cpu.Start();
 
-            var sb = new StringBuilder();
-            sb.AppendLine("lda #$01");
-            sb.AppendLine("sta $10A");
+            //byte[] rom = File.Re(@"C:\Users\ward\source\repos\NES\NES\nestest.nes");
+            var b = File.ReadAllBytes(@"C:\Users\ward\source\repos\NES\NES\nestest.nes");
+            ushort startAddress = 0xC000;
 
-            ProgramAssembled programAssembled = Assembler.Assemble(sb.ToString());
+            //var sb = new StringBuilder();
+            //sb.AppendLine("lda #$01");
+            //sb.AppendLine("sta $10A");
+
+            //ProgramAssembled programAssembled = Assembler.Assemble(sb.ToString());
 
             Console.ReadLine();
         }
