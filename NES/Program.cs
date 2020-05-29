@@ -14,16 +14,10 @@ namespace NES
             Memory memory = iNESParser.ParseNesFile(nesFile);
             var cpu = new Cpu(memory, 0xC000);
 
-            cpu.Start();
-
-            //var cpu = new Cpu(Memory.LoadRom(nesRom), 0xC000);
             //cpu.Start();
 
-            //var sb = new StringBuilder();
-            //sb.AppendLine("lda #$01");
-            //sb.AppendLine("sta $10A");
+            cpu.StepInstruction();
 
-            //ProgramAssembled programAssembled = Assembler.Assemble(sb.ToString());
 
             Console.ReadLine();
         }

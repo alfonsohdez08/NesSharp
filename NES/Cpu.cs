@@ -184,6 +184,22 @@ namespace NES
         }
 
         /// <summary>
+        /// Executes the program instruction by instruction (useful for debugging, or for execute the first N instructions of a program).
+        /// </summary>
+        /// <returns>True if there are more instruction to executed; otherwise false.</returns>
+        public bool StepInstruction()
+        {
+            //if (_pcAddress > 0xFFFF)
+            //    return false;
+
+            bool @continue = Cycle();
+            if (@continue)
+                IncrementPC();
+
+            return @continue;
+        }
+
+        /// <summary>
         /// Executes a machine cycle (fetch, decode, execute instruction).
         /// </summary>
         private bool Cycle()
@@ -239,7 +255,8 @@ namespace NES
                     break;
                 case BRK_INSTRUCTION:
                     BRK();
-                    break;
+                    return false;
+                    //break;
                 case BVC_INSTRUCTION:
                     BVC();
                     break;
