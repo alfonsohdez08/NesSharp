@@ -1,8 +1,6 @@
-﻿using NES._6502;
+﻿using NES.Rom;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Text;
 
 namespace NES
 {
@@ -10,30 +8,16 @@ namespace NES
     {
         static void Main(string[] args)
         {
-            //string[] hexDump = new string[] { "a9", "01" ,"8d", "00", "02", "a9" ,"05" ,"8d" ,"01" ,"02" ,"a9" ,"08", "8d" ,"02" ,"02" };
-            //string program = "a9 88 38 e9 09";
-            //string program = "a9 88 38 e9 f7";
-            //string[] hexDump = program.Split(' ');
-            ////string[] hexDump = new string[] { "a9", "01", "e9","78" };
-            //var memory = new Memory();
-            //const ushort startingAddress = 0x0001;
-            //ushort address = startingAddress; //initial address
-
-            //for (int i = 0; i < hexDump.Length; i++)
-            //{
-            //    byte b = Convert.ToByte(hexDump[i], 16);
-
-            //    memory.Store(address, b);
-            //    address++;
-            //}
-
-            //var cpu = new Cpu(memory, startingAddress);
-
-            //cpu.Start();
-
             //byte[] rom = File.Re(@"C:\Users\ward\source\repos\NES\NES\nestest.nes");
-            var b = File.ReadAllBytes(@"C:\Users\ward\source\repos\NES\NES\nestest.nes");
-            ushort startAddress = 0xC000;
+            byte[] nesFile = File.ReadAllBytes(@"C:\Users\ward\source\repos\NES\NES\nestest.nes");
+
+            Memory memory = iNESParser.ParseNesFile(nesFile);
+            var cpu = new Cpu(memory, 0xC000);
+
+            cpu.Start();
+
+            //var cpu = new Cpu(Memory.LoadRom(nesRom), 0xC000);
+            //cpu.Start();
 
             //var sb = new StringBuilder();
             //sb.AppendLine("lda #$01");

@@ -144,7 +144,7 @@ namespace NES
         /// <summary>
         /// The CPU's memory.
         /// </summary>
-        private readonly IMemory _memory;
+        private readonly Memory _memory;
 
         /// <summary>
         /// Instruction's operand memory address (the location in memory where resides the instruction's operand).
@@ -160,13 +160,14 @@ namespace NES
         public bool Carry => _flags.GetFlag(StatusFlag.Carry);
         public byte StackPointer => _stackPointer.GetValue();
         public ushort ProgramCounter => _programCounter.GetValue();
+        public string ProgramCounterHexString => _programCounter.GetValue().ToString("X");
 
         /// <summary>
         /// Creates an instance of a 6502 CPU.
         /// </summary>
         /// <param name="memory">Memory with program already loaded.</param>
         /// <param name="startingAddress">Address where the program starts.</param>
-        public Cpu(IMemory memory, ushort startingAddress = 0x0200)
+        public Cpu(Memory memory, ushort startingAddress)
         {
             _memory = memory;
             _programCounter = new Register<ushort>(startingAddress);
@@ -671,7 +672,9 @@ namespace NES
         /// </summary>
         private void JMP()
         {
-            _programCounter.SetValue(_operandAddress);
+            //_programCounter.SetValue(_operandAddress);
+            // Is it possible that they would jump to the address $0000?
+            _programCounter.SetValue((ushort)(_operandAddress - 1)); // The actual address would be fecthed when incremeting the PC
         }
 
         /// <summary>
@@ -1412,5 +1415,7 @@ namespace NES
             AddressingMode = addressingMode;
             MachineCycles = machineCycles;
         }
+
+        public override string ToString() => $"{Mnemonic} {AddressingMode}";
     }
 }
