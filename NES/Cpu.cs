@@ -131,7 +131,6 @@ namespace NES
         /// <summary>
         /// Holds the address of the outer 
         /// </summary>
-        // TODO: implement Peek, Push, Pop 
         private readonly Register<byte> _stackPointer = new Register<byte>();
 
         /// <summary>
@@ -150,6 +149,7 @@ namespace NES
         /// Instruction's operand memory address (the location in memory where resides the instruction's operand).
         /// </summary>
         private ushort _operandAddress;
+
         public byte Accumulator => _a.GetValue();
         public byte X => _x.GetValue();
         public byte Y => _y.GetValue();
@@ -1227,12 +1227,12 @@ namespace NES
         private void AND()
         {
             byte val = _memory.Fetch(_operandAddress);
-            int result = val & _a.GetValue();
+            byte result = (byte)(val & _a.GetValue());
 
             _flags.SetFlag(StatusFlag.Zero, result == 0);
-            _flags.SetFlag(StatusFlag.Negative, (result & 0x0080) == 0x0080);
+            _flags.SetFlag(StatusFlag.Negative, result.IsNegative());
 
-            _a.SetValue((byte)result);
+            _a.SetValue(result);
         }
 
         /// <summary>

@@ -51,7 +51,9 @@ namespace NES.Rom
             for (int i = 0; address < 0xFFFF && i < prgUpperBank.Length; address++, i++)
                 nesMemory[address] = prgUpperBank[i];
 
-            return new Memory(nesMemory);
+            throw new NotImplementedException();
+
+            //return new Memory(nesMemory);
         }
     }
 }
