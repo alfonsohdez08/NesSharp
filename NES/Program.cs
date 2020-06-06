@@ -11,13 +11,12 @@ namespace NES
             //byte[] rom = File.Re(@"C:\Users\ward\source\repos\NES\NES\nestest.nes");
             byte[] nesFile = File.ReadAllBytes(@"C:\Users\ward\source\repos\NES\NES\nestest.nes");
 
-            Memory memory = iNESParser.ParseNesFile(nesFile);
-            var cpu = new Cpu(memory, 0xC000);
+            iNESParser.ParseNesRom(nesFile, out Memory cpuMemoryMapped, out Memory ppuMemoryMapped);
+            
+            var cpuBus = new CpuBus(cpuMemoryMapped);
+            var cpu = new Cpu(cpuBus, 0xC000);
 
-            //cpu.Start();
-
-            cpu.StepInstruction();
-
+            cpu.Start();
 
             Console.ReadLine();
         }

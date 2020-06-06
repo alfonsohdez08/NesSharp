@@ -7,7 +7,15 @@ namespace NES
     /// </summary>
     abstract class Bus
     {
-        protected Memory memory;
+        /// <summary>
+        /// The memory space reachable/available for the BUS.
+        /// </summary>
+        protected readonly Memory memory;
+
+        public Bus(Memory memory)
+        {
+            this.memory = memory;
+        }
 
         public abstract byte Read(ushort address);
         public abstract void Write(ushort address, byte val);
@@ -33,9 +41,8 @@ namespace NES
         /// </summary>
         private const ushort ThirdRamMirrorOffset = 6144;
 
-        public CpuBus()
+        public CpuBus(Memory memory):base(memory)
         {
-            memory = new Memory(ushort.MaxValue);
         }
 
         public override byte Read(ushort address) => memory.Fetch(address);
@@ -45,10 +52,15 @@ namespace NES
             // Hardware RAM (NES)
             if (address >= 0x0000 && address < 0x800)
                 WriteRam(address, val);
-            else if (address >= 0x2000 && address < 0x2008)
+            else if ((address >= 0x2000 && address < 0x2008) || (address >= 0x4000 && address < 0x4020))
                 WriteInputOutputRegisters(address, val);
         }
 
+        /// <summary>
+        /// Writes into the NES hardware RAM.
+        /// </summary>
+        /// <param name="address">The address where it should be written in the RAM.</param>
+        /// <param name="val">The value that would be stored in the slot specified by the address within the RAM.</param>
         private void WriteRam(ushort address, byte val)
         {
             // Writes in the first mirror 0x0800 - 0x0FFF
@@ -63,7 +75,12 @@ namespace NES
 
         private void WriteInputOutputRegisters(ushort address, byte val)
         {
-
+            if (address >= 0x2000 && address < 0x2008)
+                // Mirror the byte written every 8 bytes until 3FFF (inclusive)
+                for (ushort i = address; i < 0x4000; i += 0x0008)
+                    memory.Store(i, val);
+            else
+                memory.Store(address, val);
         }
     }
 
@@ -72,9 +89,8 @@ namespace NES
     /// </summary>
     class PpuBus : Bus
     {
-        public PpuBus()
+        public PpuBus(Memory memory): base(memory)
         {
-            memory = new Memory(0x4000);
         }
 
         public override byte Read(ushort address)

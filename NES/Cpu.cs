@@ -138,12 +138,12 @@ namespace NES
         /// </summary>
         private readonly Register<ushort> _programCounter;
 
-        private ushort _pcAddress => _programCounter.GetValue();
-
         /// <summary>
-        /// The CPU's memory.
+        /// The CPU bus (interacts with other components within the NES).
         /// </summary>
-        private readonly Memory _memory;
+        private readonly CpuBus _bus;
+
+        private ushort _pcAddress => _programCounter.GetValue();
 
         /// <summary>
         /// Instruction's operand memory address (the location in memory where resides the instruction's operand).
@@ -163,13 +163,24 @@ namespace NES
         public string ProgramCounterHexString => _programCounter.GetValue().ToString("X");
 
         /// <summary>
-        /// Creates an instance of a 6502 CPU.
+        /// Creates an instance of the 6502 CPU.
         /// </summary>
-        /// <param name="memory">Memory with program already loaded.</param>
-        /// <param name="startingAddress">Address where the program starts.</param>
-        public Cpu(Memory memory, ushort startingAddress)
+        /// <param name="bus">The CPU bus (used for interact with other components within the NES).</param>
+        public Cpu(CpuBus bus, ushort startingAddress = 0x0000)
         {
-            _memory = memory;
+            if (bus == null)
+                throw new ArgumentNullException(nameof(bus));
+
+            _bus = bus;
+            
+            if (startingAddress == 0x0000)
+            {
+                // fetch the starting address from the reset vector
+                byte lowByte = _bus.Read(0xFFFC);
+                byte highByte = _bus.Read(0xFFFD);
+
+                startingAddress = ParseBytes(lowByte, highByte);
+            }
             _programCounter = new Register<ushort>(startingAddress);
         }
 
@@ -210,7 +221,7 @@ namespace NES
              */
 
             // Fetchs the OpCode from the memory
-            byte opCode = _memory.Fetch(_pcAddress);
+            byte opCode = _bus.Read(_pcAddress);
             Instruction instruction = OpCodes[opCode];
             if (instruction == null) // Illegal opcode
                 return true;
@@ -486,7 +497,7 @@ namespace NES
         /// </summary>
         private void STY()
         {
-            _memory.Store(_operandAddress, _y.GetValue());
+            _bus.Write(_operandAddress, _y.GetValue());
         }
 
         /// <summary>
@@ -494,7 +505,7 @@ namespace NES
         /// </summary>
         private void STX()
         {
-            _memory.Store(_operandAddress, _x.GetValue());
+            _bus.Write(_operandAddress, _x.GetValue());
         }
 
         /// <summary>
@@ -638,7 +649,7 @@ namespace NES
         /// </summary>
         private void LDY()
         {
-            byte val = _memory.Fetch(_operandAddress);
+            byte val = _bus.Read(_operandAddress);
 
             _flags.SetFlag(StatusFlag.Zero, val == 0);
             _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
@@ -651,7 +662,7 @@ namespace NES
         /// </summary>
         private void LDX()
         {
-            byte val = _memory.Fetch(_operandAddress);
+            byte val = _bus.Read(_operandAddress);
 
             _flags.SetFlag(StatusFlag.Zero, val == 0);
             _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
@@ -725,12 +736,12 @@ namespace NES
         /// </summary>
         private void INC()
         {
-            byte val = (byte)(_memory.Fetch(_operandAddress) + 1);
+            byte val = (byte)(_bus.Read(_operandAddress) + 1);
 
             _flags.SetFlag(StatusFlag.Zero, val == 0);
             _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
 
-            _memory.Store(_operandAddress, val);
+            _bus.Write(_operandAddress, val);
         }
 
         /// <summary>
@@ -764,12 +775,12 @@ namespace NES
         /// </summary>
         private void DEC()
         {
-            byte val = (byte)(_memory.Fetch(_operandAddress) - 1);
+            byte val = (byte)(_bus.Read(_operandAddress) - 1);
 
             _flags.SetFlag(StatusFlag.Zero, val == 0);
             _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
 
-            _memory.Store(_operandAddress, val);
+            _bus.Write(_operandAddress, val);
         }
 
         /// <summary>
@@ -777,7 +788,7 @@ namespace NES
         /// </summary>
         private void CPY()
         {
-            Compares(_y.GetValue(), _memory.Fetch(_operandAddress));
+            Compares(_y.GetValue(), _bus.Read(_operandAddress));
         }
 
         /// <summary>
@@ -785,7 +796,7 @@ namespace NES
         /// </summary>
         private void CPX()
         {
-            Compares(_x.GetValue(), _memory.Fetch(_operandAddress));
+            Compares(_x.GetValue(), _bus.Read(_operandAddress));
         }
 
         /// <summary>
@@ -793,7 +804,7 @@ namespace NES
         /// </summary>
         private void CMP()
         {
-            Compares(_a.GetValue(), _memory.Fetch(_operandAddress));
+            Compares(_a.GetValue(), _bus.Read(_operandAddress));
         }
 
         /// <summary>
@@ -867,10 +878,10 @@ namespace NES
             byte pcHighByte = (byte)(pcAddress >> 8);
 
             ushort stackPointerAddr = ParseStackAddress(_stackPointer.GetValue());
-            _memory.Store(stackPointerAddr--, pcHighByte);
-            _memory.Store(stackPointerAddr--, pcLowByte);
+            _bus.Write(stackPointerAddr--, pcHighByte);
+            _bus.Write(stackPointerAddr--, pcLowByte);
 
-            _memory.Store(stackPointerAddr, _flags.GetValue());
+            _bus.Write(stackPointerAddr, _flags.GetValue());
 
             _flags.SetFlag(StatusFlag.Break1, true);
             _flags.SetFlag(StatusFlag.Break2, true);
@@ -908,7 +919,7 @@ namespace NES
         private void BIT()
         {
             byte accumulator = _a.GetValue();
-            byte memory = _memory.Fetch(_operandAddress);
+            byte memory = _bus.Read(_operandAddress);
 
             _flags.SetFlag(StatusFlag.Zero, (accumulator & memory) == 0);
             _flags.SetFlag(StatusFlag.Overflow, (memory & 0x0040) == 0x0040); // bit no. 6 from the memory value
@@ -954,7 +965,7 @@ namespace NES
              */
 
             byte accValue = _a.GetValue();
-            byte val = _memory.Fetch(_operandAddress);
+            byte val = _bus.Read(_operandAddress);
 
             int temp = accValue + val + (_flags.GetFlag(StatusFlag.Carry) ? 1 : 0);
 
@@ -1001,7 +1012,7 @@ namespace NES
              */
 
             byte accValue = _a.GetValue();
-            byte val = _memory.Fetch(_operandAddress);
+            byte val = _bus.Read(_operandAddress);
             byte complement = (byte)(~val);
 
             int temp = accValue + complement + (_flags.GetFlag(StatusFlag.Carry) ? 1 : 0);
@@ -1025,7 +1036,7 @@ namespace NES
         /// </summary>
         private void LDA()
         {
-            _a.SetValue(_memory.Fetch(_operandAddress));
+            _a.SetValue(_bus.Read(_operandAddress));
 
             _flags.SetFlag(StatusFlag.Zero, _a.GetValue() == 0);
             _flags.SetFlag(StatusFlag.Negative, _a.GetValue().IsNegative());
@@ -1038,7 +1049,7 @@ namespace NES
         {
             byte accValue = _a.GetValue();
 
-            _memory.Store(_operandAddress, accValue);
+            _bus.Write(_operandAddress, accValue);
         }
 
         /// <summary>
@@ -1062,11 +1073,11 @@ namespace NES
         /// </summary>
         private void ASL()
         {
-            byte val = _memory.Fetch(_operandAddress);
+            byte val = _bus.Read(_operandAddress);
             
             byte result = ShiftLeft(val);
 
-            _memory.Store(_operandAddress, result);
+            _bus.Write(_operandAddress, result);
         }
 
         /// <summary>
@@ -1102,11 +1113,11 @@ namespace NES
         /// </summary>
         private void LSR()
         {
-            byte val = _memory.Fetch(_operandAddress);
+            byte val = _bus.Read(_operandAddress);
             
             byte result = ShiftRight(val);
 
-            _memory.Store(_operandAddress, result);
+            _bus.Write(_operandAddress, result);
         }
 
         /// <summary>
@@ -1142,11 +1153,11 @@ namespace NES
         /// </summary>
         private void ROL()
         {
-            byte val = _memory.Fetch(_operandAddress);
+            byte val = _bus.Read(_operandAddress);
             
             byte result = RotateLeft(val);
 
-            _memory.Store(_operandAddress, result);
+            _bus.Write(_operandAddress, result);
         }
 
         /// <summary>
@@ -1184,11 +1195,11 @@ namespace NES
         /// </summary>
         private void ROR()
         {
-            byte val = _memory.Fetch(_operandAddress);
+            byte val = _bus.Read(_operandAddress);
             
             byte result = RotateRight(val);
 
-            _memory.Store(_operandAddress, result);
+            _bus.Write(_operandAddress, result);
         }
 
         /// <summary>
@@ -1226,7 +1237,7 @@ namespace NES
         /// </summary>
         private void AND()
         {
-            byte val = _memory.Fetch(_operandAddress);
+            byte val = _bus.Read(_operandAddress);
             byte result = (byte)(val & _a.GetValue());
 
             _flags.SetFlag(StatusFlag.Zero, result == 0);
@@ -1240,7 +1251,7 @@ namespace NES
         /// </summary>
         private void EOR()
         {
-            byte val = _memory.Fetch(_operandAddress);
+            byte val = _bus.Read(_operandAddress);
             byte result = (byte)(val ^ _a.GetValue());
 
             _flags.SetFlag(StatusFlag.Zero, result == 0);
@@ -1254,7 +1265,7 @@ namespace NES
         /// </summary>
         private void ORA()
         {
-            byte val = _memory.Fetch(_operandAddress);
+            byte val = _bus.Read(_operandAddress);
             byte result = (byte)(val | _a.GetValue());
 
             _flags.SetFlag(StatusFlag.Zero, result == 0);
@@ -1281,13 +1292,13 @@ namespace NES
             switch (mode)
             {
                 case AddressingMode.ZeroPage:
-                    operandAddress = _memory.Fetch(_pcAddress);
+                    operandAddress = _bus.Read(_pcAddress);
                     break;
                 case AddressingMode.ZeroPageX:
-                    operandAddress = (byte)(_memory.Fetch(_pcAddress) + _x.GetValue()); // If carry in the high byte (result greater than 255), requires an additiona cycle
+                    operandAddress = (byte)(_bus.Read(_pcAddress) + _x.GetValue()); // If carry in the high byte (result greater than 255), requires an additiona cycle
                     break;
                 case AddressingMode.ZeroPageY:
-                    operandAddress = (byte)(_memory.Fetch(_pcAddress) + _y.GetValue()); // If carry in the high byte (result greater than 255), requires an additiona cycle
+                    operandAddress = (byte)(_bus.Read(_pcAddress) + _y.GetValue()); // If carry in the high byte (result greater than 255), requires an additiona cycle
                     break;
                 case AddressingMode.Immediate:
                 case AddressingMode.Relative:
@@ -1299,19 +1310,19 @@ namespace NES
                 case AddressingMode.Indirect:
                     ushort addressParsed;
                     {
-                        byte lowByte = _memory.Fetch(_pcAddress);
+                        byte lowByte = _bus.Read(_pcAddress);
 
                         IncrementPC();
 
-                        byte highByte = _memory.Fetch(_pcAddress);
+                        byte highByte = _bus.Read(_pcAddress);
 
                         addressParsed = ParseBytes(lowByte, highByte);
                     }
                     if (mode == AddressingMode.Indirect)
                     {
                         // The content located in the address parsed is the LSB (Least Significant Byte) of the target address
-                        byte lowByte = _memory.Fetch(addressParsed++);
-                        byte highByte = _memory.Fetch(addressParsed);
+                        byte lowByte = _bus.Read(addressParsed++);
+                        byte highByte = _bus.Read(addressParsed);
 
                         operandAddress = ParseBytes(lowByte, highByte);
                     }
@@ -1324,20 +1335,20 @@ namespace NES
                     break;
                 case AddressingMode.IndirectX:
                     {
-                        byte address = (byte)(_memory.Fetch(_pcAddress) + _x.GetValue()); // Wraps around the zero page
+                        byte address = (byte)(_bus.Read(_pcAddress) + _x.GetValue()); // Wraps around the zero page
 
-                        byte lowByte = _memory.Fetch(address++);
-                        byte highByte = _memory.Fetch(address);
+                        byte lowByte = _bus.Read(address++);
+                        byte highByte = _bus.Read(address);
 
                         operandAddress = ParseBytes(lowByte, highByte);
                     }
                     break;
                 case AddressingMode.IndirectY:
                     {
-                        byte zeroPageAddress = _memory.Fetch(_pcAddress);
+                        byte zeroPageAddress = _bus.Read(_pcAddress);
 
-                        byte lowByte = _memory.Fetch(zeroPageAddress++);
-                        byte highByte = _memory.Fetch(zeroPageAddress);
+                        byte lowByte = _bus.Read(zeroPageAddress++);
+                        byte highByte = _bus.Read(zeroPageAddress);
 
                         operandAddress = (ushort)(ParseBytes(lowByte, highByte) + _y.GetValue());
                     }
@@ -1382,7 +1393,7 @@ namespace NES
              */
             ushort address = ParseStackAddress(stackPointer--);
 
-            _memory.Store(address, b);
+            _bus.Write(address, b);
 
             _stackPointer.SetValue(stackPointer);
         }
@@ -1398,7 +1409,7 @@ namespace NES
             // When popping a byte from the stack, the stack pointer is incremented by one
             ushort address = ParseStackAddress(++stackPointer);
 
-            byte val = _memory.Fetch(address);
+            byte val = _bus.Read(address);
 
             _stackPointer.SetValue(stackPointer);
 

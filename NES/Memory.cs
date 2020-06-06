@@ -18,7 +18,7 @@ namespace NES
         /// <returns>The value allocated in the given address</returns>
         public byte Fetch(ushort address) => _memory[address];
 
-        public Memory(ushort length)
+        public Memory(int length)
         {
             _memory = new byte[length];
         }
