@@ -22,8 +22,6 @@ namespace NES
             //{
             //    Console.WriteLine($"{cpu.ProgramCounterHexString}: {cpu.InstructionDissasembled}");
             //}
-
-            Console.ReadLine();
         }
     }
 }

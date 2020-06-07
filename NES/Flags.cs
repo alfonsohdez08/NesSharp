@@ -9,7 +9,7 @@ namespace NES
     {
         Carry = 0,
         Zero = 1,
-        Interrupt = 2,
+        DisableInterrupt = 2,
         B4 = 4,
         B5 = 5,
         Overflow = 6,
