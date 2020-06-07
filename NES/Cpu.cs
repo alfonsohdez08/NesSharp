@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text;
 using static NES.ByteExtensions;
 
 namespace NES
@@ -131,7 +132,7 @@ namespace NES
         /// <summary>
         /// Holds the address of the outer 
         /// </summary>
-        private readonly Register<byte> _stackPointer = new Register<byte>();
+        private readonly Register<byte> _stackPointer = new Register<byte>(0xFF);
 
         /// <summary>
         /// The Program Counter register (holds the memory address of the next instruction).
@@ -162,6 +163,48 @@ namespace NES
         public ushort ProgramCounter => _programCounter.GetValue();
         public string ProgramCounterHexString => _programCounter.GetValue().ToString("X");
 
+        private string ParseInstruction(Instruction instruction, ushort operandAddress)
+        {
+            if (instruction == null)
+                return string.Empty;
+
+            if (instruction.AddressingMode == AddressingMode.Accumulator || instruction.AddressingMode == AddressingMode.Implied)
+                return instruction.Mnemonic;
+
+            var operandParsed = new StringBuilder($"${ParseOperandHex()}");
+            if (instruction.AddressingMode == AddressingMode.Immediate)
+                operandParsed.Insert(0, '#');
+            else if (instruction.AddressingMode == AddressingMode.AbsoluteX || instruction.AddressingMode == AddressingMode.ZeroPageX)
+                operandParsed.Append(",X");
+            else if (instruction.AddressingMode == AddressingMode.AbsoluteY || instruction.AddressingMode == AddressingMode.ZeroPageY)
+                operandParsed.Append(",Y");
+            else if (instruction.AddressingMode == AddressingMode.Indirect)
+            {
+                operandParsed.Insert(0 ,'(');
+                operandParsed.Append(')');
+            }
+            else if (instruction.AddressingMode == AddressingMode.IndirectX)
+            {
+                operandParsed.Insert(0, '(');
+                operandParsed.Append(",X)");
+            }
+            else if (instruction.AddressingMode == AddressingMode.IndirectY)
+            {
+                operandParsed.Insert(0, '(');
+                operandParsed.Append("),Y");
+            }
+
+            string ParseOperandHex()
+            {
+                if (instruction.AddressingMode == AddressingMode.Immediate)
+                    return _bus.Read(operandAddress).ToString("X");
+
+                return operandAddress.ToString("X");
+            }
+
+            return instruction.Mnemonic + " " + operandParsed.ToString();
+        }
+
         /// <summary>
         /// Creates an instance of the 6502 CPU.
         /// </summary>
@@ -185,48 +228,42 @@ namespace NES
         }
 
         /// <summary>
-        /// Executes the program loaded in the memory.
+        /// Runs the program loaded in the memory.
         /// </summary>
-        public void Start()
+        public void Run()
         {
-            // Each time a machine cycle is elapsed, the program counter would be incremented
-            while (Cycle())
-                IncrementPC();
+            do
+            {
+
+            } while (ExecuteInstruction());
         }
 
         /// <summary>
         /// Executes the program instruction by instruction (useful for debugging, or for execute the first N instructions of a program).
         /// </summary>
         /// <returns>True if there are more instruction to executed; otherwise false.</returns>
-        public bool StepInstruction()
-        {
-            //if (_pcAddress > 0xFFFF)
-            //    return false;
-
-            bool @continue = Cycle();
-            if (@continue)
-                IncrementPC();
-
-            return @continue;
-        }
+        public bool StepInstruction() => ExecuteInstruction();
 
         /// <summary>
-        /// Executes a machine cycle (fetch, decode, execute instruction).
+        /// Executes a CPU instruction.
         /// </summary>
-        private bool Cycle()
+        private bool ExecuteInstruction()
         {
-            /*
-                Remarks: The whole instruction is executed in a cycle; however, in reality, this is not true. An instruction could long multiple cycles (take more than
-                once cycle). Learn more about this.
-             */
-
-            // Fetchs the OpCode from the memory
+            // Fetches the OpCode from the memory
             byte opCode = _bus.Read(_pcAddress);
+
+            ushort initialAddress = _pcAddress;
+
+            IncrementPC();
+
             Instruction instruction = OpCodes[opCode];
             if (instruction == null) // Illegal opcode
                 return true;
 
             FetchOperand(instruction.AddressingMode);
+
+            string instructionDissasembled = ParseInstruction(instruction, _operandAddress);
+            Console.WriteLine($"{initialAddress.ToString("X")}: {instructionDissasembled}");
 
             // Executes the instruction based on its mnemonic code
             switch (instruction.Mnemonic)
@@ -267,7 +304,6 @@ namespace NES
                 case BRK_INSTRUCTION:
                     BRK();
                     return false;
-                    //break;
                 case BVC_INSTRUCTION:
                     BVC();
                     break;
@@ -518,7 +554,7 @@ namespace NES
 
         private void SED()
         {
-            throw new NotImplementedException();
+
         }
 
         /// <summary>
@@ -534,14 +570,6 @@ namespace NES
             byte pcHighByte = Pop();
             _programCounter.SetValue(ParseBytes(pcLowByte, pcHighByte));
 
-            //ushort address = ParseStackAddress((byte)(_stackPointer.GetValue() + 1));
-
-            //byte flags = _memory.Fetch(address++);
-            //_flags.SetValue(flags);
-
-            //byte pcLowByte = _memory.Fetch(address++);
-            //byte pcHighByte = _memory.Fetch(address);
-            //_stackPointer.SetValue((byte)(_stackPointer.GetValue() + 3));
         }
 
         /// <summary>
@@ -552,18 +580,8 @@ namespace NES
             byte pcLowByte = Pop();
             byte pcHighByte = Pop();
 
-            ushort pcAddress = (ushort)(ParseBytes(pcLowByte, pcHighByte) + 1);
+            ushort pcAddress = (ushort)(ParseBytes(pcLowByte, pcHighByte));
             _programCounter.SetValue(pcAddress);
-
-            //ushort address = ParseStackAddress((byte)(_stackPointer.GetValue() + 1));
-
-            //byte pcLowByte = _memory.Fetch(address++);
-            //byte pcHighByte = _memory.Fetch(address);
-
-            //ushort pcAddress = (ushort)(ParseBytes(pcLowByte, pcHighByte) - 1);
-            //_programCounter.SetValue(pcAddress);
-
-            //_stackPointer.SetValue((byte)(_stackPointer.GetValue() + 2));
         }
 
         /// <summary>
@@ -572,14 +590,6 @@ namespace NES
         private void PLP()
         {
             _flags.SetValue(Pop());
-
-            //byte stackPointer = _stackPointer.GetValue();
-            //ushort address = ParseStackAddress(++stackPointer);
-
-            //byte flags = _memory.Fetch(address);
-
-            //_flags.SetValue(flags);
-            //_stackPointer.SetValue(stackPointer);
         }
 
         /// <summary>
@@ -593,17 +603,6 @@ namespace NES
             _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
 
             _a.SetValue(val);
-
-            //byte stackPointer = _stackPointer.GetValue();
-            //ushort address = ParseStackAddress(++stackPointer);
-
-            //byte val = _memory.Fetch(address);
-
-            //_flags.SetFlag(StatusFlag.Zero, val == 0);
-            //_flags.SetFlag(StatusFlag.Negative, val.IsNegative());
-
-            //_a.SetValue(val);
-            //_stackPointer.SetValue(stackPointer);
         }
 
         /// <summary>
@@ -611,14 +610,11 @@ namespace NES
         /// </summary>
         private void PHP()
         {
+            // Bit 5 and 5 are set to 1 (true)
+            _flags.SetFlag(StatusFlag.B5, true);
+            _flags.SetFlag(StatusFlag.B4, true);
+
             Push(_flags.GetValue());
-
-            //byte stackPointer = _stackPointer.GetValue();
-            //ushort address = ParseStackAddress(stackPointer);
-
-            //_memory.Store(address, _flags.GetValue());
-
-            //_stackPointer.SetValue((byte)(stackPointer - 1));
         }
 
         /// <summary>
@@ -627,13 +623,6 @@ namespace NES
         private void PHA()
         {
             Push(_a.GetValue());
-
-            //byte stackPointer = _stackPointer.GetValue();
-            //ushort address = ParseStackAddress(stackPointer);
-
-            //_memory.Store(address, _a.GetValue());
-
-            //_stackPointer.SetValue((byte)(stackPointer - 1));
         }
 
         /// <summary>
@@ -675,6 +664,7 @@ namespace NES
         /// </summary>
         private void JSR()
         {
+            // The address below points to the high byte of the JSR instruction operand
             ushort returnAddress = _programCounter.GetValue();
 
             // Pushes the high byte
@@ -684,15 +674,6 @@ namespace NES
             Push(returnAddress.GetLowByte());
 
             _programCounter.SetValue(_operandAddress);
-
-            //ushort returnAddress = _programCounter.GetValue();
-            //ushort stackPointerAddr = ParseStackAddress(_stackPointer.GetValue());
-            //_memory.Store(stackPointerAddr--, (byte)(returnAddress >> 8));
-            //_memory.Store(stackPointerAddr, (byte)(returnAddress));
-
-            //_stackPointer.SetValue((byte)(_stackPointer.GetValue() - 2));
-
-            //_programCounter.SetValue(_operandAddress);
         }
 
         /// <summary>
@@ -700,9 +681,7 @@ namespace NES
         /// </summary>
         private void JMP()
         {
-            //_programCounter.SetValue(_operandAddress);
-            // Is it possible that they would jump to the address $0000?
-            _programCounter.SetValue((ushort)(_operandAddress - 1)); // The actual address would be fecthed when incremeting the PC
+            _programCounter.SetValue(_operandAddress);
         }
 
         /// <summary>
@@ -788,7 +767,7 @@ namespace NES
         /// </summary>
         private void CPY()
         {
-            Compares(_y.GetValue(), _bus.Read(_operandAddress));
+            Compare(_y.GetValue(), _bus.Read(_operandAddress));
         }
 
         /// <summary>
@@ -796,7 +775,7 @@ namespace NES
         /// </summary>
         private void CPX()
         {
-            Compares(_x.GetValue(), _bus.Read(_operandAddress));
+            Compare(_x.GetValue(), _bus.Read(_operandAddress));
         }
 
         /// <summary>
@@ -804,7 +783,7 @@ namespace NES
         /// </summary>
         private void CMP()
         {
-            Compares(_a.GetValue(), _bus.Read(_operandAddress));
+            Compare(_a.GetValue(), _bus.Read(_operandAddress));
         }
 
         /// <summary>
@@ -812,7 +791,7 @@ namespace NES
         /// </summary>
         /// <param name="register">A value coming from a register (Accumulator, X, Y).</param>
         /// <param name="memory">A value held in memory.</param>
-        private void Compares(byte register, byte memory)
+        private void Compare(byte register, byte memory)
         {
             _flags.SetFlag(StatusFlag.Carry, register >= memory);
             _flags.SetFlag(StatusFlag.Zero, register == memory);
@@ -835,9 +814,11 @@ namespace NES
             _flags.SetFlag(StatusFlag.Interrupt, false);
         }
 
+        /// <summary>
+        /// Clears the decimal flag.
+        /// </summary>
         private void CLD()
         {
-            throw new NotImplementedException();
         }
 
         /// <summary>
@@ -846,7 +827,7 @@ namespace NES
         private void BVS()
         {
             if (_flags.GetFlag(StatusFlag.Overflow))
-                _programCounter.SetValue((ushort)(_programCounter.GetValue() + (sbyte)_operandAddress));
+                _programCounter.SetValue((ushort)(_programCounter.GetValue() + (sbyte)_bus.Read(_operandAddress)));
         }
 
         /// <summary>
@@ -855,7 +836,7 @@ namespace NES
         private void BVC()
         {
             if (!_flags.GetFlag(StatusFlag.Overflow))
-                _programCounter.SetValue((ushort)(_programCounter.GetValue() + (sbyte)_operandAddress));
+                _programCounter.SetValue((ushort)(_programCounter.GetValue() + (sbyte)_bus.Read(_operandAddress)));
         }
 
         /// <summary>
@@ -864,7 +845,7 @@ namespace NES
         private void BPL()
         {
             if (!_flags.GetFlag(StatusFlag.Negative))
-                _programCounter.SetValue((ushort)(_programCounter.GetValue() + (sbyte)_operandAddress));
+                _programCounter.SetValue((ushort)(_programCounter.GetValue() + (sbyte)_bus.Read(_operandAddress)));
         }
 
         /// <summary>
@@ -872,25 +853,26 @@ namespace NES
         /// </summary>
         private void BRK()
         {
-            // TODO: review this impl
-            ushort pcAddress = _programCounter.GetValue();
-            byte pcLowByte = (byte)pcAddress;
-            byte pcHighByte = (byte)(pcAddress >> 8);
+            _flags.SetFlag(StatusFlag.B5, true);
+            _flags.SetFlag(StatusFlag.B4, true);
 
-            ushort stackPointerAddr = ParseStackAddress(_stackPointer.GetValue());
-            _bus.Write(stackPointerAddr--, pcHighByte);
-            _bus.Write(stackPointerAddr--, pcLowByte);
+            byte lowByte = (byte)_pcAddress;
+            byte highByte = (byte)(_pcAddress >> 8);
 
-            _bus.Write(stackPointerAddr, _flags.GetValue());
+            // Pushes the program counter
+            Push(highByte);
+            Push(lowByte);
 
-            _flags.SetFlag(StatusFlag.Break1, true);
-            _flags.SetFlag(StatusFlag.Break2, true);
+            // Pushes the CPU flags
+            Push(_flags.GetValue());
 
-            _stackPointer.SetValue((byte)(_stackPointer.GetValue() - 3));
             _flags.SetFlag(StatusFlag.Interrupt, true);
 
-            // interrupt vector
-            _programCounter.SetValue(0xFFFF);
+            byte irqLowByte = _bus.Read(0xFFFE);
+            byte irqHighByte = _bus.Read(0xFFFF);
+            ushort address = ParseBytes(irqLowByte, irqHighByte);
+
+            _programCounter.SetValue(address);
         }
 
         /// <summary>
@@ -899,7 +881,7 @@ namespace NES
         private void BNE()
         {
             if (!_flags.GetFlag(StatusFlag.Zero))
-                _programCounter.SetValue((ushort)(_programCounter.GetValue() + (sbyte)_operandAddress));
+                _programCounter.SetValue((ushort)(_programCounter.GetValue() + (sbyte)_bus.Read(_operandAddress)));
         }
 
         /// <summary>
@@ -908,7 +890,7 @@ namespace NES
         private void BMI()
         {
             if (_flags.GetFlag(StatusFlag.Negative))
-                _programCounter.SetValue((ushort)(_programCounter.GetValue() + (sbyte)_operandAddress));
+                _programCounter.SetValue((ushort)(_programCounter.GetValue() + (sbyte)_bus.Read(_operandAddress)));
         }
 
         /// <summary>
@@ -932,7 +914,7 @@ namespace NES
         private void BEQ()
         {
             if (_flags.GetFlag(StatusFlag.Zero))
-                _programCounter.SetValue((ushort)(_programCounter.GetValue() + (sbyte)_operandAddress));
+                _programCounter.SetValue((ushort)(_programCounter.GetValue() + (sbyte)_bus.Read(_operandAddress)));
         }
 
         /// <summary>
@@ -941,7 +923,7 @@ namespace NES
         private void BCS()
         {
             if (_flags.GetFlag(StatusFlag.Carry))
-                _programCounter.SetValue((ushort)(_programCounter.GetValue() + (sbyte)_operandAddress));
+                _programCounter.SetValue((ushort)(_programCounter.GetValue() + (sbyte)_bus.Read(_operandAddress)));
         }
 
         /// <summary>
@@ -950,7 +932,7 @@ namespace NES
         private void BCC()
         {
             if (!_flags.GetFlag(StatusFlag.Carry))
-                _programCounter.SetValue((ushort)(_programCounter.GetValue() + (sbyte)_operandAddress));
+                _programCounter.SetValue((ushort)(_programCounter.GetValue() + (sbyte)_bus.Read(_operandAddress)));
         }
 
         /// <summary>
@@ -1286,9 +1268,6 @@ namespace NES
                 return;
 
             ushort operandAddress;
-
-            IncrementPC();
-
             switch (mode)
             {
                 case AddressingMode.ZeroPage:
@@ -1354,10 +1333,11 @@ namespace NES
                     }
                     break;
                 default:
-                    throw new NotImplementedException($"The given addressing mode is not supported: {mode.ToString()}.");
+                    throw new NotImplementedException($"The given addressing mode is not supported: {mode}.");
             }
 
             _operandAddress = operandAddress;
+            IncrementPC(); // Points to the next opcode (instruction)
         }
 
         #endregion

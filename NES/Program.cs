@@ -16,7 +16,12 @@ namespace NES
             var cpuBus = new CpuBus(cpuMemoryMapped);
             var cpu = new Cpu(cpuBus, 0xC000);
 
-            cpu.Start();
+            cpu.Run();
+
+            //while (cpu.StepInstruction())
+            //{
+            //    Console.WriteLine($"{cpu.ProgramCounterHexString}: {cpu.InstructionDissasembled}");
+            //}
 
             Console.ReadLine();
         }

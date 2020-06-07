@@ -63,6 +63,8 @@ namespace NES
         /// <param name="val">The value that would be stored in the slot specified by the address within the RAM.</param>
         private void WriteRam(ushort address, byte val)
         {
+            memory.Store(address, val);
+
             // Writes in the first mirror 0x0800 - 0x0FFF
             memory.Store((ushort)(address + FirstRamMirrorOffset), val);
 

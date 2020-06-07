@@ -10,8 +10,8 @@ namespace NES
         Carry = 0,
         Zero = 1,
         Interrupt = 2,
-        Break1 = 4,
-        Break2 = 5,
+        B4 = 4,
+        B5 = 5,
         Overflow = 6,
         Negative = 7
     }
