@@ -1,6 +1,6 @@
-﻿#define CPU_NES_TEST
-
-using System;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using static NES.ByteExtensions;
 
@@ -157,11 +157,13 @@ namespace NES
         private ushort _operandAddress;
 
 #if CPU_NES_TEST
+        private readonly List<byte> _instructionHex = new List<byte>();
+
         public string TestLineResult { get; private set; }
 
         private string GetRegistersSnapshot()
         {
-            return $"A:{_a.GetValue().ToString("X")} X:{_x.GetValue().ToString("X")} Y:{_y.GetValue().ToString("X")} P:{_flags.GetValue().ToString("X")} SP:{_stackPointer.GetValue().ToString("X")}";
+            return $"A:{FormatByte(_a.GetValue())} X:{FormatByte(_x.GetValue())} Y:{FormatByte(_y.GetValue())} P:{FormatByte(_flags.GetValue())} SP:{FormatByte(_stackPointer.GetValue())}";
         }
 
         private string ParseInstruction(Instruction instruction)
@@ -238,6 +240,8 @@ namespace NES
 
             return op;
         }
+
+        private static string FormatByte(byte b) => b.ToString("X").PadLeft(2, '0');
 #endif
 
         /// <summary>
@@ -258,8 +262,11 @@ namespace NES
 
         private void Reset()
         {
+#if CPU_NES_TEST
             _flags.SetValue(0x0024);
-
+#else
+            _flags.SetValue(0x0034);
+#endif
             Push(_pcAddress.GetHighByte());
             Push(_pcAddress.GetLowByte());
         }
@@ -290,6 +297,7 @@ namespace NES
             byte opCode = _bus.Read(_pcAddress);
 
 #if CPU_NES_TEST
+            _instructionHex.Add(opCode);
             ushort opCodeAddress = _pcAddress;
             string registersSnapshot = GetRegistersSnapshot();
 #endif
@@ -306,7 +314,10 @@ namespace NES
 
 #if CPU_NES_TEST
             string instructionDisassembled = ParseInstruction(instruction);
-            TestLineResult = $"{opCodeAddress.ToString("X")}: {instructionDisassembled}\t\t{registersSnapshot}";
+            string instructionHexDump = string.Join(" ", _instructionHex.Select(i => i.ToString("X").PadLeft(2, '0')));
+
+            TestLineResult = $"{opCodeAddress.ToString("X")}  {instructionHexDump.PadRight(10, ' ')}{instructionDisassembled.PadRight(32, ' ')}{registersSnapshot}";
+            _instructionHex.Clear();
 #endif
 
             // Executes the instruction based on its mnemonic code
@@ -589,16 +600,19 @@ namespace NES
         }
 
         /// <summary>
-        /// Sets the interrupt flag to true.
+        /// Sets the disable interrupt flag.
         /// </summary>
         private void SEI()
         {
             _flags.SetFlag(StatusFlag.DisableInterrupt, true);
         }
 
+        /// <summary>
+        /// Sets the decimal flag.
+        /// </summary>
         private void SED()
         {
-
+            _flags.SetFlag(StatusFlag.Decimal, true);
         }
 
         /// <summary>
@@ -634,6 +648,7 @@ namespace NES
         private void PLP()
         {
             _flags.SetValue(Pop());
+            //_flags.SetFlag(StatusFlag.B4, false); // Disable the bit 4 just in case
         }
 
         /// <summary>
@@ -654,11 +669,18 @@ namespace NES
         /// </summary>
         private void PHP()
         {
-            // Bit 5 and 5 are set to 1 (true)
-            _flags.SetFlag(StatusFlag.B5, true);
+            /*
+             * The copy of the CPU flags that would be pushed onto the stack will have set the bits 4 and 5
+             * (this setting it's only to value that would be pushed onto the stack, not in the actual CPU flags).
+             * Source: https://stackoverflow.com/questions/52017657/6502-emulator-testing-nestest 
+             */
             _flags.SetFlag(StatusFlag.B4, true);
+            _flags.SetFlag(StatusFlag.B5, true);
 
             Push(_flags.GetValue());
+
+            _flags.SetFlag(StatusFlag.B4, false);
+            //_flags.SetFlag(StatusFlag.B5, false);
         }
 
         /// <summary>
@@ -863,6 +885,7 @@ namespace NES
         /// </summary>
         private void CLD()
         {
+            _flags.SetFlag(StatusFlag.Decimal, false);
         }
 
         /// <summary>
@@ -897,8 +920,11 @@ namespace NES
         /// </summary>
         private void BRK()
         {
-            _flags.SetFlag(StatusFlag.B5, true);
+            /*
+             * The bits no. 4 and 5 are set to the copy of the CPU flags (which would be pushed onto the stack)
+             */
             _flags.SetFlag(StatusFlag.B4, true);
+            _flags.SetFlag(StatusFlag.B5, true);
 
             byte lowByte = (byte)_pcAddress;
             byte highByte = (byte)(_pcAddress >> 8);
@@ -910,6 +936,8 @@ namespace NES
             // Pushes the CPU flags
             Push(_flags.GetValue());
 
+            _flags.SetFlag(StatusFlag.B4, false);
+            //_flags.SetFlag(StatusFlag.B5, false);
             _flags.SetFlag(StatusFlag.DisableInterrupt, true);
 
             byte irqLowByte = _bus.Read(0xFFFE);
@@ -1311,6 +1339,9 @@ namespace NES
             if (mode == AddressingMode.Accumulator || mode == AddressingMode.Implied)
                 return;
 
+#if CPU_NES_TEST
+            _instructionHex.Add(_bus.Read(_pcAddress));
+#endif
             ushort operandAddress;
             switch (mode)
             {
@@ -1338,6 +1369,9 @@ namespace NES
                         IncrementPC();
 
                         byte highByte = _bus.Read(_pcAddress);
+#if CPU_NES_TEST
+                        _instructionHex.Add(highByte);
+#endif
 
                         addressParsed = ParseBytes(lowByte, highByte);
                     }

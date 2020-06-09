@@ -6,21 +6,40 @@ namespace NES
 {
     class Program
     {
+        private static readonly string NesRootPath = Environment.GetEnvironmentVariable("NES", EnvironmentVariableTarget.Machine);
+
         static void Main(string[] args)
         {
-            //byte[] rom = File.Re(@"C:\Users\ward\source\repos\NES\NES\nestest.nes");
-            byte[] nesFile = File.ReadAllBytes(@"C:\Users\ward\source\repos\NES\NES\nestest.nes");
+            string nesTestFilePath = Path.Combine(NesRootPath, "nestest.nes");
+            byte[] nesFile = File.ReadAllBytes(nesTestFilePath);
 
             iNESParser.ParseNesRom(nesFile, out Memory cpuMemoryMapped, out Memory ppuMemoryMapped);
             
             var cpuBus = new CpuBus(cpuMemoryMapped);
             var cpu = new Cpu(cpuBus, 0xC000);
 
-            cpu.Run();
+            //cpu.Run();
 
-            //while (cpu.StepInstruction())
+            const string myCpuLogFile = "my_cpu_test_log.txt";
+            using (FileStream cpuTestLog = File.Create(Path.Combine(NesRootPath, myCpuLogFile)))
+            using (StreamWriter streamWriter = new StreamWriter(cpuTestLog))
+            {
+                while (cpu.StepInstruction())
+                {
+                    streamWriter.WriteLine(cpu.TestLineResult);
+                }
+            }
+
+            //const string justCpuLogFile = "nes_cpu_test_expected_log_just_cpu.txt";
+            //const string cpuExpectedLogFile = "nes_cpu_test_expected_log.txt";
+
+            //using (FileStream cpuLogFile = File.Create(Path.Combine(NesRootPath, justCpuLogFile)))
+            //using (StreamWriter streamWriter = new StreamWriter(cpuLogFile))
             //{
-            //    Console.WriteLine($"{cpu.ProgramCounterHexString}: {cpu.InstructionDissasembled}");
+            //    foreach (string line in File.ReadLines(Path.Combine(NesRootPath, cpuExpectedLogFile)))
+            //    {
+            //        streamWriter.WriteLine(line.Substring(0, 73));
+            //    }
             //}
         }
     }

@@ -10,6 +10,7 @@ namespace NES
         Carry = 0,
         Zero = 1,
         DisableInterrupt = 2,
+        Decimal = 3,
         B4 = 4,
         B5 = 5,
         Overflow = 6,
