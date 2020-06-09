@@ -648,7 +648,6 @@ namespace NES
         private void PLP()
         {
             _flags.SetValue(Pop());
-            //_flags.SetFlag(StatusFlag.B4, false); // Disable the bit 4 just in case
         }
 
         /// <summary>
@@ -674,15 +673,10 @@ namespace NES
              * (this setting it's only to value that would be pushed onto the stack, not in the actual CPU flags).
              * Source: https://stackoverflow.com/questions/52017657/6502-emulator-testing-nestest 
              */
-            //_flags.SetFlag(StatusFlag.B4, true);
-            //_flags.SetFlag(StatusFlag.B5, true);
             byte flags = _flags.GetValue();
             flags |= 0x30; // Sets the bit 4 and 5 to the copy of the CPU flags
 
             Push(flags);
-
-            //_flags.SetFlag(StatusFlag.B4, false);
-            //_flags.SetFlag(StatusFlag.B5, false);
         }
 
         /// <summary>
@@ -922,12 +916,6 @@ namespace NES
         /// </summary>
         private void BRK()
         {
-            /*
-             * The bits no. 4 and 5 are set to the copy of the CPU flags (which would be pushed onto the stack)
-             */
-            //_flags.SetFlag(StatusFlag.B4, true);
-            //_flags.SetFlag(StatusFlag.B5, true);
-
             byte lowByte = (byte)_pcAddress;
             byte highByte = (byte)(_pcAddress >> 8);
 
@@ -939,9 +927,6 @@ namespace NES
             byte flags = _flags.GetValue();
             flags |= 0x30; // Sets the bit 4 and 5 to the copy of the CPU flags
             Push(flags);
-
-            //_flags.SetFlag(StatusFlag.B4, false);
-            ////_flags.SetFlag(StatusFlag.B5, false);
 
             _flags.SetFlag(StatusFlag.DisableInterrupt, true);
 

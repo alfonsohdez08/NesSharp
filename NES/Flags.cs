@@ -24,7 +24,7 @@ namespace NES
 #if CPU_NES_TEST
         private const byte DefaultFlags = 0x24;
 #else
-        private const byte FlagsDisabled = 0x34;
+        private const byte DefaultFlags = 0x34;
 #endif
 
         public Flags(): base(DefaultFlags)
@@ -72,15 +72,15 @@ namespace NES
         public override void SetValue(byte value)
         {
             /*
-             * For the NES, the B flags are set by default. However, for the nestest, the bit 4 is off 
-             * (that's why it starts with 0x24 after setting the decimal flag).
+             * The bits 4 and 5 are known as B flags. There aren't instructions that affect those bits in the flags register, however they are set.
+             * For the regular NES operation, both bits are set, but for the nestest, the bit 4 is not set (it's off).
              */
             int bit4Mask = 1 << 4;
 
             int bit5Mask = 1 << 5;
             value = (byte)(value | bit5Mask);
 #if CPU_NES_TEST
-            value = (byte)((value | bit4Mask) ^ bit4Mask);
+            value = (byte)((value | bit4Mask) ^ bit4Mask); // Prevents setting the bit 4
 #else
             value = (byte)(value | bit4Mask);
 #endif
