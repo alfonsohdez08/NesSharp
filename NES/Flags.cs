@@ -11,8 +11,6 @@ namespace NES
         Zero = 1,
         DisableInterrupt = 2,
         Decimal = 3,
-        B4 = 4,
-        B5 = 5,
         Overflow = 6,
         Negative = 7
     }
@@ -22,9 +20,14 @@ namespace NES
         /// <summary>
         /// Initial value of the register (all flags disabled).
         /// </summary>
-        private const byte FlagsDisabled = 0b00000000;
 
-        public Flags(): base(FlagsDisabled)
+#if CPU_NES_TEST
+        private const byte DefaultFlags = 0x24;
+#else
+        private const byte FlagsDisabled = 0x34;
+#endif
+
+        public Flags(): base(DefaultFlags)
         {
 
         }
@@ -42,9 +45,9 @@ namespace NES
             byte flags = GetValue();
             
             int result;
-            if (val)
+            if (val) // enable/turn on/set the bit
                 result = flags | mask;
-            else
+            else // disable/turn off the bit
                 result = ((flags | mask) ^ mask); // Just in case the bit still ON
 
             SetValue((byte)result);
@@ -66,10 +69,28 @@ namespace NES
             return result == mask;
         }
 
+        public override void SetValue(byte value)
+        {
+            /*
+             * For the NES, the B flags are set by default. However, for the nestest, the bit 4 is off 
+             * (that's why it starts with 0x24 after setting the decimal flag).
+             */
+            int bit4Mask = 1 << 4;
+
+            int bit5Mask = 1 << 5;
+            value = (byte)(value | bit5Mask);
+#if CPU_NES_TEST
+            value = (byte)((value | bit4Mask) ^ bit4Mask);
+#else
+            value = (byte)(value | bit4Mask);
+#endif
+            base.SetValue(value);
+        }
+
         /// <summary>
         /// Clears all flags.
         /// </summary>
-        public void ClearFlags() => SetValue(FlagsDisabled);
+        public void ClearFlags() => SetValue(DefaultFlags);
 
 #if DEBUG
         /// <summary>

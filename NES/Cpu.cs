@@ -263,9 +263,9 @@ namespace NES
         private void Reset()
         {
 #if CPU_NES_TEST
-            _flags.SetValue(0x0024);
+            _flags.SetValue(0x0024); // ‭0010 0100‬
 #else
-            _flags.SetValue(0x0034);
+            _flags.SetValue(0x0034); // 00‭11 0100‬
 #endif
             Push(_pcAddress.GetHighByte());
             Push(_pcAddress.GetLowByte());
@@ -674,12 +674,14 @@ namespace NES
              * (this setting it's only to value that would be pushed onto the stack, not in the actual CPU flags).
              * Source: https://stackoverflow.com/questions/52017657/6502-emulator-testing-nestest 
              */
-            _flags.SetFlag(StatusFlag.B4, true);
-            _flags.SetFlag(StatusFlag.B5, true);
+            //_flags.SetFlag(StatusFlag.B4, true);
+            //_flags.SetFlag(StatusFlag.B5, true);
+            byte flags = _flags.GetValue();
+            flags |= 0x30; // Sets the bit 4 and 5 to the copy of the CPU flags
 
-            Push(_flags.GetValue());
+            Push(flags);
 
-            _flags.SetFlag(StatusFlag.B4, false);
+            //_flags.SetFlag(StatusFlag.B4, false);
             //_flags.SetFlag(StatusFlag.B5, false);
         }
 
@@ -923,8 +925,8 @@ namespace NES
             /*
              * The bits no. 4 and 5 are set to the copy of the CPU flags (which would be pushed onto the stack)
              */
-            _flags.SetFlag(StatusFlag.B4, true);
-            _flags.SetFlag(StatusFlag.B5, true);
+            //_flags.SetFlag(StatusFlag.B4, true);
+            //_flags.SetFlag(StatusFlag.B5, true);
 
             byte lowByte = (byte)_pcAddress;
             byte highByte = (byte)(_pcAddress >> 8);
@@ -934,10 +936,13 @@ namespace NES
             Push(lowByte);
 
             // Pushes the CPU flags
-            Push(_flags.GetValue());
+            byte flags = _flags.GetValue();
+            flags |= 0x30; // Sets the bit 4 and 5 to the copy of the CPU flags
+            Push(flags);
 
-            _flags.SetFlag(StatusFlag.B4, false);
-            //_flags.SetFlag(StatusFlag.B5, false);
+            //_flags.SetFlag(StatusFlag.B4, false);
+            ////_flags.SetFlag(StatusFlag.B5, false);
+
             _flags.SetFlag(StatusFlag.DisableInterrupt, true);
 
             byte irqLowByte = _bus.Read(0xFFFE);

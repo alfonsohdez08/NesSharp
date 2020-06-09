@@ -29,13 +29,13 @@ namespace NES
         /// Allocates a value in the register.
         /// </summary>
         /// <param name="value">The value.</param>
-        public void SetValue(T value) => _value = value;
+        public virtual void SetValue(T value) => _value = value;
 
         /// <summary>
         /// Retrieves the value allocated in the register.
         /// </summary>
         /// <returns>The value allocated in the register.</returns>
-        public T GetValue() => _value;
+        public virtual T GetValue() => _value;
 
 #if DEBUG
         public override string ToString()
