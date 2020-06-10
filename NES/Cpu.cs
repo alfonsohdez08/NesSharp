@@ -316,7 +316,8 @@ namespace NES
             string instructionDisassembled = ParseInstruction(instruction);
             string instructionHexDump = string.Join(" ", _instructionHex.Select(i => i.ToString("X").PadLeft(2, '0')));
 
-            TestLineResult = $"{opCodeAddress.ToString("X")}  {instructionHexDump.PadRight(10, ' ')}{instructionDisassembled.PadRight(32, ' ')}{registersSnapshot}";
+            //TestLineResult = $"{opCodeAddress.ToString("X")}  {instructionHexDump.PadRight(10, ' ')}{instructionDisassembled.PadRight(32, ' ')}{registersSnapshot}";
+            TestLineResult = $"{opCodeAddress.ToString("X")} {instructionHexDump.PadRight(10, ' ')}{registersSnapshot}";
             _instructionHex.Clear();
 #endif
 
@@ -639,7 +640,8 @@ namespace NES
             byte pcHighByte = Pop();
 
             ushort pcAddress = ParseBytes(pcLowByte, pcHighByte);
-            _programCounter.SetValue(pcAddress);
+            _programCounter.SetValue((ushort)(pcAddress + 1));
+            //_programCounter.SetValue(pcAddress);
         }
 
         /// <summary>
@@ -727,7 +729,8 @@ namespace NES
         private void JSR()
         {
             // The PC at this point points to the next instruction
-            ushort returnAddress = _programCounter.GetValue();
+            //ushort returnAddress = _programCounter.GetValue();
+            ushort returnAddress = (ushort)(_programCounter.GetValue() - 1);
 
             // Pushes the high byte
             Push(returnAddress.GetHighByte());
@@ -1408,7 +1411,7 @@ namespace NES
             IncrementPC(); // Points to the next opcode (instruction)
         }
 
-#endregion
+        #endregion
 
         /// <summary>
         /// Increments the address allocated in the Program Counter.

@@ -1,6 +1,10 @@
-﻿using NES.Rom;
+﻿using NES._6502;
+using NES.Rom;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text;
 
 namespace NES
 {
@@ -41,6 +45,53 @@ namespace NES
             //        streamWriter.WriteLine(line.Substring(0, 73));
             //    }
             //}
+
+            //var cpuLog = GetCpuTestLog();
+
+            //const string newCpuExpectedLog = "new_cpu_expected_log.txt";
+            //using (StreamWriter streamWriter = File.CreateText(Path.Combine(NesRootPath, newCpuExpectedLog)))
+            //{
+            //    foreach (string logLine in cpuLog)
+            //    {
+            //        streamWriter.WriteLine(logLine);
+            //    }
+            //}
+        }
+
+        /// <summary>
+        /// Parses the NES test CPU log that does not have the instruction dissasembled details.
+        /// </summary>
+        /// <returns>The NES test CPU log without the innstruction dissasembled details.</returns>
+        private static List<string> GetCpuTestLog()
+        {
+            const string cpuExpectedLogFile = "nes_cpu_test_expected_log.txt";
+
+            //var log = new StringBuilder();
+            var log = new List<string>();
+            foreach (string line in File.ReadLines(Path.Combine(NesRootPath, cpuExpectedLogFile)))
+            {
+                string pcAddress = line.Substring(0, 4);
+
+                string rawDump = line.Substring(6, 8).TrimEnd();
+                //byte[] dump = rawDump.Split(' ').Select(b => Convert.ToByte(b, 16)).ToArray();
+                
+                //string instruction = string.Join(' ', line.Substring(16, 32).TrimEnd().Split(' ').Take(2));
+                //string instructionDisssasembled = Assembler.DissasembleInstruction(dump, Convert.ToUInt16(pcAddress, 16));
+
+                //if (instruction != instructionDisssasembled)
+                //    throw new InvalidOperationException($"Both dissasemble are differents. From CPU log: {instruction} From my own dissasembler: {instructionDisssasembled}.");
+
+                //string registers = line.Substring(48);
+                string registers = line.Substring(48, 25);
+
+                //log.AppendLine($"{pcAddress} {rawDump.PadRight(10, ' ')}{instruction.PadRight(32, ' ')}{registers}");
+                //log.Add($"{pcAddress} {rawDump.PadRight(10, ' ')}{instruction.PadRight(32, ' ')}{registers}");
+                log.Add($"{pcAddress} {rawDump.PadRight(10, ' ')}{registers}");
+            }
+
+            return log;
+
+            //return log.ToString();
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -46,6 +47,71 @@ namespace NES._6502
                 MnemonicAddrModes[mnemonic].Add(Cpu.OpCodes[index].AddressingMode);
             }
         }
+
+        public static string DissasembleInstruction(byte[] dump, ushort pcAddress)
+        {
+            Instruction instruction = Cpu.OpCodes[dump[0]];
+            if (instruction == null)
+                return string.Empty;
+
+            var sb = new StringBuilder(instruction.Mnemonic.ToUpper());
+
+            if (instruction.AddressingMode == AddressingMode.Accumulator)
+            {
+                sb.Append(" A");
+            }else if (dump.Length > 1)
+            {
+                sb.Append(' ');
+
+                string lowByte = ConvertToHex(dump[1]);
+                string highByte = dump.Length > 2 ? ConvertToHex(dump[2]) : null;
+
+                switch (instruction.AddressingMode)
+                {
+                    case AddressingMode.Immediate:
+                        sb.Append($"#${lowByte}");
+                        break;
+                    case AddressingMode.Absolute:
+                        sb.Append($"${highByte}{lowByte}");
+                        break;
+                    case AddressingMode.AbsoluteX:
+                        sb.Append($"${highByte}{lowByte},X");
+                        break;
+                    case AddressingMode.AbsoluteY:
+                        sb.Append($"${highByte}{lowByte},Y");
+                        break;
+                    case AddressingMode.Indirect:
+                        sb.Append($"(${highByte}{lowByte})");
+                        break;
+                    case AddressingMode.IndirectX:
+                        sb.Append($"(${lowByte},X)");
+                        break;
+                    case AddressingMode.IndirectY:
+                        sb.Append($"(${lowByte}),Y");
+                        break;
+                    case AddressingMode.ZeroPage:
+                        sb.Append($"${lowByte}");
+                        break;
+                    case AddressingMode.ZeroPageX:
+                        sb.Append($"${lowByte},X");
+                        break;
+                    case AddressingMode.ZeroPageY:
+                        sb.Append($"${lowByte},Y");
+                        break;
+                    case AddressingMode.Relative:
+                        sb.Append($"${ConvertToHex((ushort)((pcAddress + 2) + (sbyte)dump[1]))}");
+                        break;
+                    default:
+                        throw new NotImplementedException();
+                }
+            }
+
+            return sb.ToString();
+        }
+
+        private static string ConvertToHex(byte b) => b.ToString("X").PadLeft(2, '0');
+
+        private static string ConvertToHex(ushort n) => n.ToString("X").PadLeft(4, '0');
 
         /// <summary>
         /// Assembles a program for a 6502 CPU.
