@@ -317,7 +317,7 @@ namespace NES
             string instructionHexDump = string.Join(" ", _instructionHex.Select(i => i.ToString("X").PadLeft(2, '0')));
 
             //TestLineResult = $"{opCodeAddress.ToString("X")}  {instructionHexDump.PadRight(10, ' ')}{instructionDisassembled.PadRight(32, ' ')}{registersSnapshot}";
-            TestLineResult = $"{opCodeAddress.ToString("X")} {instructionHexDump.PadRight(10, ' ')}{registersSnapshot}";
+            TestLineResult = $"{opCodeAddress.ToString("X").PadLeft(4, '0')} {instructionHexDump.PadRight(10, ' ')}{registersSnapshot}";
             _instructionHex.Clear();
 #endif
 
@@ -359,6 +359,7 @@ namespace NES
                     break;
                 case BRK_INSTRUCTION:
                     BRK();
+                    //break;
                     return false;
                 case BVC_INSTRUCTION:
                     BVC();
@@ -1371,7 +1372,24 @@ namespace NES
                     if (mode == AddressingMode.Indirect)
                     {
                         // The content located in the address parsed is the LSB (Least Significant Byte) of the target address
-                        byte lowByte = _bus.Read(addressParsed++);
+                        byte lowByte = _bus.Read(addressParsed);
+
+                        /*
+                         * There's a bug in the hardware when parsing the effective address in the Indirect
+                         * addressing mode: if the LSB (least significant byte) of the absolute address is 0xFF, then incrementing
+                         * by one the absolute address (incrementing by one is required for get the MSB of the effective address) 
+                         * would produce a wrap around the page; example below:
+                         * 
+                         * Absolute address: 0x02FF.
+                         * LSB from the effetive address is at 0x02FF.
+                         * MSB from the effective address should be at 0x02FF + 0x0001 = 0x0300; but because the bug explained above, it's
+                         * at 0x0200 (we stayed in the same page 0x02)
+                         */
+                        if ((byte)(addressParsed) == 0xFF)
+                            addressParsed ^= (0x00FF);
+                        else
+                            addressParsed++;
+
                         byte highByte = _bus.Read(addressParsed);
 
                         operandAddress = ParseBytes(lowByte, highByte);
