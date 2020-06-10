@@ -1385,7 +1385,7 @@ namespace NES
                          * MSB from the effective address should be at 0x02FF + 0x0001 = 0x0300; but because the bug explained above, it's
                          * at 0x0200 (we stayed in the same page 0x02)
                          */
-                        if ((byte)(addressParsed) == 0xFF)
+                        if (addressParsed.GetLowByte() == 0xFF)
                             addressParsed ^= (0x00FF);
                         else
                             addressParsed++;
