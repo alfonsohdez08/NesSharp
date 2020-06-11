@@ -93,7 +93,7 @@ namespace NES
         public const string ATX_INSTRUCTION = "ATX";
         public const string AXS_INSTRUCTION = "AXS";
         public const string DCP_INSTRUCTION = "DCP";
-        public const string ISC_INSTRUCTION = "ISC";
+        public const string ISB_INSTRUCTION = "ISB";
         //public const string KIL_INSTRUCTION = "KIL";
         public const string LAX_INSTRUCTION = "LAX";
         public const string RLA_INSTRUCTION = "RLA";
@@ -128,8 +128,8 @@ namespace NES
             new Instruction(BCS_INSTRUCTION, AddressingMode.Relative, 2), new Instruction(LDA_INSTRUCTION, AddressingMode.IndirectY, 5), null,     new Instruction(LAX_INSTRUCTION, AddressingMode.IndirectY, 5), new Instruction(LDY_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(LDA_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(LDX_INSTRUCTION, AddressingMode.ZeroPageY, 4), new Instruction(LAX_INSTRUCTION, AddressingMode.ZeroPageY, 4), new Instruction(CLV_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(LDA_INSTRUCTION, AddressingMode.AbsoluteY, 4), new Instruction(TSX_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(LAS_INSTRUCTION, AddressingMode.AbsoluteY, 4), new Instruction(LDY_INSTRUCTION, AddressingMode.AbsoluteX, 4), new Instruction(LDA_INSTRUCTION, AddressingMode.AbsoluteX, 4), new Instruction(LDX_INSTRUCTION, AddressingMode.AbsoluteY, 4), new Instruction(LAX_INSTRUCTION, AddressingMode.AbsoluteY, 4),
             new Instruction(CPY_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(CMP_INSTRUCTION, AddressingMode.IndirectX, 6), new Instruction(NOP_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(DCP_INSTRUCTION, AddressingMode.IndirectX, 8), new Instruction(CPY_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(CMP_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(DEC_INSTRUCTION, AddressingMode.ZeroPage, 5), new Instruction(DCP_INSTRUCTION, AddressingMode.ZeroPage, 5), new Instruction(INY_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(CMP_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(DEX_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(AXS_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(CPY_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(CMP_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(DEC_INSTRUCTION, AddressingMode.Absolute, 6), new Instruction(DCP_INSTRUCTION, AddressingMode.Absolute, 6),
             new Instruction(BNE_INSTRUCTION, AddressingMode.Relative, 2), new Instruction(CMP_INSTRUCTION, AddressingMode.IndirectY, 5), null, new Instruction(DCP_INSTRUCTION, AddressingMode.IndirectY, 8), new Instruction(NOP_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(CMP_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(DEC_INSTRUCTION, AddressingMode.ZeroPageX, 6), new Instruction(DCP_INSTRUCTION, AddressingMode.ZeroPageX, 6), new Instruction(CLD_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(CMP_INSTRUCTION, AddressingMode.AbsoluteY, 4), new Instruction(NOP_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(DCP_INSTRUCTION, AddressingMode.AbsoluteY, 7), new Instruction(NOP_INSTRUCTION, AddressingMode.AbsoluteX, 4), new Instruction(CMP_INSTRUCTION, AddressingMode.AbsoluteX, 4), new Instruction(DEC_INSTRUCTION, AddressingMode.AbsoluteX, 7), new Instruction(DCP_INSTRUCTION, AddressingMode.AbsoluteX, 7),
-            new Instruction(CPX_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(SBC_INSTRUCTION, AddressingMode.IndirectX, 6), new Instruction(NOP_INSTRUCTION, AddressingMode.Immediate, 2),  new Instruction(ISC_INSTRUCTION, AddressingMode.IndirectX, 8), new Instruction(CPX_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(SBC_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(INC_INSTRUCTION, AddressingMode.ZeroPage, 5), new Instruction(ISC_INSTRUCTION, AddressingMode.ZeroPage, 5), new Instruction(INX_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(SBC_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(NOP_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(SBC_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(CPX_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(SBC_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(INC_INSTRUCTION, AddressingMode.Absolute, 6), new Instruction(ISC_INSTRUCTION, AddressingMode.Absolute, 6),
-            new Instruction(BEQ_INSTRUCTION, AddressingMode.Relative, 2), new Instruction(SBC_INSTRUCTION, AddressingMode.IndirectY, 5), null,     new Instruction(ISC_INSTRUCTION, AddressingMode.IndirectY, 8), new Instruction(NOP_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(SBC_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(INC_INSTRUCTION, AddressingMode.ZeroPageX, 6), new Instruction(ISC_INSTRUCTION, AddressingMode.ZeroPageX, 6), new Instruction(SED_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(SBC_INSTRUCTION, AddressingMode.AbsoluteY, 4), new Instruction(NOP_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(ISC_INSTRUCTION, AddressingMode.AbsoluteY, 7), new Instruction(NOP_INSTRUCTION, AddressingMode.AbsoluteX, 4), new Instruction(SBC_INSTRUCTION, AddressingMode.AbsoluteX, 4), new Instruction(INC_INSTRUCTION, AddressingMode.AbsoluteX, 7), new Instruction(ISC_INSTRUCTION, AddressingMode.AbsoluteX, 7)
+            new Instruction(CPX_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(SBC_INSTRUCTION, AddressingMode.IndirectX, 6), new Instruction(NOP_INSTRUCTION, AddressingMode.Immediate, 2),  new Instruction(ISB_INSTRUCTION, AddressingMode.IndirectX, 8), new Instruction(CPX_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(SBC_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(INC_INSTRUCTION, AddressingMode.ZeroPage, 5), new Instruction(ISB_INSTRUCTION, AddressingMode.ZeroPage, 5), new Instruction(INX_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(SBC_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(NOP_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(SBC_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(CPX_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(SBC_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(INC_INSTRUCTION, AddressingMode.Absolute, 6), new Instruction(ISB_INSTRUCTION, AddressingMode.Absolute, 6),
+            new Instruction(BEQ_INSTRUCTION, AddressingMode.Relative, 2), new Instruction(SBC_INSTRUCTION, AddressingMode.IndirectY, 5), null,     new Instruction(ISB_INSTRUCTION, AddressingMode.IndirectY, 8), new Instruction(NOP_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(SBC_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(INC_INSTRUCTION, AddressingMode.ZeroPageX, 6), new Instruction(ISB_INSTRUCTION, AddressingMode.ZeroPageX, 6), new Instruction(SED_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(SBC_INSTRUCTION, AddressingMode.AbsoluteY, 4), new Instruction(NOP_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(ISB_INSTRUCTION, AddressingMode.AbsoluteY, 7), new Instruction(NOP_INSTRUCTION, AddressingMode.AbsoluteX, 4), new Instruction(SBC_INSTRUCTION, AddressingMode.AbsoluteX, 4), new Instruction(INC_INSTRUCTION, AddressingMode.AbsoluteX, 7), new Instruction(ISB_INSTRUCTION, AddressingMode.AbsoluteX, 7)
         };
         #endregion
 
@@ -527,11 +527,159 @@ namespace NES
                 case TYA_INSTRUCTION:
                     TYA();
                     break;
+                case LAX_INSTRUCTION:
+                    LAX();
+                    break;
+                case SAX_INSTRUCTION:
+                    SAX();
+                    break;
+                case DCP_INSTRUCTION:
+                    DCP();
+                    break;
+                case ISB_INSTRUCTION:
+                    ISB();
+                    break;
+                case SLO_INSTRUCTION:
+                    SLO();
+                    break;
+                case RLA_INSTRUCTION:
+                    RLA();
+                    break;
+                case SRE_INSTRUCTION:
+                    SRE();
+                    break;
+                case RRA_INSTRUCTION:
+                    RRA();
+                    break;
                 default:
-                    throw new NotImplementedException();
+                    throw new NotImplementedException($"The instruction {instruction.Mnemonic} has not been implemented yet; Op Code: {opCode.ToString("X").PadLeft(2, '0')} Addressing Mode: {instruction.AddressingMode}.");
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Perform a ROR to a value from a memory location and then perform an ADC with the value from the Accumulator.
+        /// </summary>
+        private void RRA()
+        {
+            ROR();
+            ADC();
+        }
+
+        /// <summary>
+        /// Perform a LSR to a value from a memory location and then perform an EOR against the value from the Accumulator.
+        /// </summary>
+        private void SRE()
+        {
+            LSR();
+            EOR();
+        }
+
+        /// <summary>
+        /// Perform a ROL to a value from a memory location and then perform an AND against the value from the Accumulator.
+        /// </summary>
+        private void RLA()
+        {
+            ROL();
+            AND();
+        }
+
+        /// <summary>
+        /// Perform an ASL to a value from a memory location and then perform an OR against the value from the Accumulator.
+        /// </summary>
+        private void SLO()
+        {
+            ASL();
+            ORA();
+        }
+
+        /// <summary>
+        /// Perform an INC to a memory location and then perform a SBC with the accumulator.
+        /// </summary>
+        private void ISB()
+        {
+            /*
+                INC $FF
+                SBC $FF             
+             */
+
+            INC();
+            SBC();
+        }
+
+        /// <summary>
+        /// Decrements by one the value specified by the memory address and the compare it against the Accumulator.
+        /// </summary>
+        private void DCP()
+        {
+            DEC();
+            CMP();
+
+            //Compare(_a.GetValue(), _bus.Read(_operandAddress));
+
+            //byte val = _bus.Read(_operandAddress);
+            //val--;
+
+            //Compare(_a.GetValue(), val);
+        }
+
+        /// <summary>
+        /// Performs an AND operation between the registers X and Accumulator and store its result into memory.
+        /// </summary>
+        private void SAX()
+        {
+            /*
+                STX $FE
+                PHA
+                AND $FE
+                STA $FE
+                PLA
+             */
+
+            // This instruction does not affect the CPU flags register
+            byte flags = _flags.GetValue();
+
+            STX();
+            PHA();
+            AND();
+            STA();
+            PLA();
+
+            // Pulling back the original value of the flags register
+            _flags.SetValue(flags);
+
+            //byte a = _a.GetValue();
+            //byte x = _x.GetValue();
+
+            //byte result = (byte)(a & x);
+
+            //_flags.SetFlag(StatusFlag.Zero, result == 0);
+            //_flags.SetFlag(StatusFlag.Negative, result.IsNegative());
+
+            //_bus.Write(_operandAddress, result);
+        }
+
+        /// <summary>
+        /// Loads the content of a memory location into the Accumulator and the register X.
+        /// </summary>
+        private void LAX()
+        {
+            /*
+                LDA $8400,Y
+                LDX $8400,Y             
+             */
+
+            LDA();
+            LDX();
+
+            //byte val = _bus.Read(_operandAddress);
+
+            //_a.SetValue(val);
+            //_x.SetValue(val);
+
+            //_flags.SetFlag(StatusFlag.Zero, val == 0);
+            //_flags.SetFlag(StatusFlag.Negative, val.IsNegative());
         }
 
         /// <summary>
@@ -878,12 +1026,12 @@ namespace NES
         /// Compares two bytes and updates the CPU flags based on the result.
         /// </summary>
         /// <param name="register">A value coming from a register (Accumulator, X, Y).</param>
-        /// <param name="memory">A value held in memory.</param>
-        private void Compare(byte register, byte memory)
+        /// <param name="valueFromMemory">A value held in memory.</param>
+        private void Compare(byte register, byte valueFromMemory)
         {
-            _flags.SetFlag(StatusFlag.Carry, register >= memory);
-            _flags.SetFlag(StatusFlag.Zero, register == memory);
-            _flags.SetFlag(StatusFlag.Negative, ((byte)(register - memory)).IsNegative());
+            _flags.SetFlag(StatusFlag.Carry, register >= valueFromMemory);
+            _flags.SetFlag(StatusFlag.Zero, register == valueFromMemory);
+            _flags.SetFlag(StatusFlag.Negative, ((byte)(register - valueFromMemory)).IsNegative());
         }
 
         /// <summary>
