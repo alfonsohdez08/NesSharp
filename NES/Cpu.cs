@@ -286,11 +286,13 @@ namespace NES
         {
 #if CPU_NES_TEST
             _flags.SetValue(0x0024); // ‭0010 0100‬
+            _stackPointer.SetValue(0xFD);
 #else
             _flags.SetValue(0x0034); // 00‭11 0100‬
-#endif
+            
             Push(_pcAddress.GetHighByte());
             Push(_pcAddress.GetLowByte());
+#endif
         }
 
         /// <summary>
@@ -319,6 +321,9 @@ namespace NES
             byte opCode = _bus.Read(_pcAddress);
 
 #if CPU_NES_TEST
+            if (_pcAddress == 1)
+                return false;
+
             _instructionHex.Add(opCode);
             ushort opCodeAddress = _pcAddress;
             string registersSnapshot = GetRegistersSnapshot();
@@ -381,8 +386,7 @@ namespace NES
                     break;
                 case BRK_INSTRUCTION:
                     BRK();
-                    //break;
-                    return false;
+                    break;
                 case BVC_INSTRUCTION:
                     BVC();
                     break;
@@ -563,6 +567,7 @@ namespace NES
         /// </summary>
         private void RRA()
         {
+            // Equivalent instructions:
             ROR();
             ADC();
         }
@@ -572,6 +577,7 @@ namespace NES
         /// </summary>
         private void SRE()
         {
+            // Equivalent instructions:
             LSR();
             EOR();
         }
@@ -581,6 +587,7 @@ namespace NES
         /// </summary>
         private void RLA()
         {
+            // Equivalent instructions:
             ROL();
             AND();
         }
@@ -590,6 +597,7 @@ namespace NES
         /// </summary>
         private void SLO()
         {
+            // Equivalent instructions:
             ASL();
             ORA();
         }
@@ -599,7 +607,7 @@ namespace NES
         /// </summary>
         private void ISB()
         {
-            /*
+            /* Equivalent instructions:
                 INC $FF
                 SBC $FF             
              */
@@ -613,15 +621,9 @@ namespace NES
         /// </summary>
         private void DCP()
         {
+            // Equivalent instructions
             DEC();
             CMP();
-
-            //Compare(_a.GetValue(), _bus.Read(_operandAddress));
-
-            //byte val = _bus.Read(_operandAddress);
-            //val--;
-
-            //Compare(_a.GetValue(), val);
         }
 
         /// <summary>
@@ -629,7 +631,7 @@ namespace NES
         /// </summary>
         private void SAX()
         {
-            /*
+            /* Equivalent instructions:
                 STX $FE
                 PHA
                 AND $FE
@@ -648,16 +650,6 @@ namespace NES
 
             // Pulling back the original value of the flags register
             _flags.SetValue(flags);
-
-            //byte a = _a.GetValue();
-            //byte x = _x.GetValue();
-
-            //byte result = (byte)(a & x);
-
-            //_flags.SetFlag(StatusFlag.Zero, result == 0);
-            //_flags.SetFlag(StatusFlag.Negative, result.IsNegative());
-
-            //_bus.Write(_operandAddress, result);
         }
 
         /// <summary>
@@ -672,14 +664,6 @@ namespace NES
 
             LDA();
             LDX();
-
-            //byte val = _bus.Read(_operandAddress);
-
-            //_a.SetValue(val);
-            //_x.SetValue(val);
-
-            //_flags.SetFlag(StatusFlag.Zero, val == 0);
-            //_flags.SetFlag(StatusFlag.Negative, val.IsNegative());
         }
 
         /// <summary>
