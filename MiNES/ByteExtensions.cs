@@ -1,4 +1,4 @@
-﻿namespace NES
+﻿namespace MiNES
 {
     /// <summary>
     /// Utilities for manipulate 8-bit values (byte).

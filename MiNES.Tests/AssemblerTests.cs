@@ -1,11 +1,9 @@
-﻿using NES._6502;
-using System;
-using System.Collections.Generic;
+﻿using MiNES._6502;
 using System.Linq;
 using System.Text;
 using Xunit;
 
-namespace NES.Tests
+namespace MiNES.Tests
 {
     public class AssemblerTests
     {

@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using static NES.ByteExtensions;
+using static MiNES.ByteExtensions;
 
-namespace NES
+namespace MiNES
 {
 
     enum AddressingMode

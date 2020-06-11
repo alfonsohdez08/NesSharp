@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace NES
+namespace MiNES
 {
     /// <summary>
     /// Communicates NES components each other.

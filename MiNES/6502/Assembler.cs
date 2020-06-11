@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace NES._6502
+namespace MiNES._6502
 {
     internal static class Assembler
     {

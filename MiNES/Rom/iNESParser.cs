@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace NES.Rom
+namespace MiNES.Rom
 {
     /// <summary>
     /// Parser for the .NES files.

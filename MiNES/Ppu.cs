@@ -2,11 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace NES
+namespace MiNES
 {
-    class Accumulator: Register<byte>
+    class Ppu
     {
-
-
     }
 }

@@ -1,12 +1,12 @@
-﻿using NES._6502;
-using NES.Rom;
+﻿using MiNES._6502;
+using MiNES.Rom;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace NES
+namespace MiNES
 {
     class Program
     {

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace NES
+namespace MiNES
 {
     /// <summary>
     /// Represents a general register for the 6502 CPU.

@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\NES\NES.csproj" />
+    <ProjectReference Include="..\NES\MiNES.csproj" />
   </ItemGroup>
 
 </Project>
