@@ -17,12 +17,12 @@ namespace MiNES.Rom
         /// </summary>
         /// <param name="nesFilePath">The absolute path of the NES file.</param>
         /// <returns>A ready to use NES memory (program rom and character rom already mapped).</returns>
-        public static void ParseNesRom(string nesFilePath, out Memory cpuMemoryMapped, out Memory ppuMemoryMapped)
+        public static void ParseNesCartridge(string nesFilePath, out Memory cpuMemoryMapped, out Memory ppuMemoryMapped)
         {
             if (string.IsNullOrEmpty(nesFilePath))
                 throw new ArgumentNullException(nameof(nesFilePath));
 
-            ParseNesRom(File.ReadAllBytes(nesFilePath), out cpuMemoryMapped, out ppuMemoryMapped);
+            ParseNesCartridge(File.ReadAllBytes(nesFilePath), out cpuMemoryMapped, out ppuMemoryMapped);
         }
 
         /// <summary>
@@ -30,18 +30,19 @@ namespace MiNES.Rom
         /// </summary>
         /// <param name="content">The content in byte of the NES file.</param>
         /// <returns>A ready to use NES memory (program rom and character rom already mapped).</returns>
-        public static void ParseNesRom(byte[] content, out Memory cpuMemoryMapped, out Memory ppuMemoryMapped)
+        public static void ParseNesCartridge(byte[] content, out Memory cpuMemoryMapped, out Memory ppuMemoryMapped)
         {
             if (content == null || content.Length == 0)
                 throw new ArgumentException(nameof(content));
 
-            //byte[] nesMemory = Memory.CreateEmptyMemory();
             cpuMemoryMapped = new Memory(0x10000); // from 0x0000 up to 0xFFFF (in decimal: 0 up to 65,535)
             ppuMemoryMapped = new Memory(0x4000);
 
             byte numberOfPrgBanks = content[5];
             byte[] prgRomLowerBank = new ArraySegment<byte>(content, 0x0010, 0x4000).ToArray();
             byte[] prgRomUpperBank = numberOfPrgBanks > 1 ? new ArraySegment<byte>(content, 0x4001, 0x4000).ToArray() : prgRomLowerBank;
+
+            // Only supports mapper 0
 
             // Map PRG lower bank
             ushort address = 0x8000;
@@ -53,7 +54,12 @@ namespace MiNES.Rom
             for (int i = 0; address <= 0xFFFF && i < prgRomUpperBank.Length; address++, i++)
                 cpuMemoryMapped.Store(address, prgRomUpperBank[i]);
 
-            //TODO: Map ppu memory space
+            // Map CHR bank
+            byte[] chrRom = new ArraySegment<byte>(content, 0x0010+ prgRomLowerBank.Length + prgRomUpperBank.Length, 0x2000).ToArray();
+
+            address = 0x0000;
+            for (int i = 0; address < 0x2000 && i < chrRom.Length; i++, address++)
+                ppuMemoryMapped.Store(address, chrRom[i]);
         }
     }
 }
