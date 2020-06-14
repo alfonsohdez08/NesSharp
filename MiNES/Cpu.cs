@@ -301,30 +301,15 @@ namespace MiNES
         }
 
         /// <summary>
-        /// Runs the program loaded in the memory.
+        /// Executes the next instruction denoted by the program counter.
         /// </summary>
-        public void Run()
-        {
-            //do
-            //{
-
-            //} while (ExecuteInstruction());
-        }
-
-        public int Step()
-        {
-            throw new NotImplementedException();
-        }
+        /// <returns>The number of cycles spent for execute the instruction.</returns>
+        public byte Step() => ExecuteInstruction();
 
         /// <summary>
-        /// Executes the program instruction by instruction (useful for debugging, or for execute the first N instructions of a program).
+        /// Executes a CPU instruction (droven by the fetch decode execute cycle).
         /// </summary>
-        /// <returns>True if there are more instruction to executed; otherwise false.</returns>
-        public byte StepInstruction() => ExecuteInstruction();
-
-        /// <summary>
-        /// Executes a CPU instruction.
-        /// </summary>
+        /// <returns>The number of cycle spent in order to execute the instruction.</returns>
         private byte ExecuteInstruction()
         {
             // Fetches the OpCode from the memory
