@@ -14,25 +14,26 @@ namespace MiNES
 
         static void Main(string[] args)
         {
-            //string nesTestFilePath = Path.Combine(NesRootPath, "nestest.nes");
-            //byte[] nesFile = File.ReadAllBytes(nesTestFilePath);
+            string nesTestFilePath = Path.Combine(NesRootPath, "nestest.nes");
+            byte[] nesFile = File.ReadAllBytes(nesTestFilePath);
 
-            //iNESParser.ParseNesRom(nesFile, out Memory cpuMemoryMapped, out Memory ppuMemoryMapped);
+            iNESParser.ParseNesCartridge(nesFile, out Memory cpuMemoryMapped, out Memory ppuMemoryMapped);
 
-            //var cpuBus = new CpuBus(cpuMemoryMapped);
-            //var cpu = new Cpu(cpuBus, 0xC000);
+            var cpuBus = new CpuBus(cpuMemoryMapped);
+            var cpu = new Cpu(cpuBus, 0xC000);
 
             ////cpu.Run();
 
-            //const string myCpuLogFile = "my_cpu_test_log.txt";
-            //using (FileStream cpuTestLog = File.Create(Path.Combine(NesRootPath, myCpuLogFile)))
-            //using (StreamWriter streamWriter = new StreamWriter(cpuTestLog))
-            //{
-            //    while (cpu.StepInstruction())
-            //    {
-            //        streamWriter.WriteLine(cpu.TestLineResult);
-            //    }
-            //}
+            const string myCpuLogFile = "my_cpu_test_log.txt";
+            using (FileStream myCpuTestLog = File.Create(Path.Combine(NesRootPath, myCpuLogFile)))
+            using (StreamWriter streamWriter = new StreamWriter(myCpuTestLog))
+            {
+                while (!cpu.CpuTestDone)
+                {
+                    cpu.Step();
+                    streamWriter.WriteLine(cpu.TestLineResult);
+                }
+            }
 
             //const string justCpuLogFile = "nes_cpu_test_expected_log_just_cpu.txt";
             //const string cpuExpectedLogFile = "nes_cpu_test_expected_log.txt";
@@ -58,7 +59,7 @@ namespace MiNES
             //}
 
 
-            var nes = new NES(File.ReadAllBytes(Path.Combine(NesRootPath, "super_mario_bros.nes")));
+            //var nes = new NES(File.ReadAllBytes(Path.Combine(NesRootPath, "super_mario_bros.nes")));
         }
 
         /// <summary>
@@ -75,7 +76,7 @@ namespace MiNES
             {
                 string pcAddress = line.Substring(0, 4);
 
-                string rawDump = line.Substring(6, 8).TrimEnd();
+                string hexDump = line.Substring(6, 8).TrimEnd();
                 //byte[] dump = rawDump.Split(' ').Select(b => Convert.ToByte(b, 16)).ToArray();
                 
                 //string instruction = string.Join(' ', line.Substring(16, 32).TrimEnd().Split(' ').Take(2));
@@ -86,10 +87,11 @@ namespace MiNES
 
                 //string registers = line.Substring(48);
                 string registers = line.Substring(48, 25);
+                string accumulativeCycles = line.Substring(86);
 
                 //log.AppendLine($"{pcAddress} {rawDump.PadRight(10, ' ')}{instruction.PadRight(32, ' ')}{registers}");
                 //log.Add($"{pcAddress} {rawDump.PadRight(10, ' ')}{instruction.PadRight(32, ' ')}{registers}");
-                log.Add($"{pcAddress} {rawDump.PadRight(10, ' ')}{registers}");
+                log.Add($"{pcAddress} {hexDump.PadRight(10, ' ')}{registers} {accumulativeCycles}");
             }
 
             return log;
