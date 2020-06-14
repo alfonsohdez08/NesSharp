@@ -178,6 +178,11 @@ namespace MiNES
         /// </summary>
         private ushort _operandAddress;
 
+        /// <summary>
+        /// The number of cycles spent for execute an instruction (for execute the fetch decode execute cycle).
+        /// </summary>
+        private byte _cycles;
+
 #if CPU_NES_TEST
         private readonly List<byte> _instructionHex = new List<byte>();
 
@@ -300,29 +305,34 @@ namespace MiNES
         /// </summary>
         public void Run()
         {
-            do
-            {
+            //do
+            //{
 
-            } while (ExecuteInstruction());
+            //} while (ExecuteInstruction());
+        }
+
+        public int Step()
+        {
+            throw new NotImplementedException();
         }
 
         /// <summary>
         /// Executes the program instruction by instruction (useful for debugging, or for execute the first N instructions of a program).
         /// </summary>
         /// <returns>True if there are more instruction to executed; otherwise false.</returns>
-        public bool StepInstruction() => ExecuteInstruction();
+        public byte StepInstruction() => ExecuteInstruction();
 
         /// <summary>
         /// Executes a CPU instruction.
         /// </summary>
-        private bool ExecuteInstruction()
+        private byte ExecuteInstruction()
         {
             // Fetches the OpCode from the memory
             byte opCode = _bus.Read(_pcAddress);
 
 #if CPU_NES_TEST
             if (_pcAddress == 1)
-                return false;
+                return 1;
 
             _instructionHex.Add(opCode);
             ushort opCodeAddress = _pcAddress;
@@ -335,9 +345,11 @@ namespace MiNES
             //Instruction instruction = OpCodes[opCode];
             Instruction instruction = OpCodes[opCode];
             if (instruction == null) // Illegal opcode
-                return true;
+                return 0;
 
-            FetchOperand(instruction.AddressingMode);
+            _cycles = instruction.Cycles;
+
+            SetOperand(instruction.AddressingMode);
 
 #if CPU_NES_TEST
             string instructionDisassembled = ParseInstruction(instruction);
@@ -559,7 +571,7 @@ namespace MiNES
                     throw new NotImplementedException($"The instruction {instruction.Mnemonic} has not been implemented yet; Op Code: {opCode.ToString("X").PadLeft(2, '0')} Addressing Mode: {instruction.AddressingMode}.");
             }
 
-            return true;
+            return _cycles;
         }
 
         /// <summary>
@@ -1048,7 +1060,7 @@ namespace MiNES
         private void BVS()
         {
             if (_flags.GetFlag(StatusFlag.Overflow))
-                _programCounter.SetValue((ushort)(_programCounter.GetValue() + (sbyte)_bus.Read(_operandAddress)));
+                AddOffsetToPC();
         }
 
         /// <summary>
@@ -1057,7 +1069,7 @@ namespace MiNES
         private void BVC()
         {
             if (!_flags.GetFlag(StatusFlag.Overflow))
-                _programCounter.SetValue((ushort)(_programCounter.GetValue() + (sbyte)_bus.Read(_operandAddress)));
+                AddOffsetToPC();
         }
 
         /// <summary>
@@ -1066,7 +1078,7 @@ namespace MiNES
         private void BPL()
         {
             if (!_flags.GetFlag(StatusFlag.Negative))
-                _programCounter.SetValue((ushort)(_programCounter.GetValue() + (sbyte)_bus.Read(_operandAddress)));
+                AddOffsetToPC();
         }
 
         /// <summary>
@@ -1101,7 +1113,7 @@ namespace MiNES
         private void BNE()
         {
             if (!_flags.GetFlag(StatusFlag.Zero))
-                _programCounter.SetValue((ushort)(_programCounter.GetValue() + (sbyte)_bus.Read(_operandAddress)));
+                AddOffsetToPC();
         }
 
         /// <summary>
@@ -1110,7 +1122,7 @@ namespace MiNES
         private void BMI()
         {
             if (_flags.GetFlag(StatusFlag.Negative))
-                _programCounter.SetValue((ushort)(_programCounter.GetValue() + (sbyte)_bus.Read(_operandAddress)));
+                AddOffsetToPC();
         }
 
         /// <summary>
@@ -1134,7 +1146,7 @@ namespace MiNES
         private void BEQ()
         {
             if (_flags.GetFlag(StatusFlag.Zero))
-                _programCounter.SetValue((ushort)(_programCounter.GetValue() + (sbyte)_bus.Read(_operandAddress)));
+                AddOffsetToPC();
         }
 
         /// <summary>
@@ -1143,7 +1155,7 @@ namespace MiNES
         private void BCS()
         {
             if (_flags.GetFlag(StatusFlag.Carry))
-                _programCounter.SetValue((ushort)(_programCounter.GetValue() + (sbyte)_bus.Read(_operandAddress)));
+                AddOffsetToPC();
         }
 
         /// <summary>
@@ -1152,7 +1164,18 @@ namespace MiNES
         private void BCC()
         {
             if (!_flags.GetFlag(StatusFlag.Carry))
-                _programCounter.SetValue((ushort)(_programCounter.GetValue() + (sbyte)_bus.Read(_operandAddress)));
+                AddOffsetToPC();
+        }
+
+        private void AddOffsetToPC()
+        {
+            // Add additional cycle when branch condition is true
+            _cycles++;
+
+            ushort targetAddress = (ushort)(_programCounter.GetValue() + (sbyte)_bus.Read(_operandAddress));
+            CheckIfCrossedPageBoundary(_programCounter.GetValue(), targetAddress); // Add another cycle if new branch is in another page
+
+            _programCounter.SetValue(targetAddress);
         }
 
         /// <summary>
@@ -1479,10 +1502,10 @@ namespace MiNES
 #region Addressing modes
 
         /// <summary>
-        /// Fetchs the instruction operand based on the instruction addressing mode.
+        /// Sets the operand address for the instruction.
         /// </summary>
         /// <param name="mode">The instruction's addressing mode.</param>
-        private void FetchOperand(AddressingMode mode)
+        private void SetOperand(AddressingMode mode)
         {
             if (mode == AddressingMode.Accumulator || mode == AddressingMode.Implied)
                 return;
@@ -1497,10 +1520,10 @@ namespace MiNES
                     operandAddress = _bus.Read(_pcAddress);
                     break;
                 case AddressingMode.ZeroPageX:
-                    operandAddress = (byte)(_bus.Read(_pcAddress) + _x.GetValue()); // If carry in the high byte (result greater than 255), requires an additiona cycle
+                    operandAddress = (byte)(_bus.Read(_pcAddress) + _x.GetValue());
                     break;
                 case AddressingMode.ZeroPageY:
-                    operandAddress = (byte)(_bus.Read(_pcAddress) + _y.GetValue()); // If carry in the high byte (result greater than 255), requires an additiona cycle
+                    operandAddress = (byte)(_bus.Read(_pcAddress) + _y.GetValue());
                     break;
                 case AddressingMode.Immediate:
                 case AddressingMode.Relative:
@@ -1549,11 +1572,19 @@ namespace MiNES
                         operandAddress = ParseBytes(lowByte, highByte);
                     }
                     else if (mode == AddressingMode.Absolute)
+                    {
                         operandAddress = addressParsed;
+                    }
                     else if (mode == AddressingMode.AbsoluteX)
+                    {
                         operandAddress = (ushort)(addressParsed + _x.GetValue());
+                        CheckIfCrossedPageBoundary(addressParsed, operandAddress);
+                    }
                     else
+                    {
                         operandAddress = (ushort)(addressParsed + _y.GetValue());
+                        CheckIfCrossedPageBoundary(addressParsed, operandAddress);
+                    }
                     break;
                 case AddressingMode.IndirectX:
                     {
@@ -1572,7 +1603,10 @@ namespace MiNES
                         byte lowByte = _bus.Read(zeroPageAddress++);
                         byte highByte = _bus.Read(zeroPageAddress);
 
-                        operandAddress = (ushort)(ParseBytes(lowByte, highByte) + _y.GetValue());
+                        ushort address = ParseBytes(lowByte, highByte);
+                        operandAddress = (ushort)(address + _y.GetValue());
+
+                        CheckIfCrossedPageBoundary(address, operandAddress);
                     }
                     break;
                 default:
@@ -1584,6 +1618,25 @@ namespace MiNES
         }
 
         #endregion
+
+        /// <summary>
+        /// Checks if both address are in the same page or not. If they do not, the cycle counter will be incremented by one.
+        /// </summary>
+        /// <param name="initialAddress">The address before the addition.</param>
+        /// <param name="addressAdded">The result of the addition between the initial address and another address.</param>
+        private void CheckIfCrossedPageBoundary(ushort initialAddress, ushort addressAdded)
+        {
+            if (!AreAddressOnSamePage(initialAddress, addressAdded))
+                _cycles++;
+        }
+
+        /// <summary>
+        /// Checks if the two given addresses are on the same page (an address page is the high byte).
+        /// </summary>
+        /// <param name="address1">First address.</param>
+        /// <param name="address2">Second address.</param>
+        /// <returns>True if both are on the same page; otherwise false.</returns>
+        private bool AreAddressOnSamePage(ushort address1, ushort address2) => address1 >> 8 == address2 >> 8;
 
         /// <summary>
         /// Increments the address allocated in the Program Counter.
@@ -1656,15 +1709,21 @@ namespace MiNES
         public AddressingMode AddressingMode { get; private set; }
 
         /// <summary>
-        /// The amount of machine cycles required in order to execute the instruction.
+        /// The amount of cycles required in order to execute the instruction (each cycle represents either a memory read or write).
         /// </summary>
-        public byte MachineCycles { get; private set; }
+        public byte Cycles { get; private set; }
 
-        public Instruction(string mnemonic, AddressingMode addressingMode, byte machineCycles)
+        /// <summary>
+        /// Denotes whether increment the instruction cycles when instruction's operand address cross a page within memory.
+        /// </summary>
+        public bool AdditionalCycleWhenCrossPage { get; private set; }
+
+        public Instruction(string mnemonic, AddressingMode addressingMode, byte machineCycles, bool additionalCycle = false)
         {
             Mnemonic = mnemonic;
             AddressingMode = addressingMode;
-            MachineCycles = machineCycles;
+            Cycles = machineCycles;
+            AdditionalCycleWhenCrossPage = additionalCycle;
         }
 
         public override string ToString() => $"{Mnemonic} {AddressingMode}";
