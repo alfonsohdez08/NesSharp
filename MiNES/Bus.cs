@@ -5,7 +5,7 @@ namespace MiNES
     /// <summary>
     /// Communicates NES components each other.
     /// </summary>
-    abstract class Bus
+    public abstract class Bus
     {
         /// <summary>
         /// The memory space reachable/available for the BUS.
@@ -24,7 +24,7 @@ namespace MiNES
     /// <summary>
     /// CPU's bus.
     /// </summary>
-    class CpuBus : Bus
+    public class CpuBus : Bus
     {
         /// <summary>
         /// The offset for first mirror of the CPU RAM.
@@ -89,7 +89,7 @@ namespace MiNES
     /// <summary>
     /// PPU's bus.
     /// </summary>
-    class PpuBus : Bus
+    public class PpuBus : Bus
     {
         public PpuBus(Memory memory): base(memory)
         {
@@ -97,12 +97,15 @@ namespace MiNES
 
         public override byte Read(ushort address)
         {
-            throw new NotImplementedException();
+            return memory.Fetch(address);
         }
 
         public override void Write(ushort address, byte val)
         {
-            throw new NotImplementedException();
+            if (address > 0x0000 && address < 0x2000)
+                memory.Store(address, val);
+            else
+                throw new NotImplementedException($"Have not implemented yet the logic for handle storing into the memory address {address.ToString("X").PadLeft(4, '0')}.");
         }
     }
 }

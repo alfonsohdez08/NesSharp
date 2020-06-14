@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -16,10 +17,10 @@ namespace MiNES.Emu
         {
             InitializeComponent();
 
-            InitScreen();
+            InitNES();
         }
 
-        private void InitScreen()
+        private void InitNES()
         {
             //var bitmap = new Bitmap(32, 32);
             //for (int row = 0; row < bitmap.Width; row++)
@@ -30,13 +31,16 @@ namespace MiNES.Emu
             //    }
             //}
 
-            var bitmap = new Bitmap(8, 8);
+            var nes = new NES(File.ReadAllBytes(@"C:\Users\ward\nes\super_mario_bros.nes"));
+            Bitmap backgroundTiles = nes.Ppu.DrawBackgroundTiles();
 
+            GameScreen.Image = backgroundTiles;
 
-            for (int x = 0; x < bitmap.Width; x++)
-            {
-                bitmap.SetPixel(x, 0, Color.Blue);
-            }
+            //var bitmap = new Bitmap(8, 8);
+            //for (int x = 0; x < bitmap.Width; x++)
+            //{
+            //    bitmap.SetPixel(x, 0, Color.Blue);
+            //}
 
             //for (int y = 0; y < bitmap.Height; y++)
             //{
@@ -53,7 +57,7 @@ namespace MiNES.Emu
 
 
 
-            GameScreen.Image = bitmap;
+            //GameScreen.Image = bitmap;
         }
     }
 }

@@ -5,7 +5,7 @@ using System.Text;
 
 namespace MiNES
 {
-    class Ppu
+    public class Ppu
     {
         private readonly PpuBus _ppuBus;
         private readonly CpuBus _cpuBus;
@@ -22,7 +22,10 @@ namespace MiNES
 
             int x = 0, y = 0;
 
+            int tiles = 0;
+
             for (ushort address = 0x0000; address < 0x1000; address += 0x0010)
+            //for (ushort address = 0x1000; address < 0x2000; address += 0x0010)
             {
                 ushort tileAddress = address;
                 int yTile = y;
@@ -34,8 +37,8 @@ namespace MiNES
                 {
                     int xTitle = x;
 
-                    byte lowPixelRow = _ppuBus.Read(tileAddress);
-                    byte highPixelRow = _ppuBus.Read((ushort)(tileAddress + 0x0008));
+                    byte lowBitRow = _ppuBus.Read(tileAddress);
+                    byte highBitRow = _ppuBus.Read((ushort)(tileAddress + 0x0008));
 
                     byte[] pixels = new byte[8];
 
@@ -43,10 +46,11 @@ namespace MiNES
                     for (int j = 0; j < 8; j++)
                     {
                         int mask = 1 << j;
-                        int lowBit = lowPixelRow & mask;
-                        int highBit = highPixelRow & mask;
+                        int lowBit = (lowBitRow & mask) == mask ? 1 : 0;
+                        int highBit = (highBitRow & mask) == mask ? 1 : 0;
 
                         byte pixelVal = (byte)(lowBit | (highBit << 1));
+                        
                         pixels[(pixels.Length - 1) - j] = pixelVal;
                     }
 
@@ -66,8 +70,18 @@ namespace MiNES
                     yTile++;
                 }
 
-                x += 8;
-                y += 8;
+                tiles++;
+                if (tiles >= 32)
+                {
+                    x = 0;
+                    y += 8;
+
+                    tiles = 0;
+                }
+                else
+                {
+                    x += 8;
+                }
             }
 
             return bitmap;
@@ -78,7 +92,7 @@ namespace MiNES
             switch(index)
             {
                 case 0:
-                    return Color.Black.ToArgb();
+                    return Color.White.ToArgb();
                 case 1:
                     return Color.Red.ToArgb();
                 case 2:

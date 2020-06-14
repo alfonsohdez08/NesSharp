@@ -5,7 +5,7 @@ using System.Text;
 
 namespace MiNES
 {
-    class NES
+    public class NES
     {
         private readonly Cpu _cpu;
         private readonly Ppu _ppu;

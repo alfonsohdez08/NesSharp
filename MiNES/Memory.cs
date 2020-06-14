@@ -4,7 +4,7 @@ using System.Text;
 
 namespace MiNES
 {
-    class Memory
+    public class Memory
     {
         /// <summary>
         /// The NES memory.

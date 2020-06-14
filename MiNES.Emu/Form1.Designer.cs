@@ -34,9 +34,9 @@
             // 
             // GameScreen
             // 
-            this.GameScreen.Location = new System.Drawing.Point(193, 105);
+            this.GameScreen.Location = new System.Drawing.Point(1, 1);
             this.GameScreen.Name = "GameScreen";
-            this.GameScreen.Size = new System.Drawing.Size(374, 222);
+            this.GameScreen.Size = new System.Drawing.Size(800, 450);
             this.GameScreen.TabIndex = 0;
             this.GameScreen.TabStop = false;
             // 
