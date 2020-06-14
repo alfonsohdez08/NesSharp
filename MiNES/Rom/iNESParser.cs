@@ -10,7 +10,10 @@ namespace MiNES.Rom
     /// </summary>
     static class iNESParser
     {
-
+        /// <summary>
+        /// The header offset (16 bytes).
+        /// </summary>
+        private const byte HeaderOffset = 0x10;
 
         /// <summary>
         /// Reads a NES file (.nes file extension) for dump its content into the NES memory.
@@ -38,9 +41,9 @@ namespace MiNES.Rom
             cpuMemoryMapped = new Memory(0x10000); // from 0x0000 up to 0xFFFF (in decimal: 0 up to 65,535)
             ppuMemoryMapped = new Memory(0x4000);
 
-            byte numberOfPrgBanks = content[5];
-            byte[] prgRomLowerBank = new ArraySegment<byte>(content, 0x0010, 0x4000).ToArray();
-            byte[] prgRomUpperBank = numberOfPrgBanks > 1 ? new ArraySegment<byte>(content, 0x4001, 0x4000).ToArray() : prgRomLowerBank;
+            byte numberOfPrgBanks = content[4];
+            byte[] prgRomLowerBank = new ArraySegment<byte>(content, HeaderOffset, 0x4000).ToArray();
+            byte[] prgRomUpperBank = numberOfPrgBanks > 1 ? new ArraySegment<byte>(content, 0x4000 + HeaderOffset, 0x4000).ToArray() : prgRomLowerBank;
 
             // Only supports mapper 0
 
@@ -55,7 +58,7 @@ namespace MiNES.Rom
                 cpuMemoryMapped.Store(address, prgRomUpperBank[i]);
 
             // Map CHR bank
-            byte[] chrRom = new ArraySegment<byte>(content, 0x0010+ prgRomLowerBank.Length + prgRomUpperBank.Length, 0x2000).ToArray();
+            byte[] chrRom = new ArraySegment<byte>(content, HeaderOffset + 0x8000, 0x2000).ToArray();
 
             address = 0x0000;
             for (int i = 0; address < 0x2000 && i < chrRom.Length; i++, address++)
