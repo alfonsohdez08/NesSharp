@@ -24,8 +24,8 @@ namespace MiNES
 
             int tiles = 0;
 
-            //for (ushort address = 0x0000; address < 0x1000; address += 0x0010)
-            for (ushort address = 0x1000; address < 0x2000; address += 0x0010)
+            for (ushort address = 0x0000; address < 0x1000; address += 0x0010)
+            //for (ushort address = 0x1000; address < 0x2000; address += 0x0010)
             {
                 ushort tileAddress = address;
                 int yTile = y;
