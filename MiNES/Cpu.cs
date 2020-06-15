@@ -301,7 +301,10 @@ namespace MiNES
             _stackPointer.SetValue(0xFD);
 #else
             _flags.SetValue(0x0034); // 00‭11 0100‬
-            
+
+            ushort startingAddress = ParseBytes(_bus.Read(0xFFFC), _bus.Read(0xFFFD));
+            _programCounter.SetValue(startingAddress);
+
             Push(_pcAddress.GetHighByte());
             Push(_pcAddress.GetLowByte());
 #endif

@@ -1,6 +1,7 @@
 ﻿using MiNES.Rom;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Text;
 
 namespace MiNES
@@ -23,6 +24,17 @@ namespace MiNES
 
             _cpu = new Cpu(_cpuBus);
             _ppu = new Ppu(_ppuBus, _cpuBus);
+        }
+
+        public Bitmap EmulateFrame()
+        {
+            while(true)
+            {
+                byte cpuCyclesSpent = _cpu.Step();
+            }
+
+
+            throw new NotImplementedException();
         }
     }
 }

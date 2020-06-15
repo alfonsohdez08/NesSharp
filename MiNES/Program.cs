@@ -14,6 +14,18 @@ namespace MiNES
 
         static void Main(string[] args)
         {
+#if CPU_NES_TEST
+TestCPU();
+#else
+            var superMarioRom = File.ReadAllBytes(Path.Combine(NesRootPath, "super_mario_bros.nes"));
+            var nes = new NES(superMarioRom);
+
+            var frame = nes.EmulateFrame();
+#endif
+        }
+#if CPU_NES_TEST
+        private static void TestCPU()
+        {
             string nesTestFilePath = Path.Combine(NesRootPath, "nestest.nes");
             byte[] nesFile = File.ReadAllBytes(nesTestFilePath);
 
@@ -62,7 +74,7 @@ namespace MiNES
             //var nes = new NES(File.ReadAllBytes(Path.Combine(NesRootPath, "super_mario_bros.nes")));
         }
 
-        /// <summary>
+                /// <summary>
         /// Parses the NES test CPU log that does not have the instruction dissasembled details.
         /// </summary>
         /// <returns>The NES test CPU log without the innstruction dissasembled details.</returns>
@@ -98,5 +110,6 @@ namespace MiNES
 
             //return log.ToString();
         }
+#endif
     }
 }
