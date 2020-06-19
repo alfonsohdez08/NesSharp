@@ -8,18 +8,110 @@ namespace MiNES
     public class Ppu
     {
         private readonly PpuBus _ppuBus;
-        private readonly CpuBus _cpuBus;
 
         private Bitmap[][] _patternTables;
         //private Bitmap[][] _nameTables;
 
-        public ushort Address { get; set; }
+        /// <summary>
+        /// Controls the state of the address latch (false = high byte; true = low byte).
+        /// </summary>
+        private bool _addressLatch = false;
 
-        public byte ControlRegister { get; set; }
-        public byte MaskRegister { get; set; }
-        public byte ScrollRegister { get; set; }
-        // ... and so on
+        /// <summary>
+        /// PPU Control register.
+        /// </summary>
+        public byte Control { get; set; }
 
+        /// <summary>
+        /// PPU Mask register.
+        /// </summary>
+        public byte Mask { get; set; }
+
+        /* When powering up the PPU, the status register (located at $2002) will
+         * be set to 0xA0 (10100000).
+         * 
+         * Bit 7: 0 = the PPU is not in the V-Blank area (Vertical Blank is the area non visible of the screen); 1 = the PPU is in the V-Blank area
+         * Bit 6: Sprite hit (more research about this)
+         * Bit 5: Sprite overflow (more than 8 sprites appears in a scanline)
+         */
+
+        /// <summary>
+        /// PPU Status register.
+        /// </summary>
+        public byte Status { get; set; } = 0xA0;
+
+        /// <summary>
+        /// Object Attribute Memory (OAM) address register.
+        /// </summary>
+        public byte OamAddress { get; set; }
+
+        /// <summary>
+        /// Object Attribute Memory (OAM) data register.
+        /// </summary>
+        public byte OamData { get; set; }
+
+        /// <summary>
+        /// PPU Scroll register.
+        /// </summary>
+        public byte Scroll { get; set; }
+
+
+        /// <summary>
+        /// The compiled address from the PPU Address register (this is known as Video RAM address or VRAM).
+        /// </summary>
+        private ushort _address = 0;
+
+        /// <summary>
+        /// PPU Address register.
+        /// </summary>
+        public byte Address
+        {
+            set
+            {
+                if (!_addressLatch)
+                {
+                    _address = (ushort)(_address | (value << 8));
+                    _addressLatch = true;
+                }
+                else
+                {
+                    _address |= value;
+                }
+            }
+        }
+
+        private byte _dataBuffer = 0;
+
+
+        ///// <summary>
+        ///// PPU Data register.
+        ///// </summary>
+        //public byte Data
+        //{
+        //    get
+        //    {
+        //        // Reads the data buffered (from previous read request)
+        //        byte data = _dataBuffer;
+
+        //        // Updates the buffer with the data allocated in the compiled address
+        //        _dataBuffer = _ppuBus.Read(_address);
+
+        //        /* If the compiled address does not overlap the color palette address range, then return
+        //         * the data read from the buffer; otherwise return the data read from the address right away
+        //         */
+        //        return _address >= 0x0000 && _address < 0x3F00 ? data : _dataBuffer;
+        //    }
+        //    set
+        //    {
+        //        _ppuBus.Write(_address, value);
+        //    }
+        //}
+
+
+        /// <summary>
+        /// The OAM DMA page.
+        /// </summary>
+        public byte OamDmaPage { get; set; }
 
         #region NES color palette
         private static readonly Color[] SystemColorPalette = new Color[]
@@ -94,13 +186,39 @@ namespace MiNES
         public bool IsFrameCompleted { get; private set; }
         public Bitmap Frame { get; private set; }
 
-        public Ppu(PpuBus ppuBus, CpuBus cpuBus)
+        public Ppu(PpuBus ppuBus)
         {
             _ppuBus = ppuBus;
-            _cpuBus = cpuBus;
 
-            Initialize();
             SetPatternTables();
+        }
+
+        public void ResetAddressLatch() => _addressLatch = false;
+
+        public byte GetPpuData()
+        {
+            // Reads the data buffered (from previous read request)
+            byte data = _dataBuffer;
+
+            // Updates the buffer with the data allocated in the compiled address
+            _dataBuffer = _ppuBus.Read(_address);
+
+            /* If the compiled address does not overlap the color palette address range, then return
+             * the data read from the buffer; otherwise return the data read from the address right away
+             */
+            if (_address >= 0x3F00)
+                data = _dataBuffer;
+
+            _address++;
+
+            return data;
+        }
+
+        public void SetPpuData(byte val)
+        {
+            _ppuBus.Write(_address, val);
+
+            _address++;
         }
 
         /// <summary>
@@ -110,8 +228,8 @@ namespace MiNES
         {
             _patternTables = new Bitmap[2][];
 
-            _patternTables[0] = GetBitmapPatternTable();
-            _patternTables[1] = GetBitmapPatternTable(false);
+            _patternTables[0] = GetBitmapPatternTable(false); // Left side of the pattern table it's for foreground tiles (sprites)
+            _patternTables[1] = GetBitmapPatternTable(); // Right side of the pattern table it's for the background tiles
 
             Bitmap[] GetBitmapPatternTable(bool backgroundTiles = true)
             {
@@ -158,21 +276,6 @@ namespace MiNES
 
                 return tilesBitmap;
             }
-        }
-
-        /// <summary>
-        /// Initializes the PPU (stabilize its state).
-        /// </summary>
-        private void Initialize()
-        {
-            /* When powering up the PPU, the status register (located at $2002) will
-             * be set to 0xA0 (10100000).
-             * 
-             * Bit 7: 0 = the PPU is not in the V-Blank area (Vertical Blank is the area non visible of the screen); 1 = the PPU is in the V-Blank area
-             * Bit 6: Sprite hit (more research about this)
-             * Bit 5: Sprite overflow (more than 8 sprites appears in a scanline)
-             */
-            _cpuBus.Write(0x2002, 0xA0);
         }
 
         /// <summary>

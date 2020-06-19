@@ -182,6 +182,9 @@ namespace MiNES
         /// </summary>
         private readonly CpuBus _bus;
 
+        /// <summary>
+        /// Points either to the next CPU instruction or the instruction's operand.
+        /// </summary>
         private ushort _pcAddress => _programCounter.GetValue();
 
         /// <summary>

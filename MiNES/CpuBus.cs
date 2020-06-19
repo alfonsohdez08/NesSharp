@@ -7,30 +7,16 @@ namespace MiNES
     /// </summary>
     public class CpuBus : Bus
     {
-        /// <summary>
-        /// The offset for first mirror of the CPU RAM.
-        /// </summary>
-        private const ushort FirstRamMirrorOffset = 2048;
+        private readonly Ppu _ppu;
 
         /// <summary>
-        /// The offset for second mirror of the CPU RAM.
+        /// Creates an instance of the bus used by the CPU.
         /// </summary>
-        private const ushort SecondRamMirrorOffset = 4096;
-
-        /// <summary>
-        /// The offset for third mirror of the CPU RAM.
-        /// </summary>
-        private const ushort ThirdRamMirrorOffset = 6144;
-
-        /// <summary>
-        /// Flag for determine whether writing either the low byte or high byte of the address into the PPUADDR register.
-        /// </summary>
-        /// <remarks>False: high byte; True: low byte.</remarks>
-        private bool _addressLatch = false;
-
-
-        public CpuBus(Memory memory):base(memory)
+        /// <param name="memory">The space for allocate RAM and other "stuffs".</param>
+        /// <param name="ppu">The PPU (the CPU reads/writes to the PPU registers by using any of the addresses in this range $2000-$2007).</param>
+        public CpuBus(Memory memory, Ppu ppu):base(memory)
         {
+            _ppu = ppu;
         }
 
         public override byte Read(ushort address)
@@ -38,40 +24,28 @@ namespace MiNES
             byte val;
             if (address >= 0x0000 && address < 0x2000)
                 val = memory.Fetch((ushort)(address % 0x0800));
-            else if (address >= 0x2000 && address < 0x4000)
+            else if (address >= 0x2000 && address < 0x4000) // PPU registers
             {
                 ushort addr = (ushort)(0x2000 + address % 8);
-
                 switch (addr)
                 {
-                    case 0x2000:
-                        val = GetPpuControlRegister();
-                        break;
-                    case 0x2001:
-                        val = GetPpuMaskRegister();
-                        break;
+                    // PPU Status register
                     case 0x2002:
-                        val = GetPpuStatusRegister();
+                        val = _ppu.Status;
                         // Clears bit 7 after reading the PPU Status Register
-                        memory.Store(addr, (byte)((val | 0x0080) ^ 0x0080));
+                        _ppu.Status = (byte)((val | 0x0080) ^ 0x0080);
+                        _ppu.ResetAddressLatch();
                         break;
-                    case 0x2003:
-                        val = GetOamAddress();
-                        break;
+                    // PPU OAM data register
                     case 0x2004:
-                        val = GetOamData();
+                        val = _ppu.OamData;
                         break;
-                    case 0x2005:
-                        val = GetPpuScroll();
-                        break;
-                    case 0x2006:
-                        val = GetPpuRamAddress();
-                        break;
+                    // PPU data register
                     case 0x2007:
-                        val = GetPpuRamValue();
+                        val = _ppu.GetPpuData();
                         break;
                     default:
-                        throw new InvalidOperationException();
+                        return 1; // dummy value
                 }
             }
             else
@@ -97,15 +71,6 @@ namespace MiNES
         private void WriteRam(ushort address, byte val)
         {
             memory.Store((ushort)(address % 0x0800), val);
-
-            //// Writes in the first mirror 0x0800 - 0x0FFF
-            //memory.Store((ushort)(address + FirstRamMirrorOffset), val);
-
-            //// Writes in the second mirror 0x1000 - x017FF
-            //memory.Store((ushort)(address + SecondRamMirrorOffset), val);
-
-            //// Writes in the third mirror 0x1800 - 0x1FFF
-            //memory.Store((ushort)(address + ThirdRamMirrorOffset), val);
         }
 
         private void WriteInputOutputRegisters(ushort address, byte val)
@@ -127,56 +92,37 @@ namespace MiNES
                 not slot in memory ram).
             */
 
-
             if (address >= 0x2000 && address < 0x4000)
             {
                 ushort addr = (ushort)(0x2000 + address % 8);
-                //if (addr == 0x2002)
-                //    throw new InvalidOperationException("The CPU can't write to the PPU status register.");
-
-                memory.Store(addr, val); // Writes to the actual slot in memory (I/O registers are mirrored every 8 bytes)
-
                 switch (addr)
                 {
                     case 0x2000:
+                        _ppu.Control = val;
                         break;
                     case 0x2001:
+                        _ppu.Mask = val;
                         break;
                     case 0x2003:
+                        _ppu.OamAddress = val;
                         break;
                     case 0x2004:
+                        _ppu.OamData = val;
                         break;
                     case 0x2005:
+                        // TODO: check address latch here
+                        _ppu.Scroll = val;
                         break;
                     case 0x2006:
-                        {
-                            
-                        }
+                        _ppu.Address = val;
                         break;
                     case 0x2007:
+                        _ppu.SetPpuData(val);
                         break;
                 }
             }
             else
                 memory.Store(address, val);
         }
-
-        public byte GetPpuControlRegister() => memory.Fetch(0x2000);
-
-        public byte GetPpuMaskRegister() => memory.Fetch(0x2001);
-
-        public byte GetPpuStatusRegister() => memory.Fetch(0x2002);
-
-        public byte GetOamAddress() => memory.Fetch(0x2003);
-
-        public byte GetOamData() => memory.Fetch(0x2004);
-
-        public byte GetPpuScroll() => memory.Fetch(0x2005);
-
-        public byte GetPpuRamAddress() => memory.Fetch(0x2006);
-
-        public byte GetPpuRamValue() => memory.Fetch(0x2007);
-
-        public byte GetOamDma() => memory.Fetch(0x4014);
     }
 }

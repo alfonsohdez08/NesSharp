@@ -10,8 +10,6 @@ namespace MiNES
     {
         private readonly Cpu _cpu;
         private readonly Ppu _ppu;
-        private readonly CpuBus _cpuBus;
-        private readonly PpuBus _ppuBus;
 
         public Ppu Ppu => _ppu;
 
@@ -19,11 +17,11 @@ namespace MiNES
         {
             iNESParser.ParseNesCartridge(gameCartridge, out Memory cpuMemory, out Memory ppuMemory);
 
-            _cpuBus = new CpuBus(cpuMemory);
-            _ppuBus = new PpuBus(ppuMemory);
+            var ppuBus = new PpuBus(ppuMemory);
+            _ppu = new Ppu(ppuBus);
 
-            _cpu = new Cpu(_cpuBus);
-            _ppu = new Ppu(_ppuBus, _cpuBus);
+            var cpuBus  = new CpuBus(cpuMemory, _ppu);
+            _cpu = new Cpu(cpuBus);
         }
 
         /// <summary>
