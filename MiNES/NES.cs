@@ -26,15 +26,21 @@ namespace MiNES
             _ppu = new Ppu(_ppuBus, _cpuBus);
         }
 
-        public Bitmap EmulateFrame()
+        /// <summary>
+        /// Produces/emulates a frame (an image).
+        /// </summary>
+        /// <returns>A frame (an image).</returns>
+        public Bitmap Frame()
         {
-            while(true)
+            do
             {
                 byte cpuCyclesSpent = _cpu.Step();
-            }
+                for (int ppuCycles = 0; ppuCycles < cpuCyclesSpent * 3; ppuCycles++)
+                    _ppu.Draw();
 
+            } while (!_ppu.IsFrameCompleted);
 
-            throw new NotImplementedException();
+            return _ppu.Frame;
         }
     }
 }

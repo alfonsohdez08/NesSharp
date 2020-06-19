@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using static MiNES.ByteExtensions;
 
 namespace MiNES
 {
-
+    /// <summary>
+    /// The addressing modes used by the 6502 CPU.
+    /// </summary>
     enum AddressingMode
     {
         ZeroPage,
@@ -22,6 +25,17 @@ namespace MiNES
         IndirectY,
         Implied,
         Accumulator
+    }
+
+    /// <summary>
+    /// The interruptions available for the 6502 CPU.
+    /// </summary>
+    enum InterruptionType
+    {
+        NMI,
+        IRQ,
+        BRK,
+        RESET
     }
 
     /// <summary>
@@ -156,12 +170,12 @@ namespace MiNES
         /// <summary>
         /// Holds the address of the outer 
         /// </summary>
-        private readonly Register<byte> _stackPointer;
+        private readonly Register<byte> _stackPointer = new Register<byte>();
 
         /// <summary>
         /// The Program Counter register (holds the memory address of the next instruction).
         /// </summary>
-        private readonly Register<ushort> _programCounter;
+        private readonly Register<ushort> _programCounter = new Register<ushort>();
 
         /// <summary>
         /// The CPU bus (interacts with other components within the NES).
@@ -246,7 +260,7 @@ namespace MiNES
             return instructionSb.ToString();
         }
 
-        private static string ParseOperand(ushort operand, AddressingMode addressingMode)
+                private static string ParseOperand(ushort operand, AddressingMode addressingMode)
         {
             string op = operand.ToString("X");
 
@@ -274,41 +288,113 @@ namespace MiNES
 
             return op;
         }
-
-        private static string FormatByte(byte b) => b.ToString("X").PadLeft(2, '0');
 #endif
 
         /// <summary>
         /// Creates an instance of the 6502 CPU.
         /// </summary>
         /// <param name="bus">The CPU bus (used for interact with other components within the NES).</param>
-        public Cpu(CpuBus bus, ushort startingAddress = 0x0000)
+        public Cpu(CpuBus bus)
         {
             if (bus == null)
                 throw new ArgumentNullException(nameof(bus));
 
             _bus = bus;
-            _stackPointer = new Register<byte>(0xFF);
-            _programCounter = new Register<ushort>(startingAddress);
-
-            Reset();
+            Initialize();
         }
 
-        private void Reset()
+        /// <summary>
+        /// Initializes the CPU based on the commercial NES.
+        /// </summary>
+        private void Initialize()
         {
 #if CPU_NES_TEST
             _flags.SetValue(0x0024); // ‭0010 0100‬
             _stackPointer.SetValue(0xFD);
+            _programCounter.SetValue(0xC000);
 #else
             _flags.SetValue(0x0034); // 00‭11 0100‬
-
-            ushort startingAddress = ParseBytes(_bus.Read(0xFFFC), _bus.Read(0xFFFD));
-            _programCounter.SetValue(startingAddress);
-
-            Push(_pcAddress.GetHighByte());
-            Push(_pcAddress.GetLowByte());
+            Interrupt(InterruptionType.RESET);
 #endif
         }
+
+#if !CPU_NES_TEST
+        private string ParseInstruction(Instruction instruction)
+        {
+            var instructionSb = new StringBuilder(instruction.Mnemonic);
+
+            if (!(instruction.AddressingMode == AddressingMode.Accumulator || instruction.AddressingMode == AddressingMode.Implied))
+            {
+                var operandParsed = new StringBuilder($"${FetchOperand()}");
+                if (instruction.AddressingMode == AddressingMode.Immediate)
+                    operandParsed.Insert(0, '#');
+                else if (instruction.AddressingMode == AddressingMode.AbsoluteX || instruction.AddressingMode == AddressingMode.ZeroPageX)
+                    operandParsed.Append(",X");
+                else if (instruction.AddressingMode == AddressingMode.AbsoluteY || instruction.AddressingMode == AddressingMode.ZeroPageY)
+                    operandParsed.Append(",Y");
+                else if (instruction.AddressingMode == AddressingMode.Indirect)
+                {
+                    operandParsed.Insert(0, '(');
+                    operandParsed.Append(')');
+                }
+                else if (instruction.AddressingMode == AddressingMode.IndirectX)
+                {
+                    operandParsed.Insert(0, '(');
+                    operandParsed.Append(",X)");
+                }
+                else if (instruction.AddressingMode == AddressingMode.IndirectY)
+                {
+                    operandParsed.Insert(0, '(');
+                    operandParsed.Append("),Y");
+                }
+
+                instructionSb.Append($" {operandParsed.ToString()}");
+            }
+
+            string FetchOperand()
+            {
+                ushort val = _operandAddress;
+                if (instruction.AddressingMode == AddressingMode.Immediate)
+                    val = _bus.Read(_operandAddress);
+                else if (instruction.AddressingMode == AddressingMode.Relative)
+                    val = _bus.Read(_operandAddress);
+                    //val = (ushort)(_pcAddress + (sbyte)(_bus.Read(_operandAddress))); // Perform the addition no matter what the condition result
+
+                return ParseOperand(val, instruction.AddressingMode);
+            }
+
+            return instructionSb.ToString();
+        }
+
+        private static string ParseOperand(ushort operand, AddressingMode addressingMode)
+        {
+            string op = operand.ToString("X");
+
+            // This representation is not accurate because it attempts to follow the format of the nes_cpu_test.log
+            switch (addressingMode)
+            {
+                // Addressing modes whose represetantion must be 2 bytes
+                case AddressingMode.Absolute:
+                case AddressingMode.AbsoluteX:
+                case AddressingMode.AbsoluteY:
+                case AddressingMode.Indirect:
+                    op = op.PadLeft(4, '0');
+                    break;
+                // Addressing modes whose represetantion must be 1 byte
+                case AddressingMode.Immediate:
+                case AddressingMode.ZeroPage:
+                case AddressingMode.ZeroPageX:
+                case AddressingMode.ZeroPageY:
+                case AddressingMode.IndirectX:
+                case AddressingMode.IndirectY:
+                case AddressingMode.Relative:
+                    op = op.PadLeft(2, '0');
+                    break;
+            }
+
+            return op;
+        }
+#endif
 
         /// <summary>
         /// Executes the next instruction denoted by the program counter.
@@ -323,6 +409,7 @@ namespace MiNES
         private byte ExecuteInstruction()
         {
             // Fetches the OpCode from the memory
+            ushort instructionAddress = _pcAddress;
             byte opCode = _bus.Read(_pcAddress);
 
 #if CPU_NES_TEST
@@ -340,7 +427,6 @@ namespace MiNES
             // Advances either to the current instruction operand or next instruction (depending on the addressing mode of the instruction)
             IncrementPC();
 
-            //Instruction instruction = OpCodes[opCode];
             Instruction instruction = OpCodes[opCode];
             if (instruction == null) // Illegal opcode (kills the CPU)
                 throw new Exception("The CPU got killed by an illegal opcode.");
@@ -349,6 +435,9 @@ namespace MiNES
             _additionalCycle = instruction.AdditionalCycleWhenCrossPage;
 
             SetOperand(instruction.AddressingMode);
+
+            string instructionDissasembled = ParseInstruction(instruction);
+            Console.WriteLine($"{instructionAddress.ToString("X").PadLeft(4, '0')}: {instructionDissasembled}");
 
 #if CPU_NES_TEST
             string instructionDisassembled = ParseInstruction(instruction);
@@ -812,7 +901,6 @@ namespace MiNES
 
             ushort pcAddress = ParseBytes(pcLowByte, pcHighByte);
             _programCounter.SetValue((ushort)(pcAddress + 1));
-            //_programCounter.SetValue(pcAddress);
         }
 
         /// <summary>
@@ -1090,25 +1178,65 @@ namespace MiNES
         /// </summary>
         private void BRK()
         {
-            byte lowByte = (byte)_pcAddress;
-            byte highByte = (byte)(_pcAddress >> 8);
+            Interrupt(InterruptionType.BRK);
+        }
 
-            // Pushes the program counter
-            Push(highByte);
-            Push(lowByte);
+        /// <summary>
+        /// Interrupts the CPU.
+        /// </summary>
+        /// <param name="interruptionType">The kind of interruption to the CPU.</param>
+        private void Interrupt(InterruptionType interruptionType)
+        {
+            if (interruptionType != InterruptionType.RESET)
+            {
+                byte lowByte = (byte)_pcAddress;
+                byte highByte = (byte)(_pcAddress >> 8);
 
-            // Pushes the CPU flags
-            byte flags = _flags.GetValue();
-            flags |= 0x30; // Sets the bit 4 and 5 to the copy of the CPU flags
-            Push(flags);
+                // Pushes the program counter
+                Push(highByte);
+                Push(lowByte);
 
-            _flags.SetFlag(StatusFlag.DisableInterrupt, true);
+                // Pushes the CPU flags
+                byte flags = (byte)(_flags.GetValue() | 0x30); // Sets bit 5 and 4
+                if (interruptionType != InterruptionType.BRK)
+                    flags = (byte)((flags | 0x10) ^ 0x10); // Disable the bit 4 to the copy of the CPU flags
 
-            byte irqLowByte = _bus.Read(0xFFFE);
-            byte irqHighByte = _bus.Read(0xFFFF);
-            ushort address = ParseBytes(irqLowByte, irqHighByte);
+                Push(flags);
 
+                // Side effects after performing an interruption
+                _flags.SetFlag(StatusFlag.DisableInterrupt, true);
+            }
+
+            byte jumpAddressLowByte, jumpAddressHighByte;
+            switch (interruptionType)
+            {
+                case InterruptionType.NMI:
+                    jumpAddressLowByte = _bus.Read(0xFFFA);
+                    jumpAddressHighByte = _bus.Read(0xFFFB);
+                    break;
+                case InterruptionType.RESET:
+                    jumpAddressLowByte = _bus.Read(0xFFFC);
+                    jumpAddressHighByte = _bus.Read(0xFFFD);
+                    break;
+                case InterruptionType.IRQ:
+                case InterruptionType.BRK:
+                    jumpAddressLowByte = _bus.Read(0xFFFE);
+                    jumpAddressHighByte = _bus.Read(0xFFFF);
+                    break;
+                default:
+                    throw new InvalidOperationException($"The interruption {interruptionType} does not exist.");
+            }
+
+            ushort address = ParseBytes(jumpAddressLowByte, jumpAddressHighByte);
             _programCounter.SetValue(address);
+        }
+
+        /// <summary>
+        /// Executes a NMI interruption.
+        /// </summary>
+        public void NMI()
+        {
+            Interrupt(InterruptionType.NMI);
         }
 
         /// <summary>
@@ -1218,7 +1346,6 @@ namespace MiNES
         /// <summary>
         /// Substracts a value from the accumulator's value.
         /// </summary>
-
         private void SBC()
         {
             /* The one complement of a number N is defined as N - 255. In binary, this is achieved by
@@ -1621,7 +1748,7 @@ namespace MiNES
             IncrementPC(); // Points to the next opcode (instruction)
         }
 
-        #endregion
+#endregion
 
         /// <summary>
         /// Checks if both address are in the same page or not. If they do not, the cycle counter will be incremented by one.

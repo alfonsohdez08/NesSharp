@@ -20,7 +20,7 @@ TestCPU();
             var superMarioRom = File.ReadAllBytes(Path.Combine(NesRootPath, "super_mario_bros.nes"));
             var nes = new NES(superMarioRom);
 
-            var frame = nes.EmulateFrame();
+            var frame = nes.Frame();
 #endif
         }
 #if CPU_NES_TEST
@@ -32,7 +32,7 @@ TestCPU();
             iNESParser.ParseNesCartridge(nesFile, out Memory cpuMemoryMapped, out Memory ppuMemoryMapped);
 
             var cpuBus = new CpuBus(cpuMemoryMapped);
-            var cpu = new Cpu(cpuBus, 0xC000);
+            var cpu = new Cpu(cpuBus);
 
             ////cpu.Run();
 
