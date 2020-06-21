@@ -15,9 +15,9 @@ namespace MiNES
 
         public NES(byte[] gameCartridge)
         {
-            iNESParser.ParseNesCartridge(gameCartridge, out Memory cpuMemory, out Memory ppuMemory);
+            iNESParser.ParseNesCartridge(gameCartridge, out Memory cpuMemory, out Memory ppuMemory, out Mirroring mirroring);
 
-            var ppuBus = new PpuBus(ppuMemory);
+            var ppuBus = new PpuBus(ppuMemory, mirroring);
             _ppu = new Ppu(ppuBus);
 
             var cpuBus  = new CpuBus(cpuMemory, _ppu);
@@ -34,9 +34,17 @@ namespace MiNES
             {
                 byte cpuCyclesSpent = _cpu.Step();
                 for (int ppuCycles = 0; ppuCycles < cpuCyclesSpent * 3; ppuCycles++)
-                    _ppu.Draw();
+                {
+                    //_ppu.Draw();
+                }
 
             } while (!_ppu.IsFrameCompleted);
+
+            if (_ppu.NmiRequested)
+            {
+                _cpu.NMI();
+                _ppu.NmiRequested = false;
+            }
 
             return _ppu.Frame;
         }

@@ -17,47 +17,47 @@ namespace MiNES.Emu
         {
             InitializeComponent();
 
-            InitNES();
+            //InitNES();
         }
 
-        private void InitNES()
-        {
-            //var bitmap = new Bitmap(32, 32);
-            //for (int row = 0; row < bitmap.Width; row++)
-            //{
-            //    for (int column = 0; column < bitmap.Height; column++)
-            //    {
-            //        bitmap.SetPixel(row, column, Color.FromArgb(row + 100, column + 100, row + column + 50));
-            //    }
-            //}
+        //private void InitNES()
+        //{
+        //    //var bitmap = new Bitmap(32, 32);
+        //    //for (int row = 0; row < bitmap.Width; row++)
+        //    //{
+        //    //    for (int column = 0; column < bitmap.Height; column++)
+        //    //    {
+        //    //        bitmap.SetPixel(row, column, Color.FromArgb(row + 100, column + 100, row + column + 50));
+        //    //    }
+        //    //}
 
-            var nes = new NES(File.ReadAllBytes(@"C:\Users\ward\nes\super_mario_bros.nes"));
-            Bitmap backgroundTiles = nes.Ppu.DrawBackgroundTiles();
+        //    var nes = new NES(File.ReadAllBytes(@"C:\Users\ward\nes\super_mario_bros.nes"));
+        //    Bitmap backgroundTiles = nes.Ppu.DrawBackgroundTiles();
 
-            GameScreen.Image = backgroundTiles;
+        //    GameScreen.Image = backgroundTiles;
 
-            //var bitmap = new Bitmap(8, 8);
-            //for (int x = 0; x < bitmap.Width; x++)
-            //{
-            //    bitmap.SetPixel(x, 0, Color.Blue);
-            //}
+        //    //var bitmap = new Bitmap(8, 8);
+        //    //for (int x = 0; x < bitmap.Width; x++)
+        //    //{
+        //    //    bitmap.SetPixel(x, 0, Color.Blue);
+        //    //}
 
-            //for (int y = 0; y < bitmap.Height; y++)
-            //{
-            //    bitmap.SetPixel(0, y, Color.Blue);
-            //}
-
-
-            //bitmap.SetPixel(1, 0, Color.Blue);
-            //bitmap.SetPixel(2, 0, Color.Blue);
-
-            //bitmap.SetPixel(3, 0, Color.Blue);
-
-            //bitmap.SetPixel(4, 0, Color.Blue);
+        //    //for (int y = 0; y < bitmap.Height; y++)
+        //    //{
+        //    //    bitmap.SetPixel(0, y, Color.Blue);
+        //    //}
 
 
+        //    //bitmap.SetPixel(1, 0, Color.Blue);
+        //    //bitmap.SetPixel(2, 0, Color.Blue);
 
-            //GameScreen.Image = bitmap;
-        }
+        //    //bitmap.SetPixel(3, 0, Color.Blue);
+
+        //    //bitmap.SetPixel(4, 0, Color.Blue);
+
+
+
+        //    //GameScreen.Image = bitmap;
+        //}
     }
 }

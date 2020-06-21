@@ -17,7 +17,7 @@ namespace MiNES
 #if CPU_NES_TEST
 TestCPU();
 #else
-            var superMarioRom = File.ReadAllBytes(Path.Combine(NesRootPath, "super_mario_bros.nes"));
+            var superMarioRom = File.ReadAllBytes(Path.Combine(NesRootPath, "donkey_kong.nes"));
             var nes = new NES(superMarioRom);
 
             var frame = nes.Frame();

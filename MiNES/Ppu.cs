@@ -70,18 +70,17 @@ namespace MiNES
             {
                 if (!_addressLatch)
                 {
-                    _address = (ushort)(_address | (value << 8));
+                    _address = (ushort)(((_address | 0xFF00) ^ 0xFF00) | (value << 8));
                     _addressLatch = true;
                 }
                 else
                 {
-                    _address |= value;
+                    _address = (ushort)(((_address | 0xFF) ^ 0xFF) | value);
                 }
             }
         }
 
         private byte _dataBuffer = 0;
-
 
         ///// <summary>
         ///// PPU Data register.
@@ -186,6 +185,8 @@ namespace MiNES
         public bool IsFrameCompleted { get; private set; }
         public Bitmap Frame { get; private set; }
 
+        public bool NmiRequested { get; set; }
+
         public Ppu(PpuBus ppuBus)
         {
             _ppuBus = ppuBus;
@@ -209,7 +210,11 @@ namespace MiNES
             if (_address >= 0x3F00)
                 data = _dataBuffer;
 
-            _address++;
+            // If bit 3 from control register is set, add 32 to VRAM address; otherwise 1
+            if ((Control & 0x0004) == 0x0004)
+                _address += 32;
+            else
+                _address++;
 
             return data;
         }
@@ -218,7 +223,11 @@ namespace MiNES
         {
             _ppuBus.Write(_address, val);
 
-            _address++;
+            // If bit 3 from control register is set, add 32 to VRAM address; otherwise 1
+            if ((Control & 0x0004) == 0x0004)
+                _address += 32;
+            else
+                _address++;
         }
 
         /// <summary>
@@ -278,6 +287,36 @@ namespace MiNES
             }
         }
 
+
+        private void ResetFrame() => _frame = new Bitmap(256, 240);
+
+
+        private int _cycles = 0;
+        private int _scanline = 0;
+        private Bitmap _frame;
+
+
+        /// <summary>
+        /// Fetches the tile index from the nametable.
+        /// </summary>
+        /// <returns>The tile index that would be used for fetch the tile bitmap from the pattern table.</returns>
+        private byte GetTileIndex()
+        {
+
+            throw new NotImplementedException();
+        }
+
+        private byte FindTilePixelByIndex(byte tileIndex)
+        {
+            throw new NotImplementedException();
+        }
+
+        private Color GetColor(byte palette, byte colorIndex)
+        {
+            throw new NotImplementedException();
+        }
+        
+
         /// <summary>
         /// Draws the frame.
         /// </summary>
@@ -287,99 +326,125 @@ namespace MiNES
              * The PPU has only 2kb of RAM: the nametables. The nametables are changed based on the
              * execution of the program. The pattern tables are allocated in the cartridge memory (CHR-ROM).
              */
-            
+
+
+            /*
+             * There are 240 scanlines. Each pixel within each scanline is drawn in each clock cycle.
+             * For draw a scanline (background purpose), this is the process:
+             * 1. Identify the tile currently working on: looking up the tile index from the name table (the _address field points to the nametables: be careful, it must
+             * check the PPUCNTRL register to see which nametable i should look up... mirroring).
+             * 2. Once identify which is the tile that I should be work on in the next 8 cycles (1 cycle = 1 px); determine its color index within the color pallete by
+             * looking up the tile from the pattern table (this is again is controlled by some register which would tell me which pattern table to look).
+             * 3. Once the color index is identified, just take it from the color palette assigned to the block (2 x 2 tiles region).
+             * 4. Draw the pixel in the bitmap object.
+             * 
+             * Very important: you must track the X and Y coordinates for draw the pixel and know when to go the next tile; when a scanline is done, must go to the next
+             * row of pixels (next scanline). Also, be aware that you need 8 scalines for write a full row of 32 tiles.
+             * 
+             * Fine x: each pixel in X axis within a tile (from 0 to 7)
+             * Fine Y: each pixel in Y axis within a tile (from 0 to 7)... for each scanline, this gets incremented
+             * Coarse X: tiles processed horizontally (within a scanline)
+             * Coarse Y: tiles processed vertically (within 8 scanlines)
+             */
+
+            // TODO: take donkey kong game, and draw the nametable based on what i understand (following more or less the scanlines and cycles)
+            byte tileIdx = GetTileIndex();
+            byte tileColorIndex = FindTilePixelByIndex(tileIdx);
+            byte palette = 0; // from attribute table
+
+            _frame.SetPixel(_cycles, _scanline, GetColor(palette, tileColorIndex));
+
+            _cycles++;
         }
-        
-        public Bitmap DrawBackgroundTiles()
-        {
-            Bitmap bitmap = GetNESScreen();
+
+        //public Bitmap DrawBackgroundTiles()
+        //{
+        //    Bitmap bitmap = GetNESScreen();
             
-            int x = 0, y = 0;
+        //    int x = 0, y = 0;
 
-            int tiles = 0;
+        //    int tiles = 0;
 
-            for (ushort address = 0x0000; address < 0x1000; address += 0x0010)
-            //for (ushort address = 0x1000; address < 0x2000; address += 0x0010)
-            {
-                ushort tileAddress = address;
-                int yTile = y;
+        //    for (ushort address = 0x0000; address < 0x1000; address += 0x0010)
+        //    //for (ushort address = 0x1000; address < 0x2000; address += 0x0010)
+        //    {
+        //        ushort tileAddress = address;
+        //        int yTile = y;
 
-                /* Process a tile (8 x 8 pixels)
-                 * For each iteration, we process a row of pixels for a tile.
-                 */
-                for (int i = 0; i < 8; i++)
-                {
-                    int xTitle = x;
+        //        /* Process a tile (8 x 8 pixels)
+        //         * For each iteration, we process a row of pixels for a tile.
+        //         */
+        //        for (int i = 0; i < 8; i++)
+        //        {
+        //            int xTitle = x;
 
-                    byte lowBitRow = _ppuBus.Read(tileAddress);
-                    byte highBitRow = _ppuBus.Read((ushort)(tileAddress + 0x0008));
+        //            byte lowBitRow = _ppuBus.Read(tileAddress);
+        //            byte highBitRow = _ppuBus.Read((ushort)(tileAddress + 0x0008));
 
-                    byte[] pixels = new byte[8];
+        //            byte[] pixels = new byte[8];
 
-                    // Iterates over each bit of the byte for extract each bit
-                    for (int j = 0; j < 8; j++)
-                    {
-                        int mask = 1 << j;
-                        int lowBit = (lowBitRow & mask) == mask ? 1 : 0;
-                        int highBit = (highBitRow & mask) == mask ? 1 : 0;
+        //            // Iterates over each bit of the byte for extract each bit
+        //            for (int j = 0; j < 8; j++)
+        //            {
+        //                int mask = 1 << j;
+        //                int lowBit = (lowBitRow & mask) == mask ? 1 : 0;
+        //                int highBit = (highBitRow & mask) == mask ? 1 : 0;
 
-                        byte pixelVal = (byte)(lowBit | (highBit << 1));
+        //                byte pixelVal = (byte)(lowBit | (highBit << 1));
                         
-                        pixels[(pixels.Length - 1) - j] = pixelVal;
-                    }
+        //                pixels[(pixels.Length - 1) - j] = pixelVal;
+        //            }
 
-                    // Draws the tile's row of pixels
-                    for (int j = 0; j < pixels.Length; j++)
-                    {
-                        byte colorIndex = pixels[j];
+        //            // Draws the tile's row of pixels
+        //            for (int j = 0; j < pixels.Length; j++)
+        //            {
+        //                byte colorIndex = pixels[j];
 
-                        bitmap.SetPixel(xTitle, yTile, Color.FromArgb(GetColor(colorIndex)));
-                        xTitle++;
-                    }
+        //                bitmap.SetPixel(xTitle, yTile, Color.FromArgb(GetColor(colorIndex)));
+        //                xTitle++;
+        //            }
 
-                    // Moves to the next address that denotes the next row of pixels for the current tile
-                    tileAddress++;
+        //            // Moves to the next address that denotes the next row of pixels for the current tile
+        //            tileAddress++;
 
-                    // Advances to the next set of pixels that within the height range
-                    yTile++;
-                }
+        //            // Advances to the next set of pixels that within the height range
+        //            yTile++;
+        //        }
 
-                tiles++;
-                if (tiles >= 32)
-                {
-                    x = 0;
-                    y += 8;
+        //        tiles++;
+        //        if (tiles >= 32)
+        //        {
+        //            x = 0;
+        //            y += 8;
 
-                    tiles = 0;
-                }
-                else
-                {
-                    x += 8;
-                }
-            }
+        //            tiles = 0;
+        //        }
+        //        else
+        //        {
+        //            x += 8;
+        //        }
+        //    }
 
-            return bitmap;
-        }
+        //    return bitmap;
+        //}
 
-        private static int GetColor(byte index)
-        {
-            switch(index)
-            {
-                case 0:
-                    return Color.White.ToArgb();
-                case 1:
-                    return Color.Red.ToArgb();
-                case 2:
-                    return Color.Blue.ToArgb();
-                case 3:
-                    return Color.Green.ToArgb();
-                default:
-                    throw new InvalidOperationException($"The index {index} does not have a color associated with it.");
-            }
-        }
+        //private static int GetColor(byte index)
+        //{
+        //    switch(index)
+        //    {
+        //        case 0:
+        //            return Color.White.ToArgb();
+        //        case 1:
+        //            return Color.Red.ToArgb();
+        //        case 2:
+        //            return Color.Blue.ToArgb();
+        //        case 3:
+        //            return Color.Green.ToArgb();
+        //        default:
+        //            throw new InvalidOperationException($"The index {index} does not have a color associated with it.");
+        //    }
+        //}
 
-
-
-        private static Bitmap GetNESScreen() => new Bitmap(256, 240);
+        //private static Bitmap GetNESScreen() => new Bitmap(256, 240);
     }
 }
