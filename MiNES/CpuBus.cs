@@ -31,9 +31,10 @@ namespace MiNES
                 {
                     // PPU Status register
                     case 0x2002:
-                        val = _ppu.Status;
+                        val = _ppu.Status.GetValue();
                         // Clears bit 7 after reading the PPU Status Register
-                        _ppu.Status = (byte)((val | 0x0080) ^ 0x0080);
+                        //_ppu.Status = (byte)((val | 0x0080) ^ 0x0080);
+                        _ppu.Status.SetVerticalBlank(false);
                         _ppu.ResetAddressLatch();
                         break;
                     // PPU OAM data register
@@ -98,7 +99,8 @@ namespace MiNES
                 switch (addr)
                 {
                     case 0x2000:
-                        _ppu.Control = val;
+                        //_ppu.Control = val;
+                        _ppu.Control.SetValue(val);
                         break;
                     case 0x2001:
                         _ppu.Mask = val;

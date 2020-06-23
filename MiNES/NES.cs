@@ -32,21 +32,24 @@ namespace MiNES
         {
             do
             {
+                if (_ppu.NmiRequested)
+                {
+                    _cpu.NMI();
+                    _ppu.NmiRequested = false;
+                }
+
                 byte cpuCyclesSpent = _cpu.Step();
                 for (int ppuCycles = 0; ppuCycles < cpuCyclesSpent * 3; ppuCycles++)
                 {
-                    //_ppu.Draw();
+                    _ppu.Draw();
                 }
 
             } while (!_ppu.IsFrameCompleted);
 
-            if (_ppu.NmiRequested)
-            {
-                _cpu.NMI();
-                _ppu.NmiRequested = false;
-            }
+            Bitmap frame = _ppu.Frame;
+            _ppu.ResetFrame();
 
-            return _ppu.Frame;
+            return frame;
         }
     }
 }
