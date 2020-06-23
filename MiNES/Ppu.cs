@@ -89,7 +89,7 @@ namespace MiNES
         /// <summary>
         /// PPU Control register.
         /// </summary>
-        internal PpuControl Control { get; set; }
+        internal PpuControl Control { get; set; } = new PpuControl();
 
         /// <summary>
         /// PPU Mask register.
@@ -252,7 +252,7 @@ namespace MiNES
         #endregion
 
         public bool IsFrameCompleted { get; private set; }
-        public Bitmap Frame { get; private set; }
+        public Bitmap Frame => _frame;
 
         public bool NmiRequested { get; set; }
 
@@ -261,6 +261,7 @@ namespace MiNES
             _ppuBus = ppuBus;
 
             SetPatternTables();
+            ResetFrame();
         }
 
         public void ResetAddressLatch() => _addressLatch = false;
@@ -380,7 +381,7 @@ namespace MiNES
         } 
 
         private int _cycles = 0;
-        private int _scanline = 0;
+        private int _scanline = -1;
         private Bitmap _frame;
 
 
@@ -545,7 +546,13 @@ namespace MiNES
             // TODO: change this structure in the future
             Bitmap tile = _patternTables[patternTable][tileIndex];
 
-            return (byte)tile.GetPixel(X, Y).ToArgb(); // a 2 bit value
+            int xOffset = (_cycles - 1) / 8; // offset in X axis
+            int yOffset = (_scanline / 8); // offset in Y axis (it's multipled by 32 for denote that we are skipping rows: a row = 32 tiles)
+
+            int xOrigin = xOffset * 8;
+            int yOrigin = yOffset * 8;
+
+            return (byte)tile.GetPixel(X - xOrigin, Y - yOrigin).ToArgb(); // a 2 bit value
         }
 
         private byte GetAttribute()
@@ -559,10 +566,11 @@ namespace MiNES
             return _ppuBus.Read(attributeEntryAddress);
         }
 
-        private void ParseCoordinatesForBlock(out byte x, out byte y)
+        private void ParseCoordinatesForMegaBlock(out byte x, out byte y)
         {
             int xOffset = (_cycles - 1) / 32; // a number from 0 to 7
-            int yOffset = (_scanline / 32) * 8; // a number from 0 to 7
+            //int yOffset = (_scanline / 32) * 8; // a number from 0 to 7
+            int yOffset = (_scanline / 32); // a number from 0 to 7
 
             x = (byte)(xOffset * 32);
             y = (byte)(yOffset * 32);
@@ -570,7 +578,7 @@ namespace MiNES
 
         private byte GetBlockId()
         {
-            ParseCoordinatesForBlock(out byte xBlockOrigin, out byte yBlockOrigin);
+            ParseCoordinatesForMegaBlock(out byte xBlockOrigin, out byte yBlockOrigin);
 
             int x = X - xBlockOrigin;
             int y = Y - yBlockOrigin;
@@ -585,7 +593,10 @@ namespace MiNES
             else if (x >= 16 && x < 32 && y >= 16 && y < 32) // Bottom right block
                 blockId = 1;
             else
+            {
+                Console.WriteLine();
                 throw new InvalidOperationException($"The given coordinates (${x},{y}) are invalid in terms of mega blocks.");
+            }
 
             return blockId;
         }
@@ -658,96 +669,5 @@ namespace MiNES
                 NmiRequested = true;
             }
         }
-
-
-        //public Bitmap DrawBackgroundTiles()
-        //{
-        //    Bitmap bitmap = GetNESScreen();
-            
-        //    int x = 0, y = 0;
-
-        //    int tiles = 0;
-
-        //    for (ushort address = 0x0000; address < 0x1000; address += 0x0010)
-        //    //for (ushort address = 0x1000; address < 0x2000; address += 0x0010)
-        //    {
-        //        ushort tileAddress = address;
-        //        int yTile = y;
-
-        //        /* Process a tile (8 x 8 pixels)
-        //         * For each iteration, we process a row of pixels for a tile.
-        //         */
-        //        for (int i = 0; i < 8; i++)
-        //        {
-        //            int xTitle = x;
-
-        //            byte lowBitRow = _ppuBus.Read(tileAddress);
-        //            byte highBitRow = _ppuBus.Read((ushort)(tileAddress + 0x0008));
-
-        //            byte[] pixels = new byte[8];
-
-        //            // Iterates over each bit of the byte for extract each bit
-        //            for (int j = 0; j < 8; j++)
-        //            {
-        //                int mask = 1 << j;
-        //                int lowBit = (lowBitRow & mask) == mask ? 1 : 0;
-        //                int highBit = (highBitRow & mask) == mask ? 1 : 0;
-
-        //                byte pixelVal = (byte)(lowBit | (highBit << 1));
-                        
-        //                pixels[(pixels.Length - 1) - j] = pixelVal;
-        //            }
-
-        //            // Draws the tile's row of pixels
-        //            for (int j = 0; j < pixels.Length; j++)
-        //            {
-        //                byte colorIndex = pixels[j];
-
-        //                bitmap.SetPixel(xTitle, yTile, Color.FromArgb(GetColor(colorIndex)));
-        //                xTitle++;
-        //            }
-
-        //            // Moves to the next address that denotes the next row of pixels for the current tile
-        //            tileAddress++;
-
-        //            // Advances to the next set of pixels that within the height range
-        //            yTile++;
-        //        }
-
-        //        tiles++;
-        //        if (tiles >= 32)
-        //        {
-        //            x = 0;
-        //            y += 8;
-
-        //            tiles = 0;
-        //        }
-        //        else
-        //        {
-        //            x += 8;
-        //        }
-        //    }
-
-        //    return bitmap;
-        //}
-
-        //private static int GetColor(byte index)
-        //{
-        //    switch(index)
-        //    {
-        //        case 0:
-        //            return Color.White.ToArgb();
-        //        case 1:
-        //            return Color.Red.ToArgb();
-        //        case 2:
-        //            return Color.Blue.ToArgb();
-        //        case 3:
-        //            return Color.Green.ToArgb();
-        //        default:
-        //            throw new InvalidOperationException($"The index {index} does not have a color associated with it.");
-        //    }
-        //}
-
-        //private static Bitmap GetNESScreen() => new Bitmap(256, 240);
     }
 }

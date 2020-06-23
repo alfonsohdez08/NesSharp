@@ -29,7 +29,7 @@ namespace MiNES.Emu
             Task.Factory.StartNew(() =>
             {
                 while (true)
-                    GameScreen.Image = nes.Frame();
+                    GameScreen.Image = (Bitmap)nes.Frame();
             }, TaskCreationOptions.LongRunning);
 
         }

@@ -46,7 +46,7 @@ namespace MiNES
 
             } while (!_ppu.IsFrameCompleted);
 
-            Bitmap frame = _ppu.Frame;
+            Bitmap frame = (Bitmap)_ppu.Frame.Clone();
             _ppu.ResetFrame();
 
             return frame;
