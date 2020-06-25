@@ -29,12 +29,28 @@ namespace MiNES
                 return ReadNametable((ushort)(0x2000 + address % 0x1000));
             // Background palette and sprite palletes (mirrored in the range [0x3F20, 0x3FFF])
             else if (address >= 0x3F00 && address < 0x4000)
-                return memory.Fetch((ushort)(0x3F00 + address % 0x0020));
+                return ReadPalette((ushort)(0x3F00 + address % 0x0020));
             // Mirror of everything allocated from 0x000 until 0x3FFF
             else if (address >= 0x4000)
                 return this.Read((ushort)(address % 0x4000));
 
             return memory.Fetch(address);
+        }
+
+        private byte ReadPalette(ushort address)
+        {
+            //if (address == 0x3F04 || address == 0x3F08 || address == 0x3F0C || address == 0X3F10)
+            //    address = 0x3F00;
+
+            return memory.Fetch(address);
+        }
+
+        private void WritePalette(ushort address, byte paletteEntry)
+        {
+            //if (address == 0x3F04 || address == 0x3F08 || address == 0x3F0C || address == 0X3F10)
+            //    address = 0x3F00;
+
+            memory.Store(address, paletteEntry);
         }
 
         public override void Write(ushort address, byte val)
@@ -43,8 +59,8 @@ namespace MiNES
             if (address >= 0x2000 && address < 0x3F00)
                 WriteNametable((ushort)(0x2000 + address % 0x1000), val);
             // Background palette and sprite palletes (mirrored in the range [0x3F20, 0x3FFF])
-            else if (address >= 0x3F00 && address < 0x4000)
-                memory.Store((ushort)(0x3F00 + address % 0x0020), val);
+            else if (address >= 0x3F00 && address < 0x4000) //TODO: check the behavior when writing into this address from the CPU
+                WritePalette((ushort)(0x3F00 + address % 0x0020), val);
             // Mirror of everything allocated from 0x000 until 0x3FFF
             else if (address >= 0x4000)
                 this.Write((ushort)(address % 0x4000), val);

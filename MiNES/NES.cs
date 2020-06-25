@@ -44,12 +44,15 @@ namespace MiNES
                     _ppu.Draw();
                 }
 
-            } while (!_ppu.IsFrameCompleted);
+            } while (_ppu.FrameBuffer == null);
 
-            Bitmap frame = (Bitmap)_ppu.Frame.Clone();
-            _ppu.ResetFrame();
+            Bitmap frame = (Bitmap)_ppu.FrameBuffer.Clone();
+            _ppu.DisposeBuffer();
+            //_ppu.ResetFrame();
 
             return frame;
         }
+
+        public byte[][] GetNametable() => _ppu.GetNametable();
     }
 }

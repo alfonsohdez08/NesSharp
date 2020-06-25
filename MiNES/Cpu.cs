@@ -1192,8 +1192,8 @@ namespace MiNES
         {
             if (interruptionType != InterruptionType.RESET)
             {
-                byte lowByte = (byte)_pcAddress;
-                byte highByte = (byte)(_pcAddress >> 8);
+                byte lowByte = _pcAddress.GetLowByte();
+                byte highByte = _pcAddress.GetHighByte();
 
                 // Pushes the program counter
                 Push(highByte);
