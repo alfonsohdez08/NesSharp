@@ -1,14 +1,8 @@
 ﻿using System;
 using System.Diagnostics.Tracing;
 
-namespace MiNES
+namespace MiNES.PPU
 {
-    public enum Mirroring
-    {
-        Horizontal = 0,
-        Vertical
-    }
-
 
     /// <summary>
     /// PPU's bus.

@@ -6,7 +6,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Xml;
 
-namespace MiNES
+namespace MiNES.PPU
 {
 
     internal class PpuControl: Register<byte>
@@ -80,7 +80,7 @@ namespace MiNES
     }
 
 
-    public partial class Ppu
+    public class Ppu
     {
         private readonly PpuBus _ppuBus;
 
@@ -260,6 +260,8 @@ namespace MiNES
 
 
         private readonly Tile[] _backgroundTiles;
+
+        public Tile[] BackgroundTiles => _backgroundTiles;
 
         public Ppu(PpuBus ppuBus)
         {

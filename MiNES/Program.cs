@@ -1,4 +1,6 @@
 ﻿using MiNES._6502;
+using MiNES.CPU;
+using MiNES.PPU;
 using MiNES.Rom;
 using System;
 using System.Collections.Generic;
@@ -29,9 +31,12 @@ TestCPU();
             string nesTestFilePath = Path.Combine(NesRootPath, "nestest.nes");
             byte[] nesFile = File.ReadAllBytes(nesTestFilePath);
 
-            iNESParser.ParseNesCartridge(nesFile, out Memory cpuMemoryMapped, out Memory ppuMemoryMapped);
+            iNESParser.ParseNesCartridge(nesFile, out Memory cpuMemoryMapped, out Memory ppuMemoryMapped, out Mirroring mirroring);
 
-            var cpuBus = new CpuBus(cpuMemoryMapped);
+            var ppuBus = new PpuBus(ppuMemoryMapped, mirroring);
+            var ppu = new Ppu(ppuBus);
+
+            var cpuBus = new CpuBus(cpuMemoryMapped, ppu);
             var cpu = new Cpu(cpuBus);
 
             ////cpu.Run();

@@ -1,6 +1,7 @@
-﻿using System;
+﻿using MiNES.PPU;
+using System;
 
-namespace MiNES
+namespace MiNES.CPU
 {
     /// <summary>
     /// CPU's bus.

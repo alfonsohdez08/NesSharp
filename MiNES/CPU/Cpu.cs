@@ -5,38 +5,8 @@ using System.Linq;
 using System.Text;
 using static MiNES.ByteExtensions;
 
-namespace MiNES
+namespace MiNES.CPU
 {
-    /// <summary>
-    /// The addressing modes used by the 6502 CPU.
-    /// </summary>
-    enum AddressingMode
-    {
-        ZeroPage,
-        ZeroPageX,
-        ZeroPageY,
-        Immediate,
-        Relative,
-        Absolute,
-        AbsoluteX,
-        AbsoluteY,
-        Indirect,
-        IndirectX,
-        IndirectY,
-        Implied,
-        Accumulator
-    }
-
-    /// <summary>
-    /// The interruptions available for the 6502 CPU.
-    /// </summary>
-    enum InterruptionType
-    {
-        NMI,
-        IRQ,
-        BRK,
-        RESET
-    }
 
     /// <summary>
     /// The 6502 CPU.
@@ -263,7 +233,7 @@ namespace MiNES
             return instructionSb.ToString();
         }
 
-                private static string ParseOperand(ushort operand, AddressingMode addressingMode)
+        private static string ParseOperand(ushort operand, AddressingMode addressingMode)
         {
             string op = operand.ToString("X");
 
@@ -291,6 +261,8 @@ namespace MiNES
 
             return op;
         }
+
+        private static string FormatByte(byte b) => $"{b.ToString("X").PadLeft(2, '0')}";
 #endif
 
         /// <summary>
@@ -439,9 +411,6 @@ namespace MiNES
 
             SetOperand(instruction.AddressingMode);
 
-            string instructionDissasembled = ParseInstruction(instruction);
-            Console.WriteLine($"{instructionAddress.ToString("X").PadLeft(4, '0')}: {instructionDissasembled}");
-
 #if CPU_NES_TEST
             string instructionDisassembled = ParseInstruction(instruction);
             string instructionHexDump = string.Join(" ", _instructionHex.Select(i => i.ToString("X").PadLeft(2, '0')));
@@ -449,6 +418,9 @@ namespace MiNES
             //TestLineResult = $"{opCodeAddress.ToString("X")}  {instructionHexDump.PadRight(10, ' ')}{instructionDisassembled.PadRight(32, ' ')}{registersSnapshot}";
             TestLineResult = $"{opCodeAddress.ToString("X").PadLeft(4, '0')} {instructionHexDump.PadRight(10, ' ')}{registersSnapshot}";
             _instructionHex.Clear();
+#else
+            string instructionDissasembled = ParseInstruction(instruction);
+            Console.WriteLine($"{instructionAddress.ToString("X").PadLeft(4, '0')}: {instructionDissasembled}");
 #endif
 
             // Executes the instruction based on its mnemonic code

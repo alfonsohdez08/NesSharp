@@ -1,8 +1,7 @@
-﻿using MiNES.Rom;
-using System;
-using System.Collections.Generic;
+﻿using MiNES.CPU;
+using MiNES.PPU;
+using MiNES.Rom;
 using System.Drawing;
-using System.Text;
 
 namespace MiNES
 {
@@ -54,5 +53,7 @@ namespace MiNES
         }
 
         public byte[][] GetNametable() => _ppu.GetNametable();
+
+        public Tile[] GetBackgroundTiles() => _ppu.BackgroundTiles;
     }
 }

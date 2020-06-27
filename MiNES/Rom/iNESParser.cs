@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MiNES.PPU;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -59,14 +60,12 @@ namespace MiNES.Rom
             for (int i = 0; address <= 0xFFFF && i < prgRomUpperBank.Length; address++, i++)
                 cpuMemoryMapped.Store(address, prgRomUpperBank[i]);
 
-#if !CPU_NES_TEST
             // Map CHR bank
-            byte[] chrRom = new ArraySegment<byte>(content, HeaderOffset + (numberOfPrgBanks*0x4000), 0x2000).ToArray();
+            byte[] chrRom = new ArraySegment<byte>(content, HeaderOffset + (numberOfPrgBanks * 0x4000), 0x2000).ToArray();
 
             address = 0x0000;
             for (int i = 0; address < 0x2000 && i < chrRom.Length; i++, address++)
                 ppuMemoryMapped.Store(address, chrRom[i]);
-#endif
         }
     }
 }
