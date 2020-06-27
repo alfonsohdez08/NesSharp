@@ -44,9 +44,12 @@ TestCPU();
             using (FileStream myCpuTestLog = File.Create(Path.Combine(NesRootPath, myCpuLogFile)))
             using (StreamWriter streamWriter = new StreamWriter(myCpuTestLog))
             {
-                while (!cpu.CpuTestDone)
+                while (true)
                 {
                     cpu.Step();
+                    if (cpu.CpuTestDone)
+                        break;
+
                     streamWriter.WriteLine(cpu.TestLineResult);
                 }
             }

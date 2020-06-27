@@ -394,7 +394,6 @@ namespace MiNES.CPU
             }
 
             _instructionHex.Add(opCode);
-            ushort opCodeAddress = _pcAddress;
             string registersSnapshot = GetRegistersSnapshot();
 #endif
 
@@ -415,7 +414,7 @@ namespace MiNES.CPU
             string instructionHexDump = string.Join(" ", _instructionHex.Select(i => i.ToString("X").PadLeft(2, '0')));
 
             //TestLineResult = $"{opCodeAddress.ToString("X")}  {instructionHexDump.PadRight(10, ' ')}{instructionDisassembled.PadRight(32, ' ')}{registersSnapshot}";
-            TestLineResult = $"{opCodeAddress.ToString("X").PadLeft(4, '0')} {instructionHexDump.PadRight(10, ' ')}{registersSnapshot}";
+            TestLineResult = $"{instructionAddress.ToString("X").PadLeft(4, '0')} {instructionHexDump.PadRight(10, ' ')}{registersSnapshot}";
             _instructionHex.Clear();
 #else
             string instructionDissasembled = ParseInstruction(instruction);
