@@ -34,9 +34,10 @@
             // 
             // Screen
             // 
-            this.Screen.Location = new System.Drawing.Point(28, 25);
+            this.Screen.Location = new System.Drawing.Point(12, 12);
             this.Screen.Name = "Screen";
-            this.Screen.Size = new System.Drawing.Size(256, 240);
+            this.Screen.Size = new System.Drawing.Size(450, 426);
+            this.Screen.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.Screen.TabIndex = 0;
             this.Screen.TabStop = false;
             // 

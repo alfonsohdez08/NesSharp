@@ -185,7 +185,7 @@ namespace MiNES.PPU
         public byte OamDmaPage { get; set; }
 
         #region NES color palette
-        private static readonly Color[] SystemColorPalette = new Color[]
+        public static readonly Color[] SystemColorPalette = new Color[]
         {
             Color.FromArgb(0x75, 0x75, 0x75),
             Color.FromArgb(0x27, 0x1B, 0x8F),
@@ -282,7 +282,7 @@ namespace MiNES.PPU
 
             ushort address = 0x0000;
             ushort lastAddress = 0x1000;
-            if (!isBackgroundTile)
+            if (isBackgroundTile)
             {
                 address = 0x1000;
                 lastAddress = 0x2000;
@@ -291,14 +291,16 @@ namespace MiNES.PPU
             int tiles = 0;
             for (; address < lastAddress; address += 16)
             {
+                ushort tileAddress = address;
+
                 //Bitmap tileBitmap = new Bitmap(8, 8);
                 var tile = new Tile();
 
                 // Process an entire tile (row by row, where each row represents a string of pixels)
                 for (int i = 0; i < 8; i++)
                 {
-                    byte lowBitsRow = _ppuBus.Read(address);
-                    byte highBitsRow = _ppuBus.Read((ushort)(address + 8)); // high bit plane offset is 8 positions away
+                    byte lowBitsRow = _ppuBus.Read(tileAddress);
+                    byte highBitsRow = _ppuBus.Read((ushort)(tileAddress + 8)); // high bit plane offset is 8 positions away
 
                     // Iterate over each bit within both set of bits (bytes) for draw the tile bitmap
                     for (int j = 0; j < 8; j++)
@@ -311,8 +313,10 @@ namespace MiNES.PPU
                         byte paletteColorIdx = (byte)(lowBit | (highBit << 1));
 
                         //tile.SetPixel(i, j, paletteColorIdx);
-                        tile.SetPixel(j, i, paletteColorIdx);
+                        tile.SetPixel(7 - j, i, paletteColorIdx);
                     }
+
+                    tileAddress++;
                 }
 
                 patternTable[tiles] = tile;
@@ -321,6 +325,7 @@ namespace MiNES.PPU
 
             return patternTable;
         }
+
 
         internal static void Bit(byte bitPos, bool value, ref byte register)
         {

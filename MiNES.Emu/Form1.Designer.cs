@@ -31,6 +31,7 @@
             this.GameScreen = new System.Windows.Forms.PictureBox();
             this.ManageEmulation = new System.Windows.Forms.Button();
             this.button1 = new System.Windows.Forms.Button();
+            this.button2 = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.GameScreen)).BeginInit();
             this.SuspendLayout();
             // 
@@ -45,7 +46,7 @@
             // 
             // ManageEmulation
             // 
-            this.ManageEmulation.Location = new System.Drawing.Point(702, 666);
+            this.ManageEmulation.Location = new System.Drawing.Point(616, 12);
             this.ManageEmulation.Name = "ManageEmulation";
             this.ManageEmulation.Size = new System.Drawing.Size(143, 27);
             this.ManageEmulation.TabIndex = 2;
@@ -55,7 +56,7 @@
             // 
             // button1
             // 
-            this.button1.Location = new System.Drawing.Point(912, 666);
+            this.button1.Location = new System.Drawing.Point(765, 12);
             this.button1.Name = "button1";
             this.button1.Size = new System.Drawing.Size(145, 27);
             this.button1.TabIndex = 3;
@@ -63,11 +64,22 @@
             this.button1.UseVisualStyleBackColor = true;
             this.button1.Click += new System.EventHandler(this.button1_Click_1);
             // 
+            // button2
+            // 
+            this.button2.Location = new System.Drawing.Point(616, 45);
+            this.button2.Name = "button2";
+            this.button2.Size = new System.Drawing.Size(143, 24);
+            this.button2.TabIndex = 4;
+            this.button2.Text = "Background Tiles";
+            this.button2.UseVisualStyleBackColor = true;
+            this.button2.Click += new System.EventHandler(this.button2_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1904, 1041);
+            this.ClientSize = new System.Drawing.Size(939, 648);
+            this.Controls.Add(this.button2);
             this.Controls.Add(this.button1);
             this.Controls.Add(this.ManageEmulation);
             this.Controls.Add(this.GameScreen);
@@ -85,6 +97,7 @@
         private System.Windows.Forms.PictureBox GameScreen;
         private System.Windows.Forms.Button ManageEmulation;
         private System.Windows.Forms.Button button1;
+        private System.Windows.Forms.Button button2;
     }
 }
 

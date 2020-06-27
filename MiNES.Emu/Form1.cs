@@ -176,5 +176,16 @@ namespace MiNES.Emu
                 //_nametableDebugger.Show();
             }
         }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            if (!RunEmulation)
+            {
+                var backgroundDebugger = new NametableDebugger();
+
+                backgroundDebugger.DrawPatternTable(nes.GetBackgroundTiles());
+                backgroundDebugger.Show();
+            }
+        }
     }
 }
