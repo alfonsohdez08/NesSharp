@@ -13,7 +13,6 @@ namespace MiNES.CPU
     /// </summary>
     class Cpu
     {
-
         #region Mnemonics
         public const string ADC_INSTRUCTION = "ADC";
         public const string AND_INSTRUCTION = "AND";
@@ -177,7 +176,7 @@ namespace MiNES.CPU
 
 #if CPU_NES_TEST
         private readonly List<byte> _instructionHex = new List<byte>();
-        private int _cyclesElapsed = 7;
+        private int _cyclesElapsed = 7; // Initially 7 cycles has elapsed 
 
         public string TestLineResult { get; private set; }
         public bool CpuTestDone { get; private set; } = false;
@@ -383,7 +382,7 @@ namespace MiNES.CPU
         /// <returns>The number of cycle spent in order to execute the instruction.</returns>
         private byte ExecuteInstruction()
         {
-            // Fetches the OpCode from the memory
+            // Fetches the op code from the memory
             ushort instructionAddress = _pcAddress;
             byte opCode = _bus.Read(_pcAddress);
 
@@ -1797,41 +1796,5 @@ namespace MiNES.CPU
 
             return val;
         }
-    }
-
-    /// <summary>
-    /// Represents a CPU instruction (including its mnemonic, addressing mode and machine cycles).
-    /// </summary>
-    class Instruction
-    {
-        /// <summary>
-        /// The mnemonic code that represents the underlying instruction.
-        /// </summary>
-        public string Mnemonic { get; private set; }
-
-        /// <summary>
-        /// The addressing mode of the instruction.
-        /// </summary>
-        public AddressingMode AddressingMode { get; private set; }
-
-        /// <summary>
-        /// The amount of cycles required in order to execute the instruction (each cycle represents either a memory read or write).
-        /// </summary>
-        public byte Cycles { get; private set; }
-
-        /// <summary>
-        /// Denotes whether increment the instruction cycles when instruction's operand address cross a page within memory.
-        /// </summary>
-        public bool AdditionalCycleWhenCrossPage { get; private set; }
-
-        public Instruction(string mnemonic, AddressingMode addressingMode, byte machineCycles, bool additionalCycle = false)
-        {
-            Mnemonic = mnemonic;
-            AddressingMode = addressingMode;
-            Cycles = machineCycles;
-            AdditionalCycleWhenCrossPage = additionalCycle;
-        }
-
-        public override string ToString() => $"{Mnemonic} {AddressingMode}";
     }
 }
