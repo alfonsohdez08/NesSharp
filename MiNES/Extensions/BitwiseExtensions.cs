@@ -1,9 +1,9 @@
-﻿namespace MiNES
+﻿namespace MiNES.Extensions
 {
     /// <summary>
     /// Utilities for manipulate 8-bit values (byte).
     /// </summary>
-    public static class ByteExtensions
+    public static class BitwiseExtensions
     {
 
         /// <summary>
