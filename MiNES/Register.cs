@@ -6,7 +6,7 @@ using System.Text;
 namespace MiNES
 {
     /// <summary>
-    /// Represents a general register for the 6502 CPU.
+    /// Represents a generic register.
     /// </summary>
     class Register<T> where T: struct
     {

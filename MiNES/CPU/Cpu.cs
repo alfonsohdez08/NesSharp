@@ -117,9 +117,9 @@ namespace MiNES.CPU
         #endregion
 
         /// <summary>
-        /// Accumulators.
+        /// Accumulator.
         /// </summary>
-        private readonly Register<byte> _a = new Register<byte>();
+        private Register<byte> _a = new Register<byte>();
 
         /// <summary>
         /// X register (general purpose).

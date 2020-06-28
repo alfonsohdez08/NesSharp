@@ -1,4 +1,6 @@
-﻿using System;
+﻿using MiNES.Extensions;
+using MiNES.PPU.Registers;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -8,61 +10,14 @@ using System.Xml;
 
 namespace MiNES.PPU
 {
-
-    internal class PpuControl: Register<byte>
-    {
-        public PpuControl()
-        {
-
-        }
-
-
-        public bool GetNmi() => (GetValue() & 0x80) == 0x80;
-
-        public void SetNmi(bool val)
-        {
-            byte reg = GetValue();
-
-            Ppu.Bit(7, val, ref reg);
-            SetValue(reg);
-        }
-
-        public byte GetPatternTableAddress() => (byte)((GetValue() & 0x10) == 0x10 ? 1 : 0);
-
-        public void SetPatterTableAddressBit(bool val)
-        {
-            byte reg = GetValue();
-
-            Ppu.Bit(4, val, ref reg);
-            SetValue(reg);
-        }
-
-        public bool GetVRamAddressIncrement() => (GetValue() & 0x04) == 0x04;
-
-        public void SetVramAddressIncrement(bool val)
-        {
-            byte reg = GetValue();
-
-            Ppu.Bit(2, val, ref reg);
-            SetValue(reg);
-        }
-
-        public byte GetNametableAddress() => (byte)(GetValue() & 0x03);
-
-        public void SetNametableAddress(byte val)
-        {
-            SetValue((byte)((GetValue() >> 2) | val));
-        }
-    }
-
     internal class PpuMask : Register<byte>
     {
 
     }
 
-    internal class PpuStatus: Register<byte>
+    internal class PpuStatus : Register<byte>
     {
-        public PpuStatus(): base(0xA0)
+        public PpuStatus() : base(0xA0)
         {
 
         }
@@ -92,7 +47,7 @@ namespace MiNES.PPU
         /// <summary>
         /// PPU Control register.
         /// </summary>
-        internal PpuControl Control { get; set; } = new PpuControl();
+        internal Control Control { get; set; } = new Control();
 
         /// <summary>
         /// PPU Mask register.
@@ -142,42 +97,20 @@ namespace MiNES.PPU
         {
             if (!_addressLatch)
             {
-                _address = (ushort)(((_address | 0xFF00) ^ 0xFF00) | (value << 8));
+                //_address = (ushort)((_address | 0xFF00) ^ 0xFF00 | value << 8);
+                _address.SetHighByte(value);
                 _addressLatch = true; // Flips to the low byte state
             }
             else
             {
-                _address = (ushort)(((_address | 0x00FF) ^ 0x00FF) | value);
-                _addressLatch = false;
+                //_address = (ushort)((_address | 0x00FF) ^ 0x00FF | value);
+                _address.SetLowByte(value);
+                _addressLatch = false; // Flips to the high byte state
             }
         }
 
 
         private byte _dataBuffer = 0;
-
-        ///// <summary>
-        ///// PPU Data register.
-        ///// </summary>
-        //public byte Data
-        //{
-        //    get
-        //    {
-        //        // Reads the data buffered (from previous read request)
-        //        byte data = _dataBuffer;
-
-        //        // Updates the buffer with the data allocated in the compiled address
-        //        _dataBuffer = _ppuBus.Read(_address);
-
-        //        /* If the compiled address does not overlap the color palette address range, then return
-        //         * the data read from the buffer; otherwise return the data read from the address right away
-        //         */
-        //        return _address >= 0x0000 && _address < 0x3F00 ? data : _dataBuffer;
-        //    }
-        //    set
-        //    {
-        //        _ppuBus.Write(_address, value);
-        //    }
-        //}
 
 
         /// <summary>
@@ -317,7 +250,7 @@ namespace MiNES.PPU
                         int highBit = (highBitsRow & mask) == mask ? 1 : 0;
 
                         // A 2 bit value
-                        byte paletteColorIdx = (byte)(lowBit | (highBit << 1));
+                        byte paletteColorIdx = (byte)(lowBit | highBit << 1);
 
                         //tile.SetPixel(i, j, paletteColorIdx);
                         tile.SetPixel(7 - j, i, paletteColorIdx);
@@ -342,7 +275,7 @@ namespace MiNES.PPU
             if (value) // enable/turn on/set the bit
                 result = register | mask;
             else // disable/turn off the bit
-                result = ((register | mask) ^ mask); // Just in case the bit still ON
+                result = (register | mask) ^ mask; // Just in case the bit still ON
 
             register = (byte)result;
         }
@@ -504,7 +437,7 @@ namespace MiNES.PPU
         private void LoadShiftRegisters()
         {
             byte n = 0;
-            switch(n)
+            switch (n)
             {
                 // Load nametable byte
                 case 2:
@@ -549,7 +482,7 @@ namespace MiNES.PPU
             //if (xOffset > 31)
             //    Console.WriteLine();
 
-            int yOffset = (_scanline / 8) * 32; // offset in Y axis (it's multipled by 32 for denote that we are skipping rows: a row = 32 tiles)
+            int yOffset = _scanline / 8 * 32; // offset in Y axis (it's multipled by 32 for denote that we are skipping rows: a row = 32 tiles)
 
             ushort tileAddress = (ushort)(GetNametableBaseAddress() + (xOffset + yOffset));
 
@@ -593,7 +526,7 @@ namespace MiNES.PPU
                 Console.WriteLine();
 
             int xOffset = (_cycles - 1) / 8; // offset in X axis
-            int yOffset = (_scanline / 8); // offset in Y axis (it's multipled by 32 for denote that we are skipping rows: a row = 32 tiles)
+            int yOffset = _scanline / 8; // offset in Y axis (it's multipled by 32 for denote that we are skipping rows: a row = 32 tiles)
 
             int xOrigin = xOffset * 8;
             int yOrigin = yOffset * 8;
@@ -609,7 +542,7 @@ namespace MiNES.PPU
         private byte GetAttribute()
         {
             int xOffset = (_cycles - 1) / 32;
-            int yOffset = (_scanline / 32) * 8;
+            int yOffset = _scanline / 32 * 8;
 
             int megaBlockOffset = xOffset + yOffset;
             ushort attributeEntryAddress = (ushort)(GetNametableBaseAddress() + 0x03C0 + megaBlockOffset);
@@ -621,7 +554,7 @@ namespace MiNES.PPU
         {
             int xOffset = (_cycles - 1) / 32; // a number from 0 to 7
             //int yOffset = (_scanline / 32) * 8; // a number from 0 to 7
-            int yOffset = (_scanline / 32); // a number from 0 to 7
+            int yOffset = _scanline / 32; // a number from 0 to 7
 
             x = (byte)(xOffset * 32);
             y = (byte)(yOffset * 32);
@@ -673,7 +606,7 @@ namespace MiNES.PPU
             int lowBit;
             int highBit;
 
-            switch(blockId)
+            switch (blockId)
             {
                 case 1: // Bottom right
                     //palette = (byte)(attribute & (0b11000000));
@@ -700,7 +633,7 @@ namespace MiNES.PPU
                     throw new InvalidOperationException($"The given block ID is invalid: ${blockId}.");
             }
 
-            palette = (byte)(lowBit | (highBit << 1));
+            palette = (byte)(lowBit | highBit << 1);
 
             if (palette > 3)
                 Console.WriteLine();
@@ -722,7 +655,7 @@ namespace MiNES.PPU
         private static ushort ParseBackgroundPaletteAddress(byte paletteId, byte colorIndex)
         {
             ushort baseAddress = 0x3F00;
-            var offset = (byte)((paletteId * 4) + colorIndex);
+            var offset = (byte)(paletteId * 4 + colorIndex);
 
             return (ushort)(baseAddress + offset);
         }
@@ -739,7 +672,7 @@ namespace MiNES.PPU
             //    ids.Add(_ppuBus.Read((ushort)u));
 
             byte tileIdx = GetTileIndex(); // Identified Tile ID
-            
+
             byte colorIndex = GetColorIndex(tileIdx); // Identified color index within the colors palette
             byte attribute = GetAttribute(); // Fetched the attribute entry
             byte blockId = GetBlockId(); // Identified the block within the "mega" block

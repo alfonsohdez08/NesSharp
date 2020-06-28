@@ -1,7 +1,10 @@
-﻿namespace MiNES.Extensions
+﻿using System;
+using System.ComponentModel;
+
+namespace MiNES.Extensions
 {
     /// <summary>
-    /// Utilities for manipulate 8-bit values (byte).
+    /// Utilities for manipulate values bit by bit.
     /// </summary>
     public static class BitwiseExtensions
     {
@@ -48,5 +51,47 @@
         /// <param name="val">The 16 bit value.</param>
         /// <returns>The low byte (least significant byte).</returns>
         public static byte GetLowByte(this ushort val) => (byte)(val);
+
+        /// <summary>
+        /// Turn on/off the bit allocated in the position specified.
+        /// </summary>
+        /// <param name="value">The source value.</param>
+        /// <param name="bitPosition">Position of the bit (from 0 up to 7; otherwise an exception will be raised).</param>
+        /// <param name="bitValue">The value that will be set to position of the source value: true = 1 , false = 0.</param>
+        public static void SetBit(this ref byte value, byte bitPosition, bool bitValue)
+        {
+            if (bitPosition > 7)
+                throw new ArgumentException("The given position exceeds the number of bits stored in a single byte.");
+
+            int mask = 1 << bitPosition;
+
+            int result;
+            if (bitValue) // Turn on the bit
+                result = value | mask;
+            else // Turn off the bit
+                result = ((value | mask) ^ mask); // Just in case the bit still ON
+
+            value = (byte)result;
+        }
+
+        /// <summary>
+        /// Sets a specified value into the high byte area of a 16-bit value.
+        /// </summary>
+        /// <param name="value">The source value.</param>
+        /// <param name="val">The value that will be set in the high byte area.</param>
+        public static void SetHighByte(this ref ushort value, byte val)
+        {
+            value = (ushort)(((value | 0xFF00) ^ 0xFF00) | val << 8);
+        }
+
+        /// <summary>
+        /// Sets a specified value into the low byte area of a 16-bit value.
+        /// </summary>
+        /// <param name="value">The source value.</param>
+        /// <param name="val">The value that will be set in the low byte area.</param>
+        public static void SetLowByte(this ref ushort value, byte val)
+        {
+            value = (ushort)(((value | 0xFF00) ^ 0xFF00) | val);
+        }
     }
 }
