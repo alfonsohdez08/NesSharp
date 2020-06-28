@@ -111,7 +111,7 @@ namespace MiNES.Emu
 
         private void DrawNametable()
         {
-            byte[][] nametable = nes.GetNametable();
+            byte[][] nametable = nes.GetNametable0();
 
             //tableLayoutPanel1.Visible = true;
             //tableLayoutPanel1.Enabled = true;
@@ -166,8 +166,9 @@ namespace MiNES.Emu
             if (!RunEmulation)
             {
                 var nametableDebugger = new NametableDebugger();
-                
-                nametableDebugger.DrawNametable(nes.GetNametable(), nes.GetBackgroundTiles());
+
+                //nametableDebugger.DrawNametable(nes.GetNametable0(), nes.GetBackgroundTiles());
+                nametableDebugger.DrawNametable(nes.GetNametable2(), nes.GetBackgroundTiles());
                 nametableDebugger.Show();
 
                 //var nametableDebugger = new NametableDebugger();

@@ -148,6 +148,7 @@ namespace MiNES.PPU
             else
             {
                 _address = (ushort)(((_address | 0x00FF) ^ 0x00FF) | value);
+                _addressLatch = false;
             }
         }
 
@@ -274,7 +275,13 @@ namespace MiNES.PPU
         /// <summary>
         /// Resets the address latch used by the PPU address register and PPU scroll register.
         /// </summary>
-        public void ResetAddressLatch() => _addressLatch = false;
+        //public void ResetAddressLatch() => _addressLatch = false;
+        public void ResetAddressLatch()
+        {
+            _addressLatch = false;
+            _address = 0;
+        }
+
 
         private Tile[] GetPatternTable(bool isBackgroundTile = true)
         {
@@ -791,9 +798,30 @@ namespace MiNES.PPU
             }
         }
 
-        public byte[][] GetNametable()
+        public byte[][] GetNametable0()
         {
             ushort nametableAddress = GetNametableBaseAddress();
+            //ushort finalAddress = (ushort)(nametableAddress + 0x03C0);
+
+            byte[][] nametable = new byte[30][]; // 30 tiles high
+            for (int i = 0; i < nametable.Length; i++)
+            {
+                nametable[i] = new byte[32]; // 32 tiles across
+                for (int j = 0; j < nametable[i].Length; j++)
+                {
+                    byte tileIdx = _ppuBus.Read(nametableAddress);
+                    nametable[i][j] = tileIdx;
+
+                    nametableAddress++;
+                }
+            }
+
+            return nametable;
+        }
+
+        public byte[][] GetNametable2()
+        {
+            ushort nametableAddress = 0x2800;
             //ushort finalAddress = (ushort)(nametableAddress + 0x03C0);
 
             byte[][] nametable = new byte[30][]; // 30 tiles high

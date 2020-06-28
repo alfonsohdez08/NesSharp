@@ -52,7 +52,9 @@ namespace MiNES
             return frame;
         }
 
-        public byte[][] GetNametable() => _ppu.GetNametable();
+        public byte[][] GetNametable0() => _ppu.GetNametable0();
+
+        public byte[][] GetNametable2() => _ppu.GetNametable2();
 
         public Tile[] GetBackgroundTiles() => _ppu.BackgroundTiles;
     }
