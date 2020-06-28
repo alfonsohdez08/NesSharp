@@ -18,6 +18,7 @@ namespace MiNES.Emu
         private static readonly string NesRootPath = Environment.GetEnvironmentVariable("NES", EnvironmentVariableTarget.Machine);
         private byte[] donkeyKongRom = File.ReadAllBytes(Path.Combine(NesRootPath, "donkey_kong.nes"));
         private byte[] superMarioBrosRom = File.ReadAllBytes(Path.Combine(NesRootPath, "super_mario_bros.nes"));
+        private byte[] nesTestRom = File.ReadAllBytes(Path.Combine(NesRootPath, "nestest.nes"));
 
         private object _lockObject = new object();
         private bool _runEmulation = true;
@@ -40,8 +41,12 @@ namespace MiNES.Emu
         public Form1()
         {
             InitializeComponent();
-            
+
             nes = new NES(donkeyKongRom);
+            //nes = new NES(superMarioBrosRom);
+            //nes = new NES(nesTestRom);
+
+
             //EnableEmulation.Checked = true;
 
             StartEmulation();

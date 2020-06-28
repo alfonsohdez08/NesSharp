@@ -386,63 +386,6 @@ namespace MiNES.PPU
                 _address++;
         }
 
-        ///// <summary>
-        ///// Sets the pattern tables (background and foreground tiles).
-        ///// </summary>
-        //private void SetPatternTables()
-        //{
-        //    _patternTables = new Bitmap[2][];
-
-        //    _patternTables[0] = GetBitmapPatternTable(false); // Left side of the pattern table it's for foreground tiles (sprites)
-        //    _patternTables[1] = GetBitmapPatternTable(); // Right side of the pattern table it's for the background tiles
-
-        //    Bitmap[] GetBitmapPatternTable(bool backgroundTiles = true)
-        //    {
-        //        Bitmap[] tilesBitmap = new Bitmap[256];
-
-        //        int tiles = 0;
-
-        //        ushort address = 0x0000;
-        //        ushort lastAddress = 0x1000;
-
-        //        if (!backgroundTiles)
-        //        {
-        //            address = 0x1000;
-        //            lastAddress = 0x2000;
-        //        }
-
-        //        for (; address < lastAddress; address += 16)
-        //        {
-        //            Bitmap tileBitmap = new Bitmap(8, 8);
-
-        //            // Process an entire tile (row by row, where each row represents a string of pixels)
-        //            for (int i = 0; i < 8; i++)
-        //            {
-        //                byte lowBitsRow = _ppuBus.Read(address);
-        //                byte highBitsRow = _ppuBus.Read((ushort)(address + 0x0008)); // high bit plane is offset 8 positions away
-
-        //                // Iterate over each bit within both set of bits (bytes) for draw the tile bitmap
-        //                for (int j = 0; j < 8; j++)
-        //                {
-        //                    int mask = 1 << j;
-        //                    int lowBit = (lowBitsRow & mask) == mask ? 1 : 0;
-        //                    int highBit = (highBitsRow & mask) == mask ? 1 : 0;
-
-        //                    // A 2 bit value
-        //                    byte paletteColorIdx = (byte)(lowBit | (highBit << 1));
-
-        //                    tileBitmap.SetPixel(i, j, Color.FromArgb(paletteColorIdx));
-        //                }
-        //            }
-
-        //            tilesBitmap[tiles] = tileBitmap;
-        //            tiles++;
-        //        }
-
-        //        return tilesBitmap;
-        //    }
-        //}
-
         private int _cycles = 0;
         private int _scanline = -1;
         private Bitmap _frame;
@@ -502,12 +445,13 @@ namespace MiNES.PPU
              * The cycle 0 (first tick) the PPU is idle (it does nothing). However, when the frame rendered is 
              * odd, the cycle 0 gets ignored and go straigh to cycle 1.
              */
-            //if (_cycles++ == 0 && _framesRendered % 2 == 0)
+            //if (_cycles++ == 0 && _framesRendered % 2 != 0 && Mask)
             //    return;
-            if (_scanline == 0 && _cycles == 0)
-                _cycles = 1;
+            //if (_scanline == 0 && _cycles == 0)
+            //    _cycles = 1;
 
-            if (_scanline == -1 || _scanline == 261)
+            //if (_scanline == -1 || _scanline == 261)
+            if (_scanline == -1) // 261
                 PreRenderScanline();
             else if (_scanline >= 0 && _scanline <= 239)
                 RenderVisibleScanlines();
@@ -572,7 +516,7 @@ namespace MiNES.PPU
 
         private void PreRenderScanline()
         {
-            if (_scanline == 261 && _cycles == 1)
+            if (_cycles == 1)
                 Status.SetVerticalBlank(false);
         }
 

@@ -25,8 +25,8 @@ namespace MiNES.PPU
             else if (address >= 0x3F00 && address < 0x4000)
                 return ReadPalette((ushort)(0x3F00 + address % 0x0020));
             // Mirror of everything allocated from 0x000 until 0x3FFF
-            else if (address >= 0x4000)
-                return this.Read((ushort)(address % 0x4000));
+            //else if (address >= 0x4000)
+            //    return this.Read((ushort)(address % 0x4000));
 
             return memory.Fetch(address);
         }
@@ -49,6 +49,10 @@ namespace MiNES.PPU
 
         public override void Write(ushort address, byte val)
         {
+            if (address >= 0 && address < 0x2000)
+            {
+                // Do nothing (CHR-ROM)
+            }
             // Nametables and attribute tables (mirrored in the range [0x3000, 0x3EFF])
             if (address >= 0x2000 && address < 0x3F00)
                 WriteNametable((ushort)(0x2000 + address % 0x1000), val);
@@ -56,10 +60,10 @@ namespace MiNES.PPU
             else if (address >= 0x3F00 && address < 0x4000) //TODO: check the behavior when writing into this address from the CPU
                 WritePalette((ushort)(0x3F00 + address % 0x0020), val);
             // Mirror of everything allocated from 0x000 until 0x3FFF
-            else if (address >= 0x4000)
-                this.Write((ushort)(address % 0x4000), val);
-            else
-                memory.Store(address, val);
+            //else if (address >= 0x4000)
+            //    this.Write((ushort)(address % 0x4000), val);
+            //else
+            //    memory.Store(address, val);
         }
 
         /// <summary>
@@ -83,15 +87,28 @@ namespace MiNES.PPU
             }
             else // Horizontal
             {
-                if (address >= 0x2400 && address < 0x2800)                
-                    baseAddress = 0x2000;
-                else if (address >= 0x2C00 && address < 0x3000)
-                    baseAddress = 0x2800;
-                else
-                    offset = 0x0000;
+                //if (address >= 0x2400 && address < 0x2800)                
+                //    baseAddress = 0x2000;
+                //else if (address >= 0x2C00 && address < 0x3000)
+                //    baseAddress = 0x2800;
+                //else
+                //    offset = 0x0000;
+
+                // NT 1 mirrors NT 0 and NT 3 mirrors NT 2
+                if ((address >= 0x2400 && address < 0x2800) || (address >= 0x2C00 && address < 0x3000))
+                    address -= 0x0400;
+
+                memory.Store(address, val);
             }
 
-            memory.Store((ushort)(baseAddress + offset), val);
+            //if (baseAddress + offset == 0x20C2)
+            //{
+            //    ushort addr = (ushort)(baseAddress + offset);
+
+            //    Console.WriteLine();
+            //}
+
+            //memory.Store((ushort)(baseAddress + offset), val);
         }
 
         /// <summary>
@@ -114,15 +131,30 @@ namespace MiNES.PPU
             }
             else // Horizontal
             {
-                if (address >= 0x2400 && address < 0x2800)
-                    baseAddress = 0x2000;
-                else if (address >= 0x2C00 && address < 0x3000)
-                    baseAddress = 0x2800;
-                else
-                    offset = 0x0000;
+                //if (address >= 0x2400 && address < 0x2800)
+                //    baseAddress = 0x2000;
+                //else if (address >= 0x2C00 && address < 0x3000) //NT #3
+                //    baseAddress = 0x2800;
+                //else
+                //    offset = 0x0000;
+
+                // NT 1 mirrors NT 0 and NT 3 mirrors NT 2
+                if ((address >= 0x2400 && address < 0x2800) || (address >= 0x2C00 && address < 0x3000))
+                    address -= 0x0400;
+
+                return memory.Fetch(address);
             }
 
-            return memory.Fetch((ushort)(baseAddress + offset));
+            throw new InvalidOperationException();
+
+            //if (baseAddress + offset == 0x20C2)
+            //{
+            //    ushort addr = (ushort)(baseAddress + offset);
+            //    byte val = memory.Fetch(addr);
+            //    Console.WriteLine();
+            //}
+
+            //return memory.Fetch((ushort)(baseAddress + offset));
         }
     }
 }
