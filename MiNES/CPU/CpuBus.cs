@@ -20,7 +20,6 @@ namespace MiNES.CPU
             _ppu = ppu;
         }
 
-
         public override byte Read(ushort address)
         {
             byte val;

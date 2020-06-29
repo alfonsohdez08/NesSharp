@@ -75,6 +75,23 @@ namespace MiNES.Extensions
         }
 
         /// <summary>
+        /// Retrieves the bit (as a boolean) stored in a specific position from the source value specified.
+        /// </summary>
+        /// <param name="value">The source value.</param>
+        /// <param name="bitPosition">The position of the bit within the source value.</param>
+        /// <returns>True if bit is set to "1"; false if bit is set to "0".</returns>
+        public static bool GetBit(this byte value, byte bitPosition)
+        {
+            if (bitPosition > 7)
+                throw new ArgumentException("The given position exceeds the number of bits stored in a single byte.");
+
+            int mask = 1 << bitPosition;
+            int result = value & mask;
+
+            return result == mask;
+        }
+
+        /// <summary>
         /// Sets a specified value into the high byte area of a 16-bit value.
         /// </summary>
         /// <param name="value">The source value.</param>

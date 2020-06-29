@@ -11,125 +11,22 @@ namespace MiNES.CPU
     /// <summary>
     /// The 6502 CPU.
     /// </summary>
-    class Cpu
+    public partial class Cpu
     {
-        #region Mnemonics
-        public const string ADC_INSTRUCTION = "ADC";
-        public const string AND_INSTRUCTION = "AND";
-        public const string ASL_INSTRUCTION = "ASL";
-        public const string BCC_INSTRUCTION = "BCC";
-        public const string BCS_INSTRUCTION = "BCS";
-        public const string BEQ_INSTRUCTION = "BEQ";
-        public const string BIT_INSTRUCTION = "BIT";
-        public const string BMI_INSTRUCTION = "BMI";
-        public const string BNE_INSTRUCTION = "BNE";
-        public const string BPL_INSTRUCTION = "BPL";
-        public const string BRK_INSTRUCTION = "BRK";
-        public const string BVC_INSTRUCTION = "BVC";
-        public const string BVS_INSTRUCTION = "BVS";
-        public const string CLC_INSTRUCTION = "CLC";
-        public const string CLD_INSTRUCTION = "CLD";
-        public const string CLI_INSTRUCTION = "CLI";
-        public const string CLV_INSTRUCTION = "CLV";
-        public const string CMP_INSTRUCTION = "CMP";
-        public const string CPX_INSTRUCTION = "CPX";
-        public const string CPY_INSTRUCTION = "CPY";
-        public const string DEC_INSTRUCTION = "DEC";
-        public const string DEX_INSTRUCTION = "DEX";
-        public const string DEY_INSTRUCTION = "DEY";
-        public const string EOR_INSTRUCTION = "EOR";
-        public const string INC_INSTRUCTION = "INC";
-        public const string INX_INSTRUCTION = "INX";
-        public const string INY_INSTRUCTION = "INY";
-        public const string JMP_INSTRUCTION = "JMP";
-        public const string JSR_INSTRUCTION = "JSR";
-        public const string LDA_INSTRUCTION = "LDA";
-        public const string LDX_INSTRUCTION = "LDX";
-        public const string LDY_INSTRUCTION = "LDY";
-        public const string LSR_INSTRUCTION = "LSR";
-        public const string NOP_INSTRUCTION = "NOP";
-        public const string ORA_INSTRUCTION = "ORA";
-        public const string PHA_INSTRUCTION = "PHA";
-        public const string PHP_INSTRUCTION = "PHP";
-        public const string PLA_INSTRUCTION = "PLA";
-        public const string PLP_INSTRUCTION = "PLP";
-        public const string ROL_INSTRUCTION = "ROL";
-        public const string ROR_INSTRUCTION = "ROR";
-        public const string RTI_INSTRUCTION = "RTI";
-        public const string RTS_INSTRUCTION = "RTS";
-        public const string SBC_INSTRUCTION = "SBC";
-        public const string SEC_INSTRUCTION = "SEC";
-        public const string SED_INSTRUCTION = "SED";
-        public const string SEI_INSTRUCTION = "SEI";
-        public const string STA_INSTRUCTION = "STA";
-        public const string STX_INSTRUCTION = "STX";
-        public const string STY_INSTRUCTION = "STY";
-        public const string TAX_INSTRUCTION = "TAX";
-        public const string TAY_INSTRUCTION = "TAY";
-        public const string TSX_INSTRUCTION = "TSX";
-        public const string TXA_INSTRUCTION = "TXA";
-        public const string TXS_INSTRUCTION = "TXS";
-        public const string TYA_INSTRUCTION = "TYA";
-
-        // Unofficial opcodes
-        public const string ARR_INSTRUCTION = "ARR";
-        public const string ATX_INSTRUCTION = "ATX";
-        public const string AXS_INSTRUCTION = "AXS";
-        public const string DCP_INSTRUCTION = "DCP";
-        public const string ISB_INSTRUCTION = "ISB";
-        //public const string KIL_INSTRUCTION = "KIL";
-        public const string LAX_INSTRUCTION = "LAX";
-        public const string RLA_INSTRUCTION = "RLA";
-        public const string RRA_INSTRUCTION = "RRA";
-        public const string SLO_INSTRUCTION = "SLO";
-        public const string SRE_INSTRUCTION = "SRE";
-        public const string XAA_INSTRUCTION = "XAA";
-        public const string ANC_INSTRUCTION = "ANC";
-        public const string SAX_INSTRUCTION = "SAX";
-        public const string SHX_INSTRUCTION = "SHX";
-        public const string AHX_INSTRUCTION = "AHX";
-        public const string ALR_INSTRUCTION = "ALR";
-        public const string TAS_INSTRUCTION = "TAS";
-        public const string SHY_INSTRUCTION = "SHY";
-        public const string LAS_INSTRUCTION = "LAS";
-        #endregion
-
-        #region Instruction Set Operation Codes Matrix
-        public static readonly Instruction[] OpCodes = new Instruction[256]
-             {
-            new Instruction(BRK_INSTRUCTION, AddressingMode.Implied, 7), new Instruction(ORA_INSTRUCTION, AddressingMode.IndirectX, 6), null,  new Instruction(SLO_INSTRUCTION, AddressingMode.IndirectX, 8), new Instruction(NOP_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(ORA_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(ASL_INSTRUCTION, AddressingMode.ZeroPage, 5), new Instruction(SLO_INSTRUCTION, AddressingMode.ZeroPage, 5), new Instruction(PHP_INSTRUCTION, AddressingMode.Implied, 3), new Instruction(ORA_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(ASL_INSTRUCTION, AddressingMode.Accumulator, 2), new Instruction(ANC_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(NOP_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(ORA_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(ASL_INSTRUCTION, AddressingMode.Absolute, 6), new Instruction(SLO_INSTRUCTION, AddressingMode.Absolute, 6),
-            new Instruction(BPL_INSTRUCTION, AddressingMode.Relative, 2, true), new Instruction(ORA_INSTRUCTION, AddressingMode.IndirectY, 5, true), null, new Instruction(SLO_INSTRUCTION, AddressingMode.IndirectY, 8), new Instruction(NOP_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(ORA_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(ASL_INSTRUCTION, AddressingMode.ZeroPageX, 6), new Instruction(SLO_INSTRUCTION, AddressingMode.ZeroPageX, 6), new Instruction(CLC_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(ORA_INSTRUCTION, AddressingMode.AbsoluteY, 4, true), new Instruction(NOP_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(SLO_INSTRUCTION, AddressingMode.AbsoluteY, 7), new Instruction(NOP_INSTRUCTION, AddressingMode.AbsoluteX, 4, true), new Instruction(ORA_INSTRUCTION, AddressingMode.AbsoluteX, 4, true), new Instruction(ASL_INSTRUCTION, AddressingMode.AbsoluteX, 7), new Instruction(SLO_INSTRUCTION, AddressingMode.AbsoluteX, 7),
-            new Instruction(JSR_INSTRUCTION, AddressingMode.Absolute, 6), new Instruction(AND_INSTRUCTION, AddressingMode.IndirectX, 6), null,    new Instruction(RLA_INSTRUCTION, AddressingMode.IndirectX, 8), new Instruction(BIT_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(AND_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(ROL_INSTRUCTION, AddressingMode.ZeroPage, 5), new Instruction(RLA_INSTRUCTION, AddressingMode.ZeroPage, 5), new Instruction(PLP_INSTRUCTION, AddressingMode.Implied, 4), new Instruction(AND_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(ROL_INSTRUCTION, AddressingMode.Accumulator, 2), new Instruction(ANC_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(BIT_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(AND_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(ROL_INSTRUCTION, AddressingMode.Absolute, 6), new Instruction(RLA_INSTRUCTION, AddressingMode.Absolute, 6),
-            new Instruction(BMI_INSTRUCTION, AddressingMode.Relative, 2, true), new Instruction(AND_INSTRUCTION, AddressingMode.IndirectY, 5, true), null,    new Instruction(RLA_INSTRUCTION, AddressingMode.IndirectY, 8), new Instruction(NOP_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(AND_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(ROL_INSTRUCTION, AddressingMode.ZeroPageX, 6), new Instruction(RLA_INSTRUCTION, AddressingMode.ZeroPageX, 6), new Instruction(SEC_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(AND_INSTRUCTION, AddressingMode.AbsoluteY, 4, true), new Instruction(NOP_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(RLA_INSTRUCTION, AddressingMode.AbsoluteY, 7), new Instruction(NOP_INSTRUCTION, AddressingMode.AbsoluteX, 4, true), new Instruction(AND_INSTRUCTION, AddressingMode.AbsoluteX, 4, true), new Instruction(ROL_INSTRUCTION, AddressingMode.AbsoluteX, 7), new Instruction(RLA_INSTRUCTION, AddressingMode.AbsoluteX, 7),
-            new Instruction(RTI_INSTRUCTION, AddressingMode.Implied, 6), new Instruction(EOR_INSTRUCTION, AddressingMode.IndirectX, 6), null,     new Instruction(SRE_INSTRUCTION, AddressingMode.IndirectX, 8), new Instruction(NOP_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(EOR_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(LSR_INSTRUCTION, AddressingMode.ZeroPage, 5), new Instruction(SRE_INSTRUCTION, AddressingMode.ZeroPage, 5), new Instruction(PHA_INSTRUCTION, AddressingMode.Implied, 3), new Instruction(EOR_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(LSR_INSTRUCTION, AddressingMode.Accumulator, 2), new Instruction(ALR_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(JMP_INSTRUCTION, AddressingMode.Absolute, 3), new Instruction(EOR_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(LSR_INSTRUCTION, AddressingMode.Absolute, 6), new Instruction(SRE_INSTRUCTION, AddressingMode.Absolute, 6),
-            new Instruction(BVC_INSTRUCTION, AddressingMode.Relative, 2, true), new Instruction(EOR_INSTRUCTION, AddressingMode.IndirectY, 5, true), null, new Instruction(SRE_INSTRUCTION, AddressingMode.IndirectY, 8), new Instruction(NOP_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(EOR_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(LSR_INSTRUCTION, AddressingMode.ZeroPageX, 6), new Instruction(SRE_INSTRUCTION, AddressingMode.ZeroPageX, 6), new Instruction(CLI_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(EOR_INSTRUCTION, AddressingMode.AbsoluteY, 4, true), new Instruction(NOP_INSTRUCTION, AddressingMode.Accumulator, 2), new Instruction(SRE_INSTRUCTION, AddressingMode.AbsoluteY, 7), new Instruction(NOP_INSTRUCTION, AddressingMode.AbsoluteX, 4, true), new Instruction(EOR_INSTRUCTION, AddressingMode.AbsoluteX, 4, true), new Instruction(LSR_INSTRUCTION, AddressingMode.AbsoluteX, 7), new Instruction(SRE_INSTRUCTION, AddressingMode.AbsoluteX, 7),
-            new Instruction(RTS_INSTRUCTION, AddressingMode.Implied, 6), new Instruction(ADC_INSTRUCTION, AddressingMode.IndirectX, 6), null, new Instruction(RRA_INSTRUCTION, AddressingMode.IndirectX, 8), new Instruction(NOP_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(ADC_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(ROR_INSTRUCTION, AddressingMode.ZeroPage, 5), new Instruction(RRA_INSTRUCTION, AddressingMode.ZeroPage, 5), new Instruction(PLA_INSTRUCTION, AddressingMode.Implied, 4), new Instruction(ADC_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(ROR_INSTRUCTION, AddressingMode.Accumulator, 2), new Instruction(ARR_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(JMP_INSTRUCTION, AddressingMode.Indirect, 5), new Instruction(ADC_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(ROR_INSTRUCTION, AddressingMode.Absolute, 6), new Instruction(RRA_INSTRUCTION, AddressingMode.Absolute, 6),
-            new Instruction(BVS_INSTRUCTION, AddressingMode.Relative, 2, true), new Instruction(ADC_INSTRUCTION, AddressingMode.IndirectY, 5, true), null,    new Instruction(RRA_INSTRUCTION, AddressingMode.IndirectY, 8), new Instruction(NOP_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(ADC_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(ROR_INSTRUCTION, AddressingMode.ZeroPageX, 6), new Instruction(RRA_INSTRUCTION, AddressingMode.ZeroPageX, 6), new Instruction(SEI_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(ADC_INSTRUCTION, AddressingMode.AbsoluteY, 4, true), new Instruction(NOP_INSTRUCTION, AddressingMode.Accumulator, 2), new Instruction(RRA_INSTRUCTION, AddressingMode.AbsoluteY, 7), new Instruction(NOP_INSTRUCTION, AddressingMode.AbsoluteX, 4, true), new Instruction(ADC_INSTRUCTION, AddressingMode.AbsoluteX, 4, true), new Instruction(ROR_INSTRUCTION, AddressingMode.AbsoluteX, 7), new Instruction(RRA_INSTRUCTION, AddressingMode.AbsoluteX, 7),
-            new Instruction(NOP_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(STA_INSTRUCTION, AddressingMode.IndirectX, 6), new Instruction(NOP_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(SAX_INSTRUCTION, AddressingMode.IndirectX, 6), new Instruction(STY_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(STA_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(STX_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(SAX_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(DEY_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(NOP_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(TXA_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(XAA_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(STY_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(STA_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(STX_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(SAX_INSTRUCTION, AddressingMode.Absolute, 4),
-            new Instruction(BCC_INSTRUCTION, AddressingMode.Relative, 2, true), new Instruction(STA_INSTRUCTION, AddressingMode.IndirectY, 6), null,    new Instruction(AHX_INSTRUCTION, AddressingMode.IndirectY, 6), new Instruction(STY_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(STA_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(STX_INSTRUCTION, AddressingMode.ZeroPageY, 4), new Instruction(SAX_INSTRUCTION, AddressingMode.ZeroPageY, 4), new Instruction(TYA_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(STA_INSTRUCTION, AddressingMode.AbsoluteY, 5), new Instruction(TXS_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(TAS_INSTRUCTION, AddressingMode.AbsoluteY, 5), new Instruction(SHY_INSTRUCTION, AddressingMode.AbsoluteX, 5), new Instruction(STA_INSTRUCTION, AddressingMode.AbsoluteX, 5), new Instruction(SHX_INSTRUCTION, AddressingMode.AbsoluteY, 5), new Instruction(AHX_INSTRUCTION, AddressingMode.AbsoluteY, 5),
-            new Instruction(LDY_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(LDA_INSTRUCTION, AddressingMode.IndirectX, 6), new Instruction(LDX_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(LAX_INSTRUCTION, AddressingMode.IndirectX, 6), new Instruction(LDY_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(LDA_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(LDX_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(LAX_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(TAY_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(LDA_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(TAX_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(LAX_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(LDY_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(LDA_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(LDX_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(LAX_INSTRUCTION, AddressingMode.Absolute, 4),
-            new Instruction(BCS_INSTRUCTION, AddressingMode.Relative, 2, true), new Instruction(LDA_INSTRUCTION, AddressingMode.IndirectY, 5, true), null,     new Instruction(LAX_INSTRUCTION, AddressingMode.IndirectY, 5, true), new Instruction(LDY_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(LDA_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(LDX_INSTRUCTION, AddressingMode.ZeroPageY, 4), new Instruction(LAX_INSTRUCTION, AddressingMode.ZeroPageY, 4), new Instruction(CLV_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(LDA_INSTRUCTION, AddressingMode.AbsoluteY, 4, true), new Instruction(TSX_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(LAS_INSTRUCTION, AddressingMode.AbsoluteY, 4), new Instruction(LDY_INSTRUCTION, AddressingMode.AbsoluteX, 4, true), new Instruction(LDA_INSTRUCTION, AddressingMode.AbsoluteX, 4, true), new Instruction(LDX_INSTRUCTION, AddressingMode.AbsoluteY, 4, true), new Instruction(LAX_INSTRUCTION, AddressingMode.AbsoluteY, 4, true),
-            new Instruction(CPY_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(CMP_INSTRUCTION, AddressingMode.IndirectX, 6), new Instruction(NOP_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(DCP_INSTRUCTION, AddressingMode.IndirectX, 8), new Instruction(CPY_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(CMP_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(DEC_INSTRUCTION, AddressingMode.ZeroPage, 5), new Instruction(DCP_INSTRUCTION, AddressingMode.ZeroPage, 5), new Instruction(INY_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(CMP_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(DEX_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(AXS_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(CPY_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(CMP_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(DEC_INSTRUCTION, AddressingMode.Absolute, 6), new Instruction(DCP_INSTRUCTION, AddressingMode.Absolute, 6),
-            new Instruction(BNE_INSTRUCTION, AddressingMode.Relative, 2, true), new Instruction(CMP_INSTRUCTION, AddressingMode.IndirectY, 5, true), null, new Instruction(DCP_INSTRUCTION, AddressingMode.IndirectY, 8), new Instruction(NOP_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(CMP_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(DEC_INSTRUCTION, AddressingMode.ZeroPageX, 6), new Instruction(DCP_INSTRUCTION, AddressingMode.ZeroPageX, 6), new Instruction(CLD_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(CMP_INSTRUCTION, AddressingMode.AbsoluteY, 4, true), new Instruction(NOP_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(DCP_INSTRUCTION, AddressingMode.AbsoluteY, 7), new Instruction(NOP_INSTRUCTION, AddressingMode.AbsoluteX, 4, true), new Instruction(CMP_INSTRUCTION, AddressingMode.AbsoluteX, 4, true), new Instruction(DEC_INSTRUCTION, AddressingMode.AbsoluteX, 7), new Instruction(DCP_INSTRUCTION, AddressingMode.AbsoluteX, 7),
-            new Instruction(CPX_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(SBC_INSTRUCTION, AddressingMode.IndirectX, 6), new Instruction(NOP_INSTRUCTION, AddressingMode.Immediate, 2),  new Instruction(ISB_INSTRUCTION, AddressingMode.IndirectX, 8), new Instruction(CPX_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(SBC_INSTRUCTION, AddressingMode.ZeroPage, 3), new Instruction(INC_INSTRUCTION, AddressingMode.ZeroPage, 5), new Instruction(ISB_INSTRUCTION, AddressingMode.ZeroPage, 5), new Instruction(INX_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(SBC_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(NOP_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(SBC_INSTRUCTION, AddressingMode.Immediate, 2), new Instruction(CPX_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(SBC_INSTRUCTION, AddressingMode.Absolute, 4), new Instruction(INC_INSTRUCTION, AddressingMode.Absolute, 6), new Instruction(ISB_INSTRUCTION, AddressingMode.Absolute, 6),
-            new Instruction(BEQ_INSTRUCTION, AddressingMode.Relative, 2, true), new Instruction(SBC_INSTRUCTION, AddressingMode.IndirectY, 5, true), null,     new Instruction(ISB_INSTRUCTION, AddressingMode.IndirectY, 8), new Instruction(NOP_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(SBC_INSTRUCTION, AddressingMode.ZeroPageX, 4), new Instruction(INC_INSTRUCTION, AddressingMode.ZeroPageX, 6), new Instruction(ISB_INSTRUCTION, AddressingMode.ZeroPageX, 6), new Instruction(SED_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(SBC_INSTRUCTION, AddressingMode.AbsoluteY, 4, true), new Instruction(NOP_INSTRUCTION, AddressingMode.Implied, 2), new Instruction(ISB_INSTRUCTION, AddressingMode.AbsoluteY, 7), new Instruction(NOP_INSTRUCTION, AddressingMode.AbsoluteX, 4, true), new Instruction(SBC_INSTRUCTION, AddressingMode.AbsoluteX, 4, true), new Instruction(INC_INSTRUCTION, AddressingMode.AbsoluteX, 7), new Instruction(ISB_INSTRUCTION, AddressingMode.AbsoluteX, 7)
-        };
-        #endregion
-
         /// <summary>
         /// Accumulator.
         /// </summary>
-        private Register<byte> _a = new Register<byte>();
+        private byte _a;
 
         /// <summary>
         /// X register (general purpose).
         /// </summary>
-        private readonly Register<byte> _x = new Register<byte>();
+        private byte _x;
 
         /// <summary>
         /// Y register (general purpose).
         /// </summary>
-        private readonly Register<byte> _y = new Register<byte>();
+        private byte _y;
 
         /// <summary>
         /// Status register (each bit represents a flag).
@@ -139,22 +36,12 @@ namespace MiNES.CPU
         /// <summary>
         /// Holds the address of the outer 
         /// </summary>
-        private readonly Register<byte> _stackPointer = new Register<byte>();
+        private byte _stackPointer;
 
         /// <summary>
-        /// The Program Counter register (holds the memory address of the next instruction).
+        /// The Program Counter register (holds the memory address of the next instruction or instruction's operand).
         /// </summary>
-        private readonly Register<ushort> _programCounter = new Register<ushort>();
-
-        /// <summary>
-        /// The CPU bus (interacts with other components within the NES).
-        /// </summary>
-        private readonly CpuBus _bus;
-
-        /// <summary>
-        /// Points either to the next CPU instruction or the instruction's operand.
-        /// </summary>
-        private ushort _pcAddress => _programCounter.GetValue();
+        private ushort _programCounter;
 
         /// <summary>
         /// Instruction's operand memory address (the location in memory where resides the instruction's operand).
@@ -174,6 +61,11 @@ namespace MiNES.CPU
         /// </summary>
         private bool _additionalCycle = false;
 
+        /// <summary>
+        /// The CPU bus (interacts with other components within the NES).
+        /// </summary>
+        private readonly CpuBus _bus;
+
 #if CPU_NES_TEST
         private readonly List<byte> _instructionHex = new List<byte>();
         private int _cyclesElapsed = 7; // Initially 7 cycles has elapsed 
@@ -183,7 +75,7 @@ namespace MiNES.CPU
 
         private string GetRegistersSnapshot()
         {
-            return $"A:{FormatByte(_a.GetValue())} X:{FormatByte(_x.GetValue())} Y:{FormatByte(_y.GetValue())} P:{FormatByte(_flags.GetValue())} SP:{FormatByte(_stackPointer.GetValue())}";
+            return $"A:{FormatByte(_a)} X:{FormatByte(_x)} Y:{FormatByte(_y)} P:{FormatByte(_flags.GetFlags())} SP:{FormatByte(_stackPointer)}";
         }
 
         private string ParseInstruction(Instruction instruction)
@@ -224,7 +116,7 @@ namespace MiNES.CPU
                 if (instruction.AddressingMode == AddressingMode.Immediate)
                     val = _bus.Read(_operandAddress);
                 else if (instruction.AddressingMode == AddressingMode.Relative)
-                    val = (ushort)(_pcAddress + (sbyte)(_bus.Read(_operandAddress))); // Perform the addition no matter what the condition result
+                    val = (ushort)(_programCounter + (sbyte)(_bus.Read(_operandAddress))); // Perform the addition no matter what the condition result
 
                 return ParseOperand(val, instruction.AddressingMode);
             }
@@ -283,11 +175,11 @@ namespace MiNES.CPU
         private void Initialize()
         {
 #if CPU_NES_TEST
-            _flags.SetValue(0x0024); // ‭0010 0100‬
-            _stackPointer.SetValue(0xFD);
-            _programCounter.SetValue(0xC000);
+            _flags.SetFlags(0x0024); // ‭0010 0100‬
+            _stackPointer = 0xFD;
+            _programCounter = 0xC000;
 #else
-            _flags.SetValue(0x0034); // 00‭11 0100‬
+            _flags.SetFlags(0x0034); // 00‭11 0100‬
             Interrupt(InterruptionType.RESET);
 #endif
         }
@@ -371,23 +263,17 @@ namespace MiNES.CPU
 #endif
 
         /// <summary>
-        /// Executes the next instruction denoted by the program counter.
-        /// </summary>
-        /// <returns>The number of cycles spent for execute the instruction.</returns>
-        public byte Step() => ExecuteInstruction();
-
-        /// <summary>
         /// Executes a CPU instruction (droven by the fetch decode execute cycle).
         /// </summary>
         /// <returns>The number of cycle spent in order to execute the instruction.</returns>
         private byte ExecuteInstruction()
         {
             // Fetches the op code from the memory
-            ushort instructionAddress = _pcAddress;
-            byte opCode = _bus.Read(_pcAddress);
+            ushort instructionAddress = _programCounter;
+            byte opCode = _bus.Read(_programCounter);
 
 #if CPU_NES_TEST
-            if (_pcAddress == 1)
+            if (_programCounter == 1)
             {
                 CpuTestDone = true;
                 return 0;
@@ -718,7 +604,7 @@ namespace MiNES.CPU
              */
 
             // This instruction does not affect the CPU flags register
-            byte flags = _flags.GetValue();
+            byte flags = _flags.GetFlags();
 
             STX();
             PHA();
@@ -727,7 +613,7 @@ namespace MiNES.CPU
             PLA();
 
             // Pulling back the original value of the flags register
-            _flags.SetValue(flags);
+            _flags.SetFlags(flags);
         }
 
         /// <summary>
@@ -749,12 +635,12 @@ namespace MiNES.CPU
         /// </summary>
         private void TYA()
         {
-            byte val = _y.GetValue();
+            byte val = _y;
 
             _flags.SetFlag(StatusFlag.Zero, val == 0);
             _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
 
-            _a.SetValue(val);
+            _a = val;
         }
 
         /// <summary>
@@ -762,7 +648,7 @@ namespace MiNES.CPU
         /// </summary>
         private void TXS()
         {
-            _stackPointer.SetValue(_x.GetValue());
+            _stackPointer = _x;
         }
 
         /// <summary>
@@ -770,12 +656,12 @@ namespace MiNES.CPU
         /// </summary>
         private void TXA()
         {
-            byte val = _x.GetValue();
+            byte val = _x;
 
             _flags.SetFlag(StatusFlag.Zero, val == 0);
             _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
 
-            _a.SetValue(_x.GetValue());
+            _a = _x;
         }
 
         /// <summary>
@@ -783,12 +669,12 @@ namespace MiNES.CPU
         /// </summary>
         private void TSX()
         {
-            byte val = _stackPointer.GetValue();
+            byte val = _stackPointer;
 
             _flags.SetFlag(StatusFlag.Zero, val == 0);
             _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
 
-            _x.SetValue(val);
+            _x = val;
         }
 
         /// <summary>
@@ -796,12 +682,12 @@ namespace MiNES.CPU
         /// </summary>
         private void TAY()
         {
-            byte val = _a.GetValue();
+            byte val = _a;
 
             _flags.SetFlag(StatusFlag.Zero, val == 0);
             _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
 
-            _y.SetValue(val);
+            _y = val;
         }
 
         /// <summary>
@@ -809,12 +695,12 @@ namespace MiNES.CPU
         /// </summary>
         private void TAX()
         {
-            byte val = _a.GetValue();
+            byte val = _a;
 
             _flags.SetFlag(StatusFlag.Zero, val == 0);
             _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
 
-            _x.SetValue(val);
+            _x = val;
         }
 
         /// <summary>
@@ -822,7 +708,7 @@ namespace MiNES.CPU
         /// </summary>
         private void STY()
         {
-            _bus.Write(_operandAddress, _y.GetValue());
+            _bus.Write(_operandAddress, _y);
         }
 
         /// <summary>
@@ -830,7 +716,7 @@ namespace MiNES.CPU
         /// </summary>
         private void STX()
         {
-            _bus.Write(_operandAddress, _x.GetValue());
+            _bus.Write(_operandAddress, _x);
         }
 
         /// <summary>
@@ -856,12 +742,11 @@ namespace MiNES.CPU
         private void RTI()
         {
             byte flags = Pop();
-            _flags.SetValue(flags);
+            _flags.SetFlags(flags);
 
             byte pcLowByte = Pop();
             byte pcHighByte = Pop();
-            _programCounter.SetValue(ParseBytes(pcLowByte, pcHighByte));
-
+            _programCounter = ParseBytes(pcLowByte, pcHighByte);
         }
 
         /// <summary>
@@ -873,7 +758,7 @@ namespace MiNES.CPU
             byte pcHighByte = Pop();
 
             ushort pcAddress = ParseBytes(pcLowByte, pcHighByte);
-            _programCounter.SetValue((ushort)(pcAddress + 1));
+            _programCounter = (ushort)(pcAddress + 1);
         }
 
         /// <summary>
@@ -881,7 +766,7 @@ namespace MiNES.CPU
         /// </summary>
         private void PLP()
         {
-            _flags.SetValue(Pop());
+            _flags.SetFlags(Pop());
         }
 
         /// <summary>
@@ -894,7 +779,7 @@ namespace MiNES.CPU
             _flags.SetFlag(StatusFlag.Zero, val == 0);
             _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
 
-            _a.SetValue(val);
+            _a = val;
         }
 
         /// <summary>
@@ -907,7 +792,7 @@ namespace MiNES.CPU
              * (this setting it's only to value that would be pushed onto the stack, not in the actual CPU flags).
              * Source: https://stackoverflow.com/questions/52017657/6502-emulator-testing-nestest 
              */
-            byte flags = _flags.GetValue();
+            byte flags = _flags.GetFlags();
             flags |= 0x30; // Sets the bit 4 and 5 to the copy of the CPU flags
 
             Push(flags);
@@ -918,7 +803,7 @@ namespace MiNES.CPU
         /// </summary>
         private void PHA()
         {
-            Push(_a.GetValue());
+            Push(_a);
         }
 
         /// <summary>
@@ -926,7 +811,6 @@ namespace MiNES.CPU
         /// </summary>
         private void NOP()
         {
-            //IncrementPC();
         }
 
         /// <summary>
@@ -939,7 +823,7 @@ namespace MiNES.CPU
             _flags.SetFlag(StatusFlag.Zero, val == 0);
             _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
 
-            _y.SetValue(val);
+            _y = val;
         }
 
         /// <summary>
@@ -952,7 +836,7 @@ namespace MiNES.CPU
             _flags.SetFlag(StatusFlag.Zero, val == 0);
             _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
 
-            _x.SetValue(val);
+            _x = val;
         }
 
         /// <summary>
@@ -962,7 +846,7 @@ namespace MiNES.CPU
         {
             // The PC at this point points to the next instruction
             //ushort returnAddress = _programCounter.GetValue();
-            ushort returnAddress = (ushort)(_programCounter.GetValue() - 1);
+            ushort returnAddress = (ushort)(_programCounter - 1);
 
             // Pushes the high byte
             Push(returnAddress.GetHighByte());
@@ -970,7 +854,7 @@ namespace MiNES.CPU
             // Pushes the low byte
             Push(returnAddress.GetLowByte());
 
-            _programCounter.SetValue(_operandAddress);
+            _programCounter = _operandAddress;
         }
 
         /// <summary>
@@ -978,7 +862,7 @@ namespace MiNES.CPU
         /// </summary>
         private void JMP()
         {
-            _programCounter.SetValue(_operandAddress);
+            _programCounter = _operandAddress;
         }
 
         /// <summary>
@@ -986,12 +870,10 @@ namespace MiNES.CPU
         /// </summary>
         private void INY()
         {
-            byte val = (byte)(_y.GetValue() + 1);
+            _y++;
 
-            _flags.SetFlag(StatusFlag.Zero, val == 0);
-            _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
-
-            _y.SetValue(val);
+            _flags.SetFlag(StatusFlag.Zero, _y == 0);
+            _flags.SetFlag(StatusFlag.Negative, _y.IsNegative());
         }
 
         /// <summary>
@@ -999,12 +881,11 @@ namespace MiNES.CPU
         /// </summary>
         private void INX()
         {
-            byte val = (byte)(_x.GetValue() + 1);
+            _x++;
 
-            _flags.SetFlag(StatusFlag.Zero, val == 0);
-            _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
+            _flags.SetFlag(StatusFlag.Zero, _x == 0);
+            _flags.SetFlag(StatusFlag.Negative, _x.IsNegative());
 
-            _x.SetValue(val);
         }
 
         /// <summary>
@@ -1025,12 +906,10 @@ namespace MiNES.CPU
         /// </summary>
         private void DEY()
         {
-            byte val = (byte)(_y.GetValue() - 1);
+            _y--;
 
-            _flags.SetFlag(StatusFlag.Zero, val == 0);
-            _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
-
-            _y.SetValue(val);
+            _flags.SetFlag(StatusFlag.Zero, _y == 0);
+            _flags.SetFlag(StatusFlag.Negative, _y.IsNegative());
         }
 
         /// <summary>
@@ -1038,12 +917,10 @@ namespace MiNES.CPU
         /// </summary>
         private void DEX()
         {
-            byte val = (byte)(_x.GetValue() - 1);
+            _x--;
 
-            _flags.SetFlag(StatusFlag.Zero, val == 0);
-            _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
-
-            _x.SetValue(val);
+            _flags.SetFlag(StatusFlag.Zero, _x == 0);
+            _flags.SetFlag(StatusFlag.Negative, _x.IsNegative());
         }
 
         /// <summary>
@@ -1064,7 +941,7 @@ namespace MiNES.CPU
         /// </summary>
         private void CPY()
         {
-            Compare(_y.GetValue(), _bus.Read(_operandAddress));
+            Compare(_y, _bus.Read(_operandAddress));
         }
 
         /// <summary>
@@ -1072,7 +949,7 @@ namespace MiNES.CPU
         /// </summary>
         private void CPX()
         {
-            Compare(_x.GetValue(), _bus.Read(_operandAddress));
+            Compare(_x, _bus.Read(_operandAddress));
         }
 
         /// <summary>
@@ -1080,7 +957,7 @@ namespace MiNES.CPU
         /// </summary>
         private void CMP()
         {
-            Compare(_a.GetValue(), _bus.Read(_operandAddress));
+            Compare(_a, _bus.Read(_operandAddress));
         }
 
         /// <summary>
@@ -1162,15 +1039,15 @@ namespace MiNES.CPU
         {
             if (interruptionType != InterruptionType.RESET)
             {
-                byte lowByte = _pcAddress.GetLowByte();
-                byte highByte = _pcAddress.GetHighByte();
+                byte lowByte = _programCounter.GetLowByte();
+                byte highByte = _programCounter.GetHighByte();
 
                 // Pushes the program counter
                 Push(highByte);
                 Push(lowByte);
 
                 // Pushes the CPU flags
-                byte flags = (byte)(_flags.GetValue() | 0x30); // Sets bit 5 and 4
+                byte flags = (byte)(_flags.GetFlags() | 0x30); // Sets bit 5 and 4
                 if (interruptionType != InterruptionType.BRK)
                     flags = (byte)((flags | 0x10) ^ 0x10); // Disable the bit 4 to the copy of the CPU flags
 
@@ -1201,15 +1078,7 @@ namespace MiNES.CPU
             }
 
             ushort address = ParseBytes(jumpAddressLowByte, jumpAddressHighByte);
-            _programCounter.SetValue(address);
-        }
-
-        /// <summary>
-        /// Executes a NMI interruption.
-        /// </summary>
-        public void NMI()
-        {
-            Interrupt(InterruptionType.NMI);
+            _programCounter = address;
         }
 
         /// <summary>
@@ -1237,10 +1106,9 @@ namespace MiNES.CPU
         /// </summary>
         private void BIT()
         {
-            byte accumulator = _a.GetValue();
             byte memory = _bus.Read(_operandAddress);
 
-            _flags.SetFlag(StatusFlag.Zero, (accumulator & memory) == 0);
+            _flags.SetFlag(StatusFlag.Zero, (_a & memory) == 0);
             _flags.SetFlag(StatusFlag.Overflow, (memory & 0x0040) == 0x0040); // bit no. 6 from the memory value
             _flags.SetFlag(StatusFlag.Negative, memory.IsNegative());
         }
@@ -1277,24 +1145,24 @@ namespace MiNES.CPU
             // Add additional cycle when branch condition is true
             _cycles++;
 
-            ushort targetAddress = (ushort)(_programCounter.GetValue() + (sbyte)_bus.Read(_operandAddress));
-            CheckIfCrossedPageBoundary(_programCounter.GetValue(), targetAddress); // Add another cycle if new branch is in another page
+            ushort targetAddress = (ushort)(_programCounter + (sbyte)_bus.Read(_operandAddress));
+            CheckIfCrossedPageBoundary(_programCounter, targetAddress); // Add another cycle if new branch is in another page
 
-            _programCounter.SetValue(targetAddress);
+            _programCounter = targetAddress;
         }
 
         /// <summary>
         /// Adds a value to the accumulator's value.
         /// </summary>
         private void ADC()
-        {            
+        {
             /*
              * Overflow happens when the result can't fit into a signed byte: RESULT < -128 OR RESULT > 127
              * In order to this happen, both operands should hava the same sign: same sign operands
              * produces a bigger magnitude (the magnitude of a signed number is the actual number next to the sign: +5 magnitude equals to 5).
              */
 
-            byte accValue = _a.GetValue();
+            byte accValue = _a;
             byte val = _bus.Read(_operandAddress);
 
             int temp = accValue + val + (_flags.GetFlag(StatusFlag.Carry) ? 1 : 0);
@@ -1313,7 +1181,7 @@ namespace MiNES.CPU
             // If two numbers of the same sign produce a number whose sign is different, then there's an overflow
             _flags.SetFlag(StatusFlag.Overflow, ((accValue ^ result) & (val ^ result) & 0x0080) == 0x0080);
 
-            _a.SetValue(result);
+            _a = result;
         }
 
         /// <summary>
@@ -1340,7 +1208,7 @@ namespace MiNES.CPU
              * N = (+), so the substraction is -M + (+N) = -M + (-N); it gets converted to (-) because the one complement of N.
              */
 
-            byte accValue = _a.GetValue();
+            byte accValue = _a;
             byte val = _bus.Read(_operandAddress);
             byte complement = (byte)(~val);
 
@@ -1357,7 +1225,7 @@ namespace MiNES.CPU
             // In the substraction, the sign check is done in the complement
             _flags.SetFlag(StatusFlag.Overflow, ((accValue ^ result) & (complement ^ result) & 0x0080) == 0x0080);
 
-            _a.SetValue(result);
+            _a = result;
         }
 
         /// <summary>                                                                                    
@@ -1365,10 +1233,10 @@ namespace MiNES.CPU
         /// </summary>
         private void LDA()
         {
-            _a.SetValue(_bus.Read(_operandAddress));
+            _a = _bus.Read(_operandAddress);
 
-            _flags.SetFlag(StatusFlag.Zero, _a.GetValue() == 0);
-            _flags.SetFlag(StatusFlag.Negative, _a.GetValue().IsNegative());
+            _flags.SetFlag(StatusFlag.Zero, _a == 0);
+            _flags.SetFlag(StatusFlag.Negative, _a.IsNegative());
         }
 
         /// <summary>
@@ -1376,9 +1244,7 @@ namespace MiNES.CPU
         /// </summary>
         private void STA()
         {
-            byte accValue = _a.GetValue();
-
-            _bus.Write(_operandAddress, accValue);
+            _bus.Write(_operandAddress, _a);
         }
 
         /// <summary>
@@ -1413,12 +1279,9 @@ namespace MiNES.CPU
         /// Shifts each bit of current accumulator value one place to the left.
         /// </summary>
         private void ASL_ACC()
-        {
-            byte val = _a.GetValue();
-            
-            byte result = ShiftLeft(val);
-
-            _a.SetValue(result);
+        {            
+            byte result = ShiftLeft(_a);
+            _a = result;
         }
 
         /// <summary>
@@ -1454,11 +1317,8 @@ namespace MiNES.CPU
         /// </summary>
         private void LSR_ACC()
         {
-            byte val = _a.GetValue();
-            
-            byte result = ShiftRight(val);
-
-            _a.SetValue(result);
+            byte result = ShiftRight(_a);
+            _a = result;
         }
 
         /// <summary>
@@ -1494,11 +1354,8 @@ namespace MiNES.CPU
         /// </summary>
         private void ROL_ACC()
         {
-            byte val = _a.GetValue();
-            
-            byte result = RotateLeft(val);
-
-            _a.SetValue(result);
+            byte result = RotateLeft(_a);
+            _a = result;
         }
 
         /// <summary>
@@ -1536,11 +1393,8 @@ namespace MiNES.CPU
         /// </summary>
         private void ROR_ACC()
         {
-            byte val = _a.GetValue();
-            
-            byte result = RotateRight(val);
-
-            _a.SetValue(result);
+            byte result = RotateRight(_a);
+            _a = result;
         }
 
         /// <summary>
@@ -1567,12 +1421,12 @@ namespace MiNES.CPU
         private void AND()
         {
             byte val = _bus.Read(_operandAddress);
-            byte result = (byte)(val & _a.GetValue());
+            byte result = (byte)(val & _a);
 
             _flags.SetFlag(StatusFlag.Zero, result == 0);
             _flags.SetFlag(StatusFlag.Negative, result.IsNegative());
 
-            _a.SetValue(result);
+            _a = result;
         }
 
         /// <summary>
@@ -1581,12 +1435,12 @@ namespace MiNES.CPU
         private void EOR()
         {
             byte val = _bus.Read(_operandAddress);
-            byte result = (byte)(val ^ _a.GetValue());
+            byte result = (byte)(val ^ _a);
 
             _flags.SetFlag(StatusFlag.Zero, result == 0);
             _flags.SetFlag(StatusFlag.Negative, result.IsNegative());
 
-            _a.SetValue(result);
+            _a = result;
         }
 
         /// <summary>
@@ -1595,12 +1449,12 @@ namespace MiNES.CPU
         private void ORA()
         {
             byte val = _bus.Read(_operandAddress);
-            byte result = (byte)(val | _a.GetValue());
+            byte result = (byte)(val | _a);
 
             _flags.SetFlag(StatusFlag.Zero, result == 0);
             _flags.SetFlag(StatusFlag.Negative, result.IsNegative());
 
-            _a.SetValue(result);
+            _a = result;
         }
 
 #region Addressing modes
@@ -1615,23 +1469,23 @@ namespace MiNES.CPU
                 return;
 
 #if CPU_NES_TEST
-            _instructionHex.Add(_bus.Read(_pcAddress));
+            _instructionHex.Add(_bus.Read(_programCounter));
 #endif
             ushort operandAddress;
             switch (mode)
             {
                 case AddressingMode.ZeroPage:
-                    operandAddress = _bus.Read(_pcAddress);
+                    operandAddress = _bus.Read(_programCounter);
                     break;
                 case AddressingMode.ZeroPageX:
-                    operandAddress = (byte)(_bus.Read(_pcAddress) + _x.GetValue());
+                    operandAddress = (byte)(_bus.Read(_programCounter) + _x);
                     break;
                 case AddressingMode.ZeroPageY:
-                    operandAddress = (byte)(_bus.Read(_pcAddress) + _y.GetValue());
+                    operandAddress = (byte)(_bus.Read(_programCounter) + _y);
                     break;
                 case AddressingMode.Immediate:
                 case AddressingMode.Relative:
-                    operandAddress = _pcAddress;
+                    operandAddress = _programCounter;
                     break;
                 case AddressingMode.Absolute:
                 case AddressingMode.AbsoluteX:
@@ -1639,11 +1493,11 @@ namespace MiNES.CPU
                 case AddressingMode.Indirect:
                     ushort addressParsed;
                     {
-                        byte lowByte = _bus.Read(_pcAddress);
+                        byte lowByte = _bus.Read(_programCounter);
 
                         IncrementPC();
 
-                        byte highByte = _bus.Read(_pcAddress);
+                        byte highByte = _bus.Read(_programCounter);
 #if CPU_NES_TEST
                         _instructionHex.Add(highByte);
 #endif
@@ -1681,18 +1535,18 @@ namespace MiNES.CPU
                     }
                     else if (mode == AddressingMode.AbsoluteX)
                     {
-                        operandAddress = (ushort)(addressParsed + _x.GetValue());
+                        operandAddress = (ushort)(addressParsed + _x);
                         CheckIfCrossedPageBoundary(addressParsed, operandAddress);
                     }
                     else
                     {
-                        operandAddress = (ushort)(addressParsed + _y.GetValue());
+                        operandAddress = (ushort)(addressParsed + _y);
                         CheckIfCrossedPageBoundary(addressParsed, operandAddress);
                     }
                     break;
                 case AddressingMode.IndirectX:
                     {
-                        byte address = (byte)(_bus.Read(_pcAddress) + _x.GetValue()); // Wraps around the zero page
+                        byte address = (byte)(_bus.Read(_programCounter) + _x); // Wraps around the zero page
 
                         byte lowByte = _bus.Read(address++);
                         byte highByte = _bus.Read(address);
@@ -1702,13 +1556,13 @@ namespace MiNES.CPU
                     break;
                 case AddressingMode.IndirectY:
                     {
-                        byte zeroPageAddress = _bus.Read(_pcAddress);
+                        byte zeroPageAddress = _bus.Read(_programCounter);
 
                         byte lowByte = _bus.Read(zeroPageAddress++);
                         byte highByte = _bus.Read(zeroPageAddress);
 
                         ushort address = ParseBytes(lowByte, highByte);
-                        operandAddress = (ushort)(address + _y.GetValue());
+                        operandAddress = (ushort)(address + _y);
 
                         CheckIfCrossedPageBoundary(address, operandAddress);
                     }
@@ -1747,7 +1601,7 @@ namespace MiNES.CPU
         /// </summary>
         private void IncrementPC()
         {
-            _programCounter.SetValue((ushort)(_pcAddress + 1));
+            _programCounter++;
         }
 
         /// <summary>
@@ -1766,7 +1620,7 @@ namespace MiNES.CPU
         /// <param name="b">The value that would be pushed into the stack.</param>
         private void Push(byte b)
         {
-            byte stackPointer = _stackPointer.GetValue();
+            byte stackPointer = _stackPointer;
 
             /* When pushing a byte onto the stack, the stack pointer is decremented by one (the stack pointer groes down). Also the stack pointer
              * points to the next available slot in the stack's memory page.
@@ -1775,7 +1629,7 @@ namespace MiNES.CPU
 
             _bus.Write(address, b);
 
-            _stackPointer.SetValue(stackPointer);
+            _stackPointer = stackPointer;
         }
 
         /// <summary>
@@ -1784,16 +1638,30 @@ namespace MiNES.CPU
         /// <returns>The top value in the stack.</returns>
         private byte Pop()
         {
-            byte stackPointer = _stackPointer.GetValue();
+            byte stackPointer = _stackPointer;
 
             // When popping a byte from the stack, the stack pointer is incremented by one
             ushort address = ParseStackAddress(++stackPointer);
 
             byte val = _bus.Read(address);
 
-            _stackPointer.SetValue(stackPointer);
+            _stackPointer = stackPointer;
 
             return val;
         }
+
+        /// <summary>
+        /// Executes a NMI interruption.
+        /// </summary>
+        public void NMI()
+        {
+            Interrupt(InterruptionType.NMI);
+        }
+
+        /// <summary>
+        /// Executes the next instruction denoted by the program counter.
+        /// </summary>
+        /// <returns>The number of cycles spent for execute the instruction.</returns>
+        public byte Step() => ExecuteInstruction();
     }
 }

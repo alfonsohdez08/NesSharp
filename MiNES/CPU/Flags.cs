@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MiNES.Extensions;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -15,8 +16,13 @@ namespace MiNES.CPU
         Negative = 7
     }
 
-    class Flags: Register<byte>
+    class Flags
     {
+        /// <summary>
+        /// The 6502 CPU flags are represented as a 8-bit register where each bit represets a CPU flag.
+        /// </summary>
+        private byte _flags; 
+
         /// <summary>
         /// Initial value of the register (all flags disabled).
         /// </summary>
@@ -27,9 +33,9 @@ namespace MiNES.CPU
         private const byte DefaultFlags = 0x34;
 #endif
 
-        public Flags(): base(DefaultFlags)
+        public Flags()
         {
-
+            _flags = DefaultFlags;
         }
 
         /// <summary>
@@ -39,18 +45,7 @@ namespace MiNES.CPU
         /// <param name="val">If true it means it should be "on"; otherwise "off".</param>
         public void SetFlag(StatusFlag flag, bool val)
         {
-            byte flagPos = (byte)flag;
-            int mask = 1 << flagPos;
-
-            byte flags = GetValue();
-            
-            int result;
-            if (val) // enable/turn on/set the bit
-                result = flags | mask;
-            else // disable/turn off the bit
-                result = ((flags | mask) ^ mask); // Just in case the bit still ON
-
-            SetValue((byte)result);
+            _flags.SetBit((byte)flag, val);
         }
 
         /// <summary>
@@ -58,18 +53,9 @@ namespace MiNES.CPU
         /// </summary>
         /// <param name="flag">The CPU status flag.</param>
         /// <returns>True if it's "on"; otherwise false.</returns>
-        public bool GetFlag(StatusFlag flag)
-        {
-            byte flagPos = (byte)flag;
-            int mask = 1 << flagPos;
+        public bool GetFlag(StatusFlag flag) => _flags.GetBit((byte)flag);
 
-            byte flags = GetValue();
-            int result = flags & mask;
-
-            return result == mask;
-        }
-
-        public override void SetValue(byte value)
+        public void SetFlags(byte value)
         {
             /*
              * The bits 4 and 5 are known as B flags. There aren't instructions that affect those bits in the flags register, however they are set.
@@ -84,13 +70,11 @@ namespace MiNES.CPU
 #else
             value = (byte)(value | bit4Mask);
 #endif
-            base.SetValue(value);
+
+            _flags = value;
         }
 
-        /// <summary>
-        /// Clears all flags.
-        /// </summary>
-        public void ClearFlags() => SetValue(DefaultFlags);
+        public byte GetFlags() => _flags;
 
 #if DEBUG
         /// <summary>
@@ -100,13 +84,12 @@ namespace MiNES.CPU
         public override string ToString()
         {
             var sb = new StringBuilder();
-            byte flags = GetValue();
 
             var e = Enum.GetValues(typeof(StatusFlag)).Cast<StatusFlag>();
             foreach (StatusFlag f in e)
             {
                 int mask = (1 << (byte)f);
-                sb.AppendLine($"{f}: {(flags & mask) == mask}");
+                sb.AppendLine($"{f}: {(_flags & mask) == mask}");
             }
 
             return sb.ToString();
