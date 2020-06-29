@@ -10,31 +10,6 @@ using System.Xml;
 
 namespace MiNES.PPU
 {
-    internal class PpuMask : Register<byte>
-    {
-
-    }
-
-    internal class PpuStatus : Register<byte>
-    {
-        public PpuStatus() : base(0xA0)
-        {
-
-        }
-
-
-        public bool GetVerticalBlank() => (GetValue() & 0x80) == 0x80;
-
-        public void SetVerticalBlank(bool val)
-        {
-            byte reg = GetValue();
-
-            Ppu.Bit(7, val, ref reg);
-            SetValue(reg);
-        }
-    }
-
-
     public class Ppu
     {
         private readonly PpuBus _ppuBus;
@@ -47,12 +22,12 @@ namespace MiNES.PPU
         /// <summary>
         /// PPU Control register.
         /// </summary>
-        internal Control Control { get; set; } = new Control();
+        internal Control ControlRegister { get; private set; } = new Control();
 
         /// <summary>
         /// PPU Mask register.
         /// </summary>
-        public byte Mask { get; set; }
+        internal Mask Mask { get; private set; } = new Mask();
 
         /* When powering up the PPU, the status register (located at $2002) will
          * be set to 0xA0 (10100000).
@@ -65,7 +40,7 @@ namespace MiNES.PPU
         /// <summary>
         /// PPU Status register.
         /// </summary>
-        internal PpuStatus Status { get; set; } = new PpuStatus();
+        internal Status StatusRegister { get; set; } = new Status();
 
         /// <summary>
         /// Object Attribute Memory (OAM) address register.
@@ -87,31 +62,8 @@ namespace MiNES.PPU
         /// The compiled address from the PPU Address register (this is known as Video RAM address or VRAM).
         /// </summary>
         private ushort _address = 0;
-
-
-        /// <summary>
-        /// Sets the address into the PPU address register.
-        /// </summary>
-        /// <param name="value">The value of the address (either high or low byte, depending on the latch).</param>
-        public void SetAddress(byte value)
-        {
-            if (!_addressLatch)
-            {
-                //_address = (ushort)((_address | 0xFF00) ^ 0xFF00 | value << 8);
-                _address.SetHighByte(value);
-                _addressLatch = true; // Flips to the low byte state
-            }
-            else
-            {
-                //_address = (ushort)((_address | 0x00FF) ^ 0x00FF | value);
-                _address.SetLowByte(value);
-                _addressLatch = false; // Flips to the high byte state
-            }
-        }
-
-
+        
         private byte _dataBuffer = 0;
-
 
         /// <summary>
         /// The OAM DMA page.
@@ -216,6 +168,26 @@ namespace MiNES.PPU
         }
 
 
+        /// <summary>
+        /// Sets the address into the PPU address register.
+        /// </summary>
+        /// <param name="value">The value of the address (either high or low byte, depending on the latch).</param>
+        public void SetAddress(byte value)
+        {
+            if (!_addressLatch)
+            {
+                //_address = (ushort)((_address | 0xFF00) ^ 0xFF00 | value << 8);
+                _address.SetHighByte(value);
+                _addressLatch = true; // Flips to the low byte state
+            }
+            else
+            {
+                //_address = (ushort)((_address | 0x00FF) ^ 0x00FF | value);
+                _address.SetLowByte(value);
+                _addressLatch = false; // Flips to the high byte state
+            }
+        }
+
         private Tile[] GetPatternTable(bool isBackgroundTile = true)
         {
             var patternTable = new Tile[256];
@@ -266,20 +238,6 @@ namespace MiNES.PPU
             return patternTable;
         }
 
-
-        internal static void Bit(byte bitPos, bool value, ref byte register)
-        {
-            int mask = 1 << bitPos;
-
-            int result;
-            if (value) // enable/turn on/set the bit
-                result = register | mask;
-            else // disable/turn off the bit
-                result = (register | mask) ^ mask; // Just in case the bit still ON
-
-            register = (byte)result;
-        }
-
         /// <summary>
         /// Retrieves the data from the address set through the PPU address register.
         /// </summary>
@@ -320,7 +278,7 @@ namespace MiNES.PPU
         {
             // If bit 3 from control register is set, add 32 to VRAM address; otherwise 1
             //if ((Control & 0x0004) == 0x0004)
-            if (Control.GetVRamAddressIncrement())
+            if (ControlRegister.VRamAddressIncrement)
                 _address += 32;
             else
                 _address++;
@@ -457,7 +415,7 @@ namespace MiNES.PPU
         private void PreRenderScanline()
         {
             if (_cycles == 1)
-                Status.SetVerticalBlank(false);
+                StatusRegister.VerticalBlank = false;
         }
 
         private int _fineX;
@@ -491,7 +449,7 @@ namespace MiNES.PPU
 
         private ushort GetNametableBaseAddress()
         {
-            byte nametable = Control.GetNametableAddress();
+            byte nametable = ControlRegister.BaseNametableAddress;
 
             ushort baseAddress;
             switch (nametable)
@@ -682,7 +640,7 @@ namespace MiNES.PPU
             //int y = _scanline;
 
             //If bit 3 from Mask register is set, it means we can render the background
-            if ((Mask & 0x08) == 0x08)
+            if (Mask.RenderBackground)
                 _frame.SetPixel(X, Y, GetBackgroundColor(palette, colorIndex));
             else
                 _frame.SetPixel(X, Y, Color.Black);
@@ -724,10 +682,9 @@ namespace MiNES.PPU
         {
             if (_scanline == 241 && _cycles == 1)
             {
-                Status.SetVerticalBlank(true);
-                if (Control.GetNmi())
+                StatusRegister.VerticalBlank = true;
+                if (ControlRegister.GenerateNMI)
                     NmiRequested = true;
-                //NmiRequested = true;
             }
         }
 

@@ -55,10 +55,10 @@ namespace MiNES.CPU
 
                 // PPU Status register
                 case 0x2002:
-                    value = _ppu.Status.GetValue();
+                    value = _ppu.StatusRegister.Value;
                     
                     // Side effects of reading the status register
-                    _ppu.Status.SetVerticalBlank(false); // Clears bit 7 (V-BLANK) flag after CPU read the status register
+                    _ppu.StatusRegister.VerticalBlank = false; // Clears bit 7 (V-BLANK) flag after CPU read the status register
                     _ppu.ResetAddressLatch();
                     break;
                 
@@ -121,12 +121,13 @@ namespace MiNES.CPU
             {
                 // PPU Control register (write only)
                 case 0x2000:
-                    _ppu.Control.SetValue(value);
+                    _ppu.ControlRegister.Value = value;
+
                     break;
 
                 // PPU Mask register (write only)
                 case 0x2001:
-                    _ppu.Mask = value;
+                    _ppu.Mask.Value = value;
                     break;
 
                 // PPU Status register (read only)

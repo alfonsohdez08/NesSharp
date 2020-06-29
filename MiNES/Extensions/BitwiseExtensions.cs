@@ -108,7 +108,7 @@ namespace MiNES.Extensions
         /// <param name="val">The value that will be set in the low byte area.</param>
         public static void SetLowByte(this ref ushort value, byte val)
         {
-            value = (ushort)(((value | 0xFF00) ^ 0xFF00) | val);
+            value = (ushort)(((value | 0x00FF) ^ 0x00FF) | val);
         }
     }
 }
