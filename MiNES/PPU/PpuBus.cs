@@ -90,12 +90,15 @@ namespace MiNES.PPU
             ushort offset = (ushort)(address % 0x0400);
             if (_mirroring == Mirroring.Vertical)
             {
-                if (address >= 0x2800 && address < 0x2C00)
-                    baseAddress = 0x2000;
-                else if (address >= 0x2C00 && address < 0x3000)
-                    baseAddress = 0x2400;
-                else
-                    offset = 0x0000;
+                if ((address >= 0x2800 && address < 0x2C00) || (address >= 0x2C00 && address < 0x3000))
+                    address -= 0x0400;
+
+                //if (address >= 0x2800 && address < 0x2C00)
+                //    baseAddress = 0x2000;
+                //else if (address >= 0x2C00 && address < 0x3000)
+                //    baseAddress = 0x2400;
+                //else
+                //    offset = 0x0000;
             }
             else // Horizontal
             {
@@ -110,8 +113,9 @@ namespace MiNES.PPU
                 if ((address >= 0x2400 && address < 0x2800) || (address >= 0x2C00 && address < 0x3000))
                     address -= 0x0400;
 
-                memory.Store(address, val);
             }
+
+            memory.Store(address, val);
 
             //if (baseAddress + offset == 0x20C2)
             //{
@@ -134,12 +138,15 @@ namespace MiNES.PPU
             ushort offset = (ushort)(address % 0x0400);
             if (_mirroring == Mirroring.Vertical)
             {
-                if (address >= 0x2800 && address < 0x2C00)
-                    baseAddress = 0x2000;
-                else if (address >= 0x2C00 && address < 0x3000)
-                    baseAddress = 0x2400;
-                else
-                    offset = 0x0000;
+                if ((address >= 0x2800 && address < 0x2C00) || (address >= 0x2C00 && address < 0x3000))
+                    address -= 0x0400;
+
+                //if (address >= 0x2800 && address < 0x2C00)
+                //    baseAddress = 0x2000;
+                //else if (address >= 0x2C00 && address < 0x3000)
+                //    baseAddress = 0x2400;
+                //else
+                //    offset = 0x0000;
             }
             else // Horizontal
             {
@@ -153,11 +160,10 @@ namespace MiNES.PPU
                 // NT 1 mirrors NT 0 and NT 3 mirrors NT 2
                 if ((address >= 0x2400 && address < 0x2800) || (address >= 0x2C00 && address < 0x3000))
                     address -= 0x0400;
-
-                return memory.Fetch(address);
             }
 
-            throw new InvalidOperationException();
+            return memory.Fetch(address);
+
 
             //if (baseAddress + offset == 0x20C2)
             //{
