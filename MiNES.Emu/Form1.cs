@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MiNES.Emu.Debugger;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -8,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Xml;
 
 namespace MiNES.Emu
 {
@@ -16,10 +18,14 @@ namespace MiNES.Emu
         private static readonly string NesRootPath = Environment.GetEnvironmentVariable("NES", EnvironmentVariableTarget.Machine);
         private byte[] donkeyKongRom = File.ReadAllBytes(Path.Combine(NesRootPath, "donkey_kong.nes"));
         private byte[] superMarioBrosRom = File.ReadAllBytes(Path.Combine(NesRootPath, "super_mario_bros.nes"));
+        private byte[] nesTestRom = File.ReadAllBytes(Path.Combine(NesRootPath, "nestest.nes"));
 
         private object _lockObject = new object();
         private bool _runEmulation = true;
         private NES nes;
+
+        //private NametableDebugger _nametableDebugger;
+
 
         public bool RunEmulation
         {
@@ -35,8 +41,12 @@ namespace MiNES.Emu
         public Form1()
         {
             InitializeComponent();
-            
+
             nes = new NES(donkeyKongRom);
+            //nes = new NES(superMarioBrosRom);
+            //nes = new NES(nesTestRom);
+
+
             //EnableEmulation.Checked = true;
 
             StartEmulation();
@@ -91,7 +101,7 @@ namespace MiNES.Emu
                 _runEmulation = false;
             }
 
-            DrawNametable();
+            //DrawNametable();
         }
 
         private void flowLayoutPanel1_Paint(object sender, PaintEventArgs e)
@@ -101,12 +111,12 @@ namespace MiNES.Emu
 
         private void DrawNametable()
         {
-            byte[][] nametable = nes.GetNametable();
+            byte[][] nametable = nes.GetNametable0();
 
             //tableLayoutPanel1.Visible = true;
             //tableLayoutPanel1.Enabled = true;
 
-            tableLayoutPanel1.Controls.Clear();
+            //tableLayoutPanel1.Controls.Clear();
             for (int row = 0; row < nametable.Length; row++)
             {
                 for (int column = 0; column < nametable[row].Length; column++)
@@ -124,7 +134,7 @@ namespace MiNES.Emu
 
                     //tableLayoutPanel1.SetCellPosition(control, new TableLayoutPanelCellPosition(row, column));
                     //tableLayoutPanel1.SetCellPosition(label, new TableLayoutPanelCellPosition(row, column));
-                    tableLayoutPanel1.Controls.Add(label, column, row);
+                    //tableLayoutPanel1.Controls.Add(label, column, row);
                 }
             }
         }
@@ -147,6 +157,40 @@ namespace MiNES.Emu
             {
                 ResumeEmulation();
                 ManageEmulation.Text = "Stop Emulation";
+            }
+        }
+
+        private void button1_Click_1(object sender, EventArgs e)
+        {
+            // Only draw the nametable when the emulation is stopped
+            if (!RunEmulation)
+            {
+                var nametableDebugger = new NametableDebugger();
+
+                //nametableDebugger.DrawNametable(nes.GetNametable0(), nes.GetBackgroundTiles());
+                nametableDebugger.DrawNametable(nes.GetNametable0(), nes.GetBackgroundTiles());
+                nametableDebugger.Show();
+
+                //var nametableDebugger = new NametableDebugger();
+                //nametableDebugger.DrawNametable(nes.GetNametable());
+                //nametableDebugger.Show();
+
+                //if (_nametableDebugger == null)
+                //    _nametableDebugger = new NametableDebugger();
+
+                //_nametableDebugger.DrawNametable(nes.GetNametable());
+                //_nametableDebugger.Show();
+            }
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            if (!RunEmulation)
+            {
+                var backgroundDebugger = new NametableDebugger();
+
+                backgroundDebugger.DrawPatternTable(nes.GetBackgroundTiles());
+                backgroundDebugger.Show();
             }
         }
     }

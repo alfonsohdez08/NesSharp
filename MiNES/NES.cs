@@ -1,8 +1,7 @@
-﻿using MiNES.Rom;
-using System;
-using System.Collections.Generic;
+﻿using MiNES.CPU;
+using MiNES.PPU;
+using MiNES.Rom;
 using System.Drawing;
-using System.Text;
 
 namespace MiNES
 {
@@ -53,6 +52,10 @@ namespace MiNES
             return frame;
         }
 
-        public byte[][] GetNametable() => _ppu.GetNametable();
+        public byte[][] GetNametable0() => _ppu.GetNametable0();
+
+        public byte[][] GetNametable2() => _ppu.GetNametable2();
+
+        public Tile[] GetBackgroundTiles() => _ppu.BackgroundTiles;
     }
 }

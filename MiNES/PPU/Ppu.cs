@@ -1,4 +1,6 @@
-﻿using System;
+﻿using MiNES.Extensions;
+using MiNES.PPU.Registers;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -6,81 +8,9 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Xml;
 
-namespace MiNES
+namespace MiNES.PPU
 {
-
-    internal class PpuControl: Register<byte>
-    {
-        public PpuControl()
-        {
-
-        }
-
-
-        public bool GetNmi() => (GetValue() & 0x80) == 0x80;
-
-        public void SetNmi(bool val)
-        {
-            byte reg = GetValue();
-
-            Ppu.Bit(7, val, ref reg);
-            SetValue(reg);
-        }
-
-        public byte GetPatternTableAddress() => (byte)((GetValue() & 0x10) == 0x10 ? 1 : 0);
-
-        public void SetPatterTableAddressBit(bool val)
-        {
-            byte reg = GetValue();
-
-            Ppu.Bit(4, val, ref reg);
-            SetValue(reg);
-        }
-
-        public bool GetVRamAddressIncrement() => (GetValue() & 0x04) == 0x04;
-
-        public void SetVramAddressIncrement(bool val)
-        {
-            byte reg = GetValue();
-
-            Ppu.Bit(2, val, ref reg);
-            SetValue(reg);
-        }
-
-        public byte GetNametableAddress() => (byte)(GetValue() & 0x03);
-
-        public void SetNametableAddress(byte val)
-        {
-            SetValue((byte)((GetValue() >> 2) | val));
-        }
-    }
-
-    internal class PpuMask : Register<byte>
-    {
-
-    }
-
-    internal class PpuStatus: Register<byte>
-    {
-        public PpuStatus(): base(0xA0)
-        {
-
-        }
-
-
-        public bool GetVerticalBlank() => (GetValue() & 0x80) == 0x80;
-
-        public void SetVerticalBlank(bool val)
-        {
-            byte reg = GetValue();
-
-            Ppu.Bit(7, val, ref reg);
-            SetValue(reg);
-        }
-    }
-
-
-    public partial class Ppu
+    public class Ppu
     {
         private readonly PpuBus _ppuBus;
 
@@ -92,12 +22,12 @@ namespace MiNES
         /// <summary>
         /// PPU Control register.
         /// </summary>
-        internal PpuControl Control { get; set; } = new PpuControl();
+        internal Control ControlRegister { get; private set; } = new Control();
 
         /// <summary>
         /// PPU Mask register.
         /// </summary>
-        public byte Mask { get; set; }
+        internal Mask Mask { get; private set; } = new Mask();
 
         /* When powering up the PPU, the status register (located at $2002) will
          * be set to 0xA0 (10100000).
@@ -110,7 +40,7 @@ namespace MiNES
         /// <summary>
         /// PPU Status register.
         /// </summary>
-        internal PpuStatus Status { get; set; } = new PpuStatus();
+        internal Status StatusRegister { get; set; } = new Status();
 
         /// <summary>
         /// Object Attribute Memory (OAM) address register.
@@ -132,52 +62,8 @@ namespace MiNES
         /// The compiled address from the PPU Address register (this is known as Video RAM address or VRAM).
         /// </summary>
         private ushort _address = 0;
-
-
-        /// <summary>
-        /// Sets the address into the PPU address register.
-        /// </summary>
-        /// <param name="value">The value of the address (either high or low byte, depending on the latch).</param>
-        public void SetAddress(byte value)
-        {
-            if (!_addressLatch)
-            {
-                _address = (ushort)(((_address | 0xFF00) ^ 0xFF00) | (value << 8));
-                _addressLatch = true; // Flips to the low byte state
-            }
-            else
-            {
-                _address = (ushort)(((_address | 0x00FF) ^ 0x00FF) | value);
-            }
-        }
-
-
+        
         private byte _dataBuffer = 0;
-
-        ///// <summary>
-        ///// PPU Data register.
-        ///// </summary>
-        //public byte Data
-        //{
-        //    get
-        //    {
-        //        // Reads the data buffered (from previous read request)
-        //        byte data = _dataBuffer;
-
-        //        // Updates the buffer with the data allocated in the compiled address
-        //        _dataBuffer = _ppuBus.Read(_address);
-
-        //        /* If the compiled address does not overlap the color palette address range, then return
-        //         * the data read from the buffer; otherwise return the data read from the address right away
-        //         */
-        //        return _address >= 0x0000 && _address < 0x3F00 ? data : _dataBuffer;
-        //    }
-        //    set
-        //    {
-        //        _ppuBus.Write(_address, value);
-        //    }
-        //}
-
 
         /// <summary>
         /// The OAM DMA page.
@@ -185,7 +71,7 @@ namespace MiNES
         public byte OamDmaPage { get; set; }
 
         #region NES color palette
-        private static readonly Color[] SystemColorPalette = new Color[]
+        public static readonly Color[] SystemColorPalette = new Color[]
         {
             Color.FromArgb(0x75, 0x75, 0x75),
             Color.FromArgb(0x27, 0x1B, 0x8F),
@@ -261,6 +147,8 @@ namespace MiNES
 
         private readonly Tile[] _backgroundTiles;
 
+        public Tile[] BackgroundTiles => _backgroundTiles;
+
         public Ppu(PpuBus ppuBus)
         {
             _ppuBus = ppuBus;
@@ -272,7 +160,33 @@ namespace MiNES
         /// <summary>
         /// Resets the address latch used by the PPU address register and PPU scroll register.
         /// </summary>
-        public void ResetAddressLatch() => _addressLatch = false;
+        //public void ResetAddressLatch() => _addressLatch = false;
+        public void ResetAddressLatch()
+        {
+            _addressLatch = false;
+            _address = 0;
+        }
+
+
+        /// <summary>
+        /// Sets the address into the PPU address register.
+        /// </summary>
+        /// <param name="value">The value of the address (either high or low byte, depending on the latch).</param>
+        public void SetAddress(byte value)
+        {
+            if (!_addressLatch)
+            {
+                //_address = (ushort)((_address | 0xFF00) ^ 0xFF00 | value << 8);
+                _address.SetHighByte(value);
+                _addressLatch = true; // Flips to the low byte state
+            }
+            else
+            {
+                //_address = (ushort)((_address | 0x00FF) ^ 0x00FF | value);
+                _address.SetLowByte(value);
+                _addressLatch = false; // Flips to the high byte state
+            }
+        }
 
         private Tile[] GetPatternTable(bool isBackgroundTile = true)
         {
@@ -280,7 +194,7 @@ namespace MiNES
 
             ushort address = 0x0000;
             ushort lastAddress = 0x1000;
-            if (!isBackgroundTile)
+            if (isBackgroundTile)
             {
                 address = 0x1000;
                 lastAddress = 0x2000;
@@ -289,14 +203,16 @@ namespace MiNES
             int tiles = 0;
             for (; address < lastAddress; address += 16)
             {
+                ushort tileAddress = address;
+
                 //Bitmap tileBitmap = new Bitmap(8, 8);
                 var tile = new Tile();
 
                 // Process an entire tile (row by row, where each row represents a string of pixels)
                 for (int i = 0; i < 8; i++)
                 {
-                    byte lowBitsRow = _ppuBus.Read(address);
-                    byte highBitsRow = _ppuBus.Read((ushort)(address + 8)); // high bit plane offset is 8 positions away
+                    byte lowBitsRow = _ppuBus.Read(tileAddress);
+                    byte highBitsRow = _ppuBus.Read((ushort)(tileAddress + 8)); // high bit plane offset is 8 positions away
 
                     // Iterate over each bit within both set of bits (bytes) for draw the tile bitmap
                     for (int j = 0; j < 8; j++)
@@ -306,11 +222,13 @@ namespace MiNES
                         int highBit = (highBitsRow & mask) == mask ? 1 : 0;
 
                         // A 2 bit value
-                        byte paletteColorIdx = (byte)(lowBit | (highBit << 1));
+                        byte paletteColorIdx = (byte)(lowBit | highBit << 1);
 
                         //tile.SetPixel(i, j, paletteColorIdx);
-                        tile.SetPixel(j, i, paletteColorIdx);
+                        tile.SetPixel(7 - j, i, paletteColorIdx);
                     }
+
+                    tileAddress++;
                 }
 
                 patternTable[tiles] = tile;
@@ -318,19 +236,6 @@ namespace MiNES
             }
 
             return patternTable;
-        }
-
-        internal static void Bit(byte bitPos, bool value, ref byte register)
-        {
-            int mask = 1 << bitPos;
-
-            int result;
-            if (value) // enable/turn on/set the bit
-                result = register | mask;
-            else // disable/turn off the bit
-                result = ((register | mask) ^ mask); // Just in case the bit still ON
-
-            register = (byte)result;
         }
 
         /// <summary>
@@ -373,68 +278,11 @@ namespace MiNES
         {
             // If bit 3 from control register is set, add 32 to VRAM address; otherwise 1
             //if ((Control & 0x0004) == 0x0004)
-            if (Control.GetVRamAddressIncrement())
+            if (ControlRegister.VRamAddressIncrement)
                 _address += 32;
             else
                 _address++;
         }
-
-        ///// <summary>
-        ///// Sets the pattern tables (background and foreground tiles).
-        ///// </summary>
-        //private void SetPatternTables()
-        //{
-        //    _patternTables = new Bitmap[2][];
-
-        //    _patternTables[0] = GetBitmapPatternTable(false); // Left side of the pattern table it's for foreground tiles (sprites)
-        //    _patternTables[1] = GetBitmapPatternTable(); // Right side of the pattern table it's for the background tiles
-
-        //    Bitmap[] GetBitmapPatternTable(bool backgroundTiles = true)
-        //    {
-        //        Bitmap[] tilesBitmap = new Bitmap[256];
-
-        //        int tiles = 0;
-
-        //        ushort address = 0x0000;
-        //        ushort lastAddress = 0x1000;
-
-        //        if (!backgroundTiles)
-        //        {
-        //            address = 0x1000;
-        //            lastAddress = 0x2000;
-        //        }
-
-        //        for (; address < lastAddress; address += 16)
-        //        {
-        //            Bitmap tileBitmap = new Bitmap(8, 8);
-
-        //            // Process an entire tile (row by row, where each row represents a string of pixels)
-        //            for (int i = 0; i < 8; i++)
-        //            {
-        //                byte lowBitsRow = _ppuBus.Read(address);
-        //                byte highBitsRow = _ppuBus.Read((ushort)(address + 0x0008)); // high bit plane is offset 8 positions away
-
-        //                // Iterate over each bit within both set of bits (bytes) for draw the tile bitmap
-        //                for (int j = 0; j < 8; j++)
-        //                {
-        //                    int mask = 1 << j;
-        //                    int lowBit = (lowBitsRow & mask) == mask ? 1 : 0;
-        //                    int highBit = (highBitsRow & mask) == mask ? 1 : 0;
-
-        //                    // A 2 bit value
-        //                    byte paletteColorIdx = (byte)(lowBit | (highBit << 1));
-
-        //                    tileBitmap.SetPixel(i, j, Color.FromArgb(paletteColorIdx));
-        //                }
-        //            }
-
-        //            tilesBitmap[tiles] = tileBitmap;
-        //            tiles++;
-        //        }
-
-        //        return tilesBitmap;
-        //    }
-        //}
 
         private int _cycles = 0;
         private int _scanline = -1;
@@ -495,12 +343,13 @@ namespace MiNES
              * The cycle 0 (first tick) the PPU is idle (it does nothing). However, when the frame rendered is 
              * odd, the cycle 0 gets ignored and go straigh to cycle 1.
              */
-            //if (_cycles++ == 0 && _framesRendered % 2 == 0)
+            //if (_cycles++ == 0 && _framesRendered % 2 != 0 && Mask)
             //    return;
-            if (_scanline == 0 && _cycles == 0)
-                _cycles = 1;
+            //if (_scanline == 0 && _cycles == 0)
+            //    _cycles = 1;
 
-            if (_scanline == -1 || _scanline == 261)
+            //if (_scanline == -1 || _scanline == 261)
+            if (_scanline == -1) // 261
                 PreRenderScanline();
             else if (_scanline >= 0 && _scanline <= 239)
                 RenderVisibleScanlines();
@@ -546,7 +395,7 @@ namespace MiNES
         private void LoadShiftRegisters()
         {
             byte n = 0;
-            switch(n)
+            switch (n)
             {
                 // Load nametable byte
                 case 2:
@@ -565,8 +414,8 @@ namespace MiNES
 
         private void PreRenderScanline()
         {
-            if (_scanline == 261 && _cycles == 1)
-                Status.SetVerticalBlank(false);
+            if (_cycles == 1)
+                StatusRegister.VerticalBlank = false;
         }
 
         private int _fineX;
@@ -591,7 +440,7 @@ namespace MiNES
             //if (xOffset > 31)
             //    Console.WriteLine();
 
-            int yOffset = (_scanline / 8) * 32; // offset in Y axis (it's multipled by 32 for denote that we are skipping rows: a row = 32 tiles)
+            int yOffset = _scanline / 8 * 32; // offset in Y axis (it's multipled by 32 for denote that we are skipping rows: a row = 32 tiles)
 
             ushort tileAddress = (ushort)(GetNametableBaseAddress() + (xOffset + yOffset));
 
@@ -600,7 +449,7 @@ namespace MiNES
 
         private ushort GetNametableBaseAddress()
         {
-            byte nametable = Control.GetNametableAddress();
+            byte nametable = ControlRegister.BaseNametableAddress;
 
             ushort baseAddress;
             switch (nametable)
@@ -635,7 +484,7 @@ namespace MiNES
                 Console.WriteLine();
 
             int xOffset = (_cycles - 1) / 8; // offset in X axis
-            int yOffset = (_scanline / 8); // offset in Y axis (it's multipled by 32 for denote that we are skipping rows: a row = 32 tiles)
+            int yOffset = _scanline / 8; // offset in Y axis (it's multipled by 32 for denote that we are skipping rows: a row = 32 tiles)
 
             int xOrigin = xOffset * 8;
             int yOrigin = yOffset * 8;
@@ -651,7 +500,7 @@ namespace MiNES
         private byte GetAttribute()
         {
             int xOffset = (_cycles - 1) / 32;
-            int yOffset = (_scanline / 32) * 8;
+            int yOffset = _scanline / 32 * 8;
 
             int megaBlockOffset = xOffset + yOffset;
             ushort attributeEntryAddress = (ushort)(GetNametableBaseAddress() + 0x03C0 + megaBlockOffset);
@@ -663,7 +512,7 @@ namespace MiNES
         {
             int xOffset = (_cycles - 1) / 32; // a number from 0 to 7
             //int yOffset = (_scanline / 32) * 8; // a number from 0 to 7
-            int yOffset = (_scanline / 32); // a number from 0 to 7
+            int yOffset = _scanline / 32; // a number from 0 to 7
 
             x = (byte)(xOffset * 32);
             y = (byte)(yOffset * 32);
@@ -715,7 +564,7 @@ namespace MiNES
             int lowBit;
             int highBit;
 
-            switch(blockId)
+            switch (blockId)
             {
                 case 1: // Bottom right
                     //palette = (byte)(attribute & (0b11000000));
@@ -742,7 +591,7 @@ namespace MiNES
                     throw new InvalidOperationException($"The given block ID is invalid: ${blockId}.");
             }
 
-            palette = (byte)(lowBit | (highBit << 1));
+            palette = (byte)(lowBit | highBit << 1);
 
             if (palette > 3)
                 Console.WriteLine();
@@ -764,7 +613,7 @@ namespace MiNES
         private static ushort ParseBackgroundPaletteAddress(byte paletteId, byte colorIndex)
         {
             ushort baseAddress = 0x3F00;
-            var offset = (byte)((paletteId * 4) + colorIndex);
+            var offset = (byte)(paletteId * 4 + colorIndex);
 
             return (ushort)(baseAddress + offset);
         }
@@ -781,7 +630,7 @@ namespace MiNES
             //    ids.Add(_ppuBus.Read((ushort)u));
 
             byte tileIdx = GetTileIndex(); // Identified Tile ID
-            
+
             byte colorIndex = GetColorIndex(tileIdx); // Identified color index within the colors palette
             byte attribute = GetAttribute(); // Fetched the attribute entry
             byte blockId = GetBlockId(); // Identified the block within the "mega" block
@@ -791,7 +640,7 @@ namespace MiNES
             //int y = _scanline;
 
             //If bit 3 from Mask register is set, it means we can render the background
-            if ((Mask & 0x08) == 0x08)
+            if (Mask.RenderBackground)
                 _frame.SetPixel(X, Y, GetBackgroundColor(palette, colorIndex));
             else
                 _frame.SetPixel(X, Y, Color.Black);
@@ -833,16 +682,36 @@ namespace MiNES
         {
             if (_scanline == 241 && _cycles == 1)
             {
-                Status.SetVerticalBlank(true);
-                if (Control.GetNmi())
+                StatusRegister.VerticalBlank = true;
+                if (ControlRegister.GenerateNMI)
                     NmiRequested = true;
-                //NmiRequested = true;
             }
         }
 
-        public byte[][] GetNametable()
+        public byte[][] GetNametable0()
         {
             ushort nametableAddress = GetNametableBaseAddress();
+            //ushort finalAddress = (ushort)(nametableAddress + 0x03C0);
+
+            byte[][] nametable = new byte[30][]; // 30 tiles high
+            for (int i = 0; i < nametable.Length; i++)
+            {
+                nametable[i] = new byte[32]; // 32 tiles across
+                for (int j = 0; j < nametable[i].Length; j++)
+                {
+                    byte tileIdx = _ppuBus.Read(nametableAddress);
+                    nametable[i][j] = tileIdx;
+
+                    nametableAddress++;
+                }
+            }
+
+            return nametable;
+        }
+
+        public byte[][] GetNametable2()
+        {
+            ushort nametableAddress = 0x2800;
             //ushort finalAddress = (ushort)(nametableAddress + 0x03C0);
 
             byte[][] nametable = new byte[30][]; // 30 tiles high

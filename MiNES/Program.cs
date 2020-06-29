@@ -1,4 +1,6 @@
 ﻿using MiNES._6502;
+using MiNES.CPU;
+using MiNES.PPU;
 using MiNES.Rom;
 using System;
 using System.Collections.Generic;
@@ -23,58 +25,48 @@ TestCPU();
             var frame = nes.Frame();
 #endif
         }
+
 #if CPU_NES_TEST
         private static void TestCPU()
         {
             string nesTestFilePath = Path.Combine(NesRootPath, "nestest.nes");
             byte[] nesFile = File.ReadAllBytes(nesTestFilePath);
 
-            iNESParser.ParseNesCartridge(nesFile, out Memory cpuMemoryMapped, out Memory ppuMemoryMapped);
+            iNESParser.ParseNesCartridge(nesFile, out Memory cpuMemoryMapped, out Memory ppuMemoryMapped, out Mirroring mirroring);
 
-            var cpuBus = new CpuBus(cpuMemoryMapped);
+            var ppuBus = new PpuBus(ppuMemoryMapped, mirroring);
+            var ppu = new Ppu(ppuBus);
+
+            var cpuBus = new CpuBus(cpuMemoryMapped, ppu);
             var cpu = new Cpu(cpuBus);
-
-            ////cpu.Run();
 
             const string myCpuLogFile = "my_cpu_test_log.txt";
             using (FileStream myCpuTestLog = File.Create(Path.Combine(NesRootPath, myCpuLogFile)))
             using (StreamWriter streamWriter = new StreamWriter(myCpuTestLog))
             {
-                while (!cpu.CpuTestDone)
+                while (true)
                 {
                     cpu.Step();
+                    if (cpu.CpuTestDone)
+                        break;
+
                     streamWriter.WriteLine(cpu.TestLineResult);
                 }
             }
 
-            //const string justCpuLogFile = "nes_cpu_test_expected_log_just_cpu.txt";
-            //const string cpuExpectedLogFile = "nes_cpu_test_expected_log.txt";
+            var cpuLog = GetCpuTestLog();
 
-            //using (FileStream cpuLogFile = File.Create(Path.Combine(NesRootPath, justCpuLogFile)))
-            //using (StreamWriter streamWriter = new StreamWriter(cpuLogFile))
-            //{
-            //    foreach (string line in File.ReadLines(Path.Combine(NesRootPath, cpuExpectedLogFile)))
-            //    {
-            //        streamWriter.WriteLine(line.Substring(0, 73));
-            //    }
-            //}
-
-            //var cpuLog = GetCpuTestLog();
-
-            //const string newCpuExpectedLog = "new_cpu_expected_log.txt";
-            //using (StreamWriter streamWriter = File.CreateText(Path.Combine(NesRootPath, newCpuExpectedLog)))
-            //{
-            //    foreach (string logLine in cpuLog)
-            //    {
-            //        streamWriter.WriteLine(logLine);
-            //    }
-            //}
-
-
-            //var nes = new NES(File.ReadAllBytes(Path.Combine(NesRootPath, "super_mario_bros.nes")));
+            const string nestestCpuLog = "cpu_expected_log_excluding_ppu.txt";
+            using (StreamWriter streamWriter = File.CreateText(Path.Combine(NesRootPath, nestestCpuLog)))
+            {
+                foreach (string logLine in cpuLog)
+                {
+                    streamWriter.WriteLine(logLine);
+                }
+            }
         }
 
-                /// <summary>
+        /// <summary>
         /// Parses the NES test CPU log that does not have the instruction dissasembled details.
         /// </summary>
         /// <returns>The NES test CPU log without the innstruction dissasembled details.</returns>
@@ -107,8 +99,6 @@ TestCPU();
             }
 
             return log;
-
-            //return log.ToString();
         }
 #endif
     }
