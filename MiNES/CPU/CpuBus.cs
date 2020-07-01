@@ -123,6 +123,8 @@ namespace MiNES.CPU
                 case 0x2000:
                     _ppu.ControlRegister.Value = value;
 
+                    _ppu.T.Nametable = (byte)(value & 3);
+
                     break;
 
                 // PPU Mask register (write only)
@@ -143,12 +145,10 @@ namespace MiNES.CPU
                 case 0x2004:
                     _ppu.OamData = value;
                     break;
-
                 // PPU Scroll register (write only)
                 case 0x2005:
-                    
+                    _ppu.SetScroll(value); // First write: sets fine X and coarse X; Second write: sets fine Y and coarse Y
                     break;
-
                 // PPU Address register (write only)
                 case 0x2006:
                     _ppu.SetAddress(value); // First write: high byte of the address; Second write: low byte of the address

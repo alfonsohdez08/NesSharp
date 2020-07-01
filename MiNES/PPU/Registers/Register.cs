@@ -4,8 +4,8 @@ using System.Text;
 
 namespace MiNES.PPU.Registers
 {
-    internal abstract class Register
+    internal abstract class Register<T>
     {
-        public byte Value { get; set; }
+        public T Value { get; set; }
     }
 }

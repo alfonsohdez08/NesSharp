@@ -5,7 +5,7 @@ using System.Text;
 
 namespace MiNES.PPU.Registers
 {
-    class Mask: Register
+    class Mask: Register<byte>
     {
         public bool RenderBackground => Value.GetBit(3);
 

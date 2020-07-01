@@ -5,7 +5,7 @@ using System.Text;
 
 namespace MiNES.PPU.Registers
 {
-    class Status: Register
+    class Status: Register<byte>
     {
 
         public bool VerticalBlank

@@ -8,7 +8,7 @@ namespace MiNES.PPU.Registers
     /// <summary>
     /// As its name says, controls the PPU operation (8-bit register).
     /// </summary>
-    class Control: Register
+    class Control: Register<byte>
     {
         public byte BaseNametableAddress => (byte)((Value.GetBit(0) ? 1 : 0) | ((Value.GetBit(1) ? 1 : 0) << 1));
 

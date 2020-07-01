@@ -149,6 +149,9 @@ namespace MiNES.PPU
 
         public Tile[] BackgroundTiles => _backgroundTiles;
 
+        internal LoopyRegister V { get; private set; } = new LoopyRegister();
+        internal LoopyRegister T { get; private set; } = new LoopyRegister();
+
         public Ppu(PpuBus ppuBus)
         {
             _ppuBus = ppuBus;
@@ -174,16 +177,48 @@ namespace MiNES.PPU
         /// <param name="value">The value of the address (either high or low byte, depending on the latch).</param>
         public void SetAddress(byte value)
         {
-            if (!_addressLatch)
+            if (!_addressLatch) // w is 0
             {
                 //_address = (ushort)((_address | 0xFF00) ^ 0xFF00 | value << 8);
-                _address.SetHighByte(value);
+                //_address.SetHighByte(value);
+
+                value = (byte)((value | 0xC0) ^ 0xC0);
+                T.Value = (ushort)(T.Value | (value << 8));
+
+                T.Value = (ushort)((T.Value | 0x4000) ^ 0x4000); // Sets bit 14 to 0
+
                 _addressLatch = true; // Flips to the low byte state
             }
-            else
+            else // w is 1
             {
                 //_address = (ushort)((_address | 0x00FF) ^ 0x00FF | value);
-                _address.SetLowByte(value);
+                //_address.SetLowByte(value);
+
+                T.Value = (ushort)(T.Value | value);
+                V.Value = T.Value;
+
+                _addressLatch = false; // Flips to the high byte state
+            }
+        }
+
+        /// <summary>
+        /// Sets the scroll into Loppy T register.
+        /// </summary>
+        /// <param name="value">The value of the register ("d" in nesdev docs).</param>
+        public void SetScroll(byte value)
+        {
+            if (!_addressLatch) // w is 0
+            {
+                T.CoarseX = (byte)(value >> 3); 
+                _fineX = (byte)(value & 7);
+
+                _addressLatch = true; // Flips to the low byte state
+            }
+            else // w is 1
+            {
+                T.CoarseY = (byte)(value >> 3);
+                T.FineY = (byte)(value & 7);
+
                 _addressLatch = false; // Flips to the high byte state
             }
         }
