@@ -42,6 +42,22 @@ namespace MiNES.PPU
             //if (address == 0x3F04 || address == 0x3F08 || address == 0x3F0C || address == 0X3F10)
             //    address = 0x3F00;
 
+            switch (address)
+            {
+                case 0x3F10:
+                    address = 0x3F00;
+                    break;
+                case 0x3F14:
+                    address = 0x3F04;
+                    break;
+                case 0x3F18:
+                    address = 0x3F08;
+                    break;
+                case 0x3F1C:
+                    address = 0x3F0C;
+                    break;
+            }
+
             return memory.Fetch(address);
         }
 
@@ -49,6 +65,22 @@ namespace MiNES.PPU
         {
             //if (address == 0x3F04 || address == 0x3F08 || address == 0x3F0C || address == 0X3F10)
             //    address = 0x3F00;
+
+            switch (address)
+            {
+                case 0x3F10:
+                    address = 0x3F00;
+                    break;
+                case 0x3F14:
+                    address = 0x3F04;
+                    break;
+                case 0x3F18:
+                    address = 0x3F08;
+                    break;
+                case 0x3F1C:
+                    address = 0x3F0C;
+                    break;
+            }
 
             memory.Store(address, paletteEntry);
         }
@@ -73,7 +105,7 @@ namespace MiNES.PPU
             //if (address >= 0x2000 && address < 0x3F00)
             //    WriteNametable((ushort)(0x2000 + address % 0x1000), val);
             // Background palette and sprite palletes (mirrored in the range [0x3F20, 0x3FFF])
-            else if (address >= 0x3F00 && address < 0x4000) //TODO: check the behavior when writing into this address from the CPU
+            else if (address >= 0x3F00 && address < 0x4000)
                 WritePalette((ushort)(0x3F00 + address % 0x0020), val);
             // Mirror of everything allocated from 0x000 until 0x3FFF
             //else if (address >= 0x4000)

@@ -38,8 +38,8 @@ namespace MiNES.PPU
         /// be drawn in the current cycle).
         private ushort _msbBackgroundShiftRegister;
 
-        private byte _lsbAttributeShiftRegister;
-        private byte _msbAttributeShiftRegister;
+        private ushort _lsbAttributeShiftRegister;
+        private ushort _msbAttributeShiftRegister;
 
         private byte _tileId;
         private byte _attributeTableEntry;
@@ -499,15 +499,15 @@ namespace MiNES.PPU
                                 // The same bit is propagated to all bits in the attribute shift register
                                 bool lowBit = palette.GetBit(0);
                                 if (lowBit)
-                                    _lsbAttributeShiftRegister = 0xFF;
+                                    _lsbAttributeShiftRegister = (ushort)(((_lsbAttributeShiftRegister | 0x00FF) ^ 0x00FF) | 0xFF);
                                 else
-                                    _lsbAttributeShiftRegister = 0;
+                                    _lsbAttributeShiftRegister = (ushort)(((_lsbAttributeShiftRegister | 0x00FF) ^ 0x00FF));
 
                                 bool highBit = palette.GetBit(1);
                                 if (highBit)
-                                    _msbAttributeShiftRegister = 0xFF;
+                                    _msbAttributeShiftRegister = (ushort)(((_msbAttributeShiftRegister | 0x00FF) ^ 0x00FF) | 0xFF);
                                 else
-                                    _msbAttributeShiftRegister = 0;
+                                    _msbAttributeShiftRegister = (ushort)(((_msbAttributeShiftRegister | 0x00FF) ^ 0x00FF));
                             }
                             break;
                         // Fetch nametable byte
@@ -546,11 +546,11 @@ namespace MiNES.PPU
                 }
 
                 // Increments the vertical component in the V register
-                if (_cycles == 256 && Mask.RenderBackground)
+                if (_cycles == 256)
                     IncrementVerticalPosition();
 
                 // Copy the horizontal component from T register into V register
-                if (_cycles == 257 && Mask.RenderBackground)
+                if (_cycles == 257)
                     CopyHorizontalPositionToV();
             }
             else if (_scanline == 240)
@@ -607,8 +607,12 @@ namespace MiNES.PPU
         /// </summary>
         private void CopyHorizontalPositionToV()
         {
-            V.CoarseX = T.CoarseX;
-            V.Value = (ushort)(((V.Value | 0x0400 ) ^ 0x0400) | (T.Value & 0x0400)); // copy bit 10 (nametable x) from T register
+            if (Mask.RenderBackground || Mask.RenderSprites)
+            {
+
+                V.CoarseX = T.CoarseX;
+                V.Value = (ushort)(((V.Value | 0x0400) ^ 0x0400) | (T.Value & 0x0400)); // copy bit 10 (nametable x) from T register
+            }
         }
 
         /// <summary>
@@ -616,10 +620,13 @@ namespace MiNES.PPU
         /// </summary>
         private void CopyVerticalPositionToV()
         {
-            V.CoarseY = T.CoarseY;
-            V.FineY = T.FineY;
+            if (Mask.RenderBackground || Mask.RenderSprites)
+            {
+                V.CoarseY = T.CoarseY;
+                V.FineY = T.FineY;
 
-            V.Value = (ushort)(((V.Value | 0x0800) ^ 0x0800) | (T.Value & 0x0800)); // copy bit 11 (nametable y) from T register
+                V.Value = (ushort)(((V.Value | 0x0800) ^ 0x0800) | (T.Value & 0x0800)); // copy bit 11 (nametable y) from T register
+            }
         }
 
         /// <summary>
@@ -644,42 +651,42 @@ namespace MiNES.PPU
                   v = (v & ~0x03E0) | (y << 5)     // put coarse Y back into v                          
              */
 
-            if (!Mask.RenderBackground)
-                return;
-
-            byte fineY = (byte)((V.Value & 0x7000) >> 12);
-            if (fineY < 7)
+            if (Mask.RenderBackground || Mask.RenderSprites)
             {
-                fineY++;
-            }
-            else
-            {
-                fineY = 0;
-
-                // Increments coarse Y then
-                byte coarseY = (byte)((V.Value & 0x03E0) >> 5);
-                if (coarseY == 29)
+                byte fineY = (byte)((V.Value & 0x7000) >> 12);
+                if (fineY < 7)
                 {
-                    coarseY = 0;
-
-                    byte yNametable = (byte)((V.Value & 0x0800) >> 11);
-                    yNametable = (byte)~yNametable; // by toggling bit 11, we switch vertical nametable
-
-                    V.Value = (ushort)(((V.Value | 0x0800) ^ 0x0800) | ((yNametable & 1) << 11));
-                }
-                else if (coarseY == 31)
-                {
-                    coarseY = 0;
+                    fineY++;
                 }
                 else
                 {
-                    coarseY++;
+                    fineY = 0;
+
+                    // Increments coarse Y then
+                    byte coarseY = (byte)((V.Value & 0x03E0) >> 5);
+                    if (coarseY == 29)
+                    {
+                        coarseY = 0;
+
+                        byte yNametable = (byte)((V.Value & 0x0800) >> 11);
+                        yNametable = (byte)~yNametable; // by toggling bit 11, we switch vertical nametable
+
+                        V.Value = (ushort)(((V.Value | 0x0800) ^ 0x0800) | ((yNametable & 1) << 11));
+                    }
+                    else if (coarseY == 31)
+                    {
+                        coarseY = 0;
+                    }
+                    else
+                    {
+                        coarseY++;
+                    }
+
+                    V.Value = (ushort)(((V.Value | 0x03E0) ^ 0x03E0) | (coarseY << 5)); // Put coarse Y into the V register
                 }
 
-                V.Value = (ushort)(((V.Value | 0x03E0) ^ 0x03E0) | (coarseY << 5)); // Put coarse Y into the V register
+                V.Value = (ushort)(((V.Value | 0x7000) ^ 0x7000) | (fineY << 12)); // Put fineY into the V register
             }
-
-            V.Value = (ushort)(((V.Value | 0x7000) ^ 0x7000) | (fineY << 12)); // Put fineY into the V register
         }
 
         private void IncrementHorizontalPosition()
@@ -691,33 +698,33 @@ namespace MiNES.PPU
                 else
                   v += 1                // increment coarse X             
              */
-            if (!Mask.RenderBackground)
-                return;
 
-
-            byte coarseX = (byte)(V.Value & 0x001F);
-            if (coarseX == 31)
+            if (Mask.RenderBackground || Mask.RenderSprites)
             {
-                coarseX = 0;
+                byte coarseX = (byte)(V.Value & 0x001F);
+                if (coarseX == 31)
+                {
+                    coarseX = 0;
 
-                byte xNametable = (byte)((V.Value & 0x0400) >> 10);
-                xNametable = (byte)~xNametable; // by toggling bit 10, we switch horizontal nametable
+                    byte xNametable = (byte)((V.Value & 0x0400) >> 10);
+                    xNametable = (byte)~xNametable; // by toggling bit 10, we switch horizontal nametable
 
-                V.Value = (ushort)(((V.Value | 0x0400) ^ 0x0400) | ((xNametable & 1) << 10));
+                    V.Value = (ushort)(((V.Value | 0x0400) ^ 0x0400) | ((xNametable & 1) << 10));
+                }
+                else
+                {
+                    coarseX++;
+                }
+
+                V.Value = (ushort)(((V.Value | 0x001F) ^ 0x001F) | coarseX);
             }
-            else
-            {
-                coarseX++;
-            }
-
-            V.Value = (ushort)(((V.Value | 0x001F) ^ 0x001F) | coarseX);
         }
 
         private void PreRender()
         {
             if (_cycles == 1)
                 StatusRegister.VerticalBlank = false;
-            else if (Mask.RenderBackground && _cycles >= 280 && _cycles <= 304)
+            else if (_cycles >= 280 && _cycles <= 304)
                 CopyVerticalPositionToV();
         }
 
@@ -734,9 +741,12 @@ namespace MiNES.PPU
             byte pixelColorIndex = (byte)(lsbPixelColorIdx | (msbPixelColorIdx << 1));
 
             // Multiplexor
-            ushort paletteMux = (byte)(0xFF >> _fineX);
-            var lsbPaletteIdx = (_lsbAttributeShiftRegister & paletteMux) == paletteMux ? 1 : 0;
-            var msbPaletteIdx = (_msbAttributeShiftRegister & paletteMux) == paletteMux ? 1 : 0;
+            //ushort paletteMux = (byte)(0xFF >> _fineX);
+            //var lsbPaletteIdx = (_lsbAttributeShiftRegister & paletteMux) == paletteMux ? 1 : 0;
+            //var msbPaletteIdx = (_msbAttributeShiftRegister & paletteMux) == paletteMux ? 1 : 0;
+
+            var lsbPaletteIdx = (_lsbAttributeShiftRegister & colorPixelMux) == colorPixelMux ? 1 : 0;
+            var msbPaletteIdx = (_msbAttributeShiftRegister & colorPixelMux) == colorPixelMux ? 1 : 0;
 
             byte palette = (byte)((lsbPaletteIdx) | (msbPaletteIdx << 1));
 

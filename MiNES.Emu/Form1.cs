@@ -19,6 +19,8 @@ namespace MiNES.Emu
         private byte[] donkeyKongRom = File.ReadAllBytes(Path.Combine(NesRootPath, "donkey_kong.nes"));
         private byte[] superMarioBrosRom = File.ReadAllBytes(Path.Combine(NesRootPath, "super_mario_bros.nes"));
         private byte[] nesTestRom = File.ReadAllBytes(Path.Combine(NesRootPath, "nestest.nes"));
+        private byte[] iceClimbersRom = File.ReadAllBytes(Path.Combine(NesRootPath, "ice_climbers.nes"));
+
 
         private object _lockObject = new object();
         private bool _runEmulation = true;
@@ -45,7 +47,9 @@ namespace MiNES.Emu
             nes = new NES(donkeyKongRom);
             //nes = new NES(superMarioBrosRom);
             //nes = new NES(nesTestRom);
+            //nes = new NES(iceClimbersRom);
 
+            //TODO: check palletes, cpu and ppu buses; and ensure mirroring is implemented properly in all places (compare against olc mirroring)
 
             //EnableEmulation.Checked = true;
 

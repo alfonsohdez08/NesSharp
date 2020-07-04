@@ -8,6 +8,6 @@ namespace MiNES.PPU.Registers
     class Mask: Register<byte>
     {
         public bool RenderBackground => Value.GetBit(3);
-
+        public bool RenderSprites => Value.GetBit(4);
     }
 }
