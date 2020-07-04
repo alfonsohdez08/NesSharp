@@ -57,5 +57,7 @@ namespace MiNES
         public byte[][] GetNametable2() => _ppu.GetNametable2();
 
         public Tile[] GetBackgroundTiles() => _ppu.BackgroundTiles;
+
+        public Color[] GetPalettes() => _ppu.GetPalettes();
     }
 }

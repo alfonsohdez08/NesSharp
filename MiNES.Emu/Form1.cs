@@ -197,5 +197,17 @@ namespace MiNES.Emu
                 backgroundDebugger.Show();
             }
         }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            if (!RunEmulation)
+            {
+                var backgroundDebugger = new NametableDebugger();
+                Color[] palettes = nes.GetPalettes();
+
+                backgroundDebugger.DrawPalettes(palettes);
+                backgroundDebugger.Show();
+            }
+        }
     }
 }

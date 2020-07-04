@@ -1085,5 +1085,15 @@ namespace MiNES.PPU
 
             return nametable;
         }
+
+        public Color[] GetPalettes()
+        {
+            var palettes = new Color[32];
+
+            for (ushort addr = 0x3F00, idx = 0; addr < 0x3F20; addr++, idx++)
+                palettes[idx] = SystemColorPalette[_ppuBus.Read(addr)];
+
+            return palettes;
+        }
     }
 }

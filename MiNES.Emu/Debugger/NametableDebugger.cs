@@ -22,8 +22,6 @@ namespace MiNES.Emu.Debugger
         {
             Bitmap screen = new Bitmap(256, 240);
 
-            // TODO: check this logic... i confirmed that the CPU works okay (pass the nestest log!)
-            // i think first i should draw the pattern tables, jsut in case. then i can check the nametable display
             int yOffset = 0;
             for (int row = 0; row < 30; row++)
             {
@@ -174,6 +172,73 @@ namespace MiNES.Emu.Debugger
                 default:
                     throw new InvalidOperationException($"The given color index {index} is not mapped to a color.");
             }
+        }
+
+        public void DrawPalettes(Color[] palettes)
+        {
+            var screen = new Bitmap(256, 32);
+
+            //int x = 0, y = 0;
+
+            int colorIndex = 0;
+
+            int yOffset = 0;
+            for (int row = 0; row < 2; row++)
+            {
+                int x = 0;
+                for (int column = 0; column < 16; column++)
+                {
+                    //byte tileIdx = nametable[row][column];
+                    //Tile tile = backgroundTiles[tileIdx];
+
+                    // Draw an entire color tile (16 x 16 pixels)
+                    for (int r = 0; r < 16; r++)
+                    {
+                        for (int c = 0; c < 16; c++)
+                        {
+                            //byte pixel = tile.GetPixel(c, r);
+                            Color color = palettes[colorIndex];
+
+                            screen.SetPixel(x + c, r + yOffset, color);
+                        }
+                    }
+
+                    colorIndex++;
+
+                    x += 16;
+                }
+
+                yOffset += 16;
+            }
+
+
+            //for (int colorIdx = 0; colorIdx < palettes.Length; colorIdx++)
+            //{
+            //    Color color = palettes[colorIdx];
+
+            //    // Process row by row (pixel row)
+            //    for (int r = 0; r < 16; r++)
+            //    {
+            //        // Process column by column
+            //        for (int c = 0; c < 16; c++)
+            //        {
+            //            screen.SetPixel(x + c, y + r, color);
+            //        }
+            //    }
+
+            //    if (x >= 240)
+            //    {
+            //        x = 0;
+            //        y += 16;
+            //    }
+            //    else
+            //    {
+            //        x += 16;
+            //        y = 0;
+            //    }
+            //}
+
+            Screen.Image = screen;
         }
     }
 }
