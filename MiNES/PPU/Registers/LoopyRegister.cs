@@ -1,6 +1,7 @@
 ﻿using MiNES.Extensions;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Reflection.PortableExecutable;
 using System.Text;
 
@@ -58,5 +59,46 @@ namespace MiNES.PPU.Registers
                 Value = (ushort)(((Value | 0x0C00) ^ 0x0C00) | (value << 10));
             }
         }
+
+        public ushort Address
+        {
+            get
+            {
+                ushort addr = Value;
+                addr = (ushort)((addr | 0x4000) ^ 0x4000);
+
+                return addr;
+            }
+        }
+
+        //public byte NametableX
+        //{
+        //    get => (byte)(Nametable & 1);
+        //    //set
+        //    //{
+        //    //    if (value < 0 || value > 1)
+        //    //        throw new ArgumentOutOfRangeException();
+
+        //    //    byte nametable = Nametable;
+        //    //    nametable = (byte)(((nametable | 1) ^ 1) | value);
+
+        //    //    Nametable = nametable;
+        //    //}
+        //}
+
+        //public byte NametableY
+        //{
+        //    get => (byte)(Nametable & 2);
+        //    //set
+        //    //{
+        //    //    if (value < 0 || value > 1)
+        //    //        throw new ArgumentOutOfRangeException();
+
+        //    //    byte nametable = Nametable;
+        //    //    nametable = (byte)(((nametable | 2) ^ 2) | value);
+
+        //    //    Nametable = nametable;
+        //    //}
+        //}
     }
 }

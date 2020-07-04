@@ -19,14 +19,14 @@ namespace MiNES.PPU
         public override byte Read(ushort address)
         {
             // Nametables and attribute tables (mirrored in the range [0x3000, 0x3EFF])
-            //if (address >= 0x2000 && address < 0x3F00)
-            //    return ReadNametable((ushort)(0x2000 + address % 0x1000));
-            if (address >= 0x2000 && address < 0x3000)
-                return ReadNametable(address);
-            else if (address >= 0x3000 && address < 0x3F00)
-            {
-                Console.WriteLine();
-            }
+            if (address >= 0x2000 && address < 0x3F00)
+                return ReadNametable((ushort)(0x2000 + address % 0x1000));
+            //if (address >= 0x2000 && address < 0x3000)
+            //    return ReadNametable(address);
+            //else if (address >= 0x3000 && address < 0x3F00)
+            //{
+            //    Console.WriteLine();
+            //}
             // Background palette and sprite palletes (mirrored in the range [0x3F20, 0x3FFF])
             else if (address >= 0x3F00 && address < 0x4000)
                 return ReadPalette((ushort)(0x3F00 + address % 0x0020));
@@ -59,12 +59,16 @@ namespace MiNES.PPU
             {
                 // Do nothing (CHR-ROM)
             }
-            if (address >= 0x2000 && address < 0x3000)
-                WriteNametable(address, val);
-            else if (address >= 0x3000 && address < 0x3F00)
+            else if (address >= 0x2000 && address < 0x3F00)
             {
-                Console.WriteLine();
+                WriteNametable((ushort)(0x2000 + address % 0x1000), val);
             }
+            //else if (address >= 0x2000 && address < 0x3000)
+            //    WriteNametable(address, val);
+            //else if (address >= 0x3000 && address < 0x3F00)
+            //{
+            //    Console.WriteLine();
+            //}
             // Nametables and attribute tables (mirrored in the range [0x3000, 0x3EFF])
             //if (address >= 0x2000 && address < 0x3F00)
             //    WriteNametable((ushort)(0x2000 + address % 0x1000), val);

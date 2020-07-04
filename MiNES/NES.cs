@@ -40,7 +40,7 @@ namespace MiNES
                 byte cpuCyclesSpent = _cpu.Step();
                 for (int ppuCycles = 0; ppuCycles < cpuCyclesSpent * 3; ppuCycles++)
                 {
-                    _ppu.Draw();
+                    _ppu.DrawPixel();
                 }
 
             } while (_ppu.FrameBuffer == null);

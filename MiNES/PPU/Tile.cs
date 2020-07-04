@@ -1,4 +1,6 @@
-﻿namespace MiNES.PPU
+﻿using System;
+
+namespace MiNES.PPU
 {
     public class Tile
     {
@@ -19,6 +21,18 @@
         public byte GetPixel(int x, int y)
         {
             return _grid[y][x];
+        }
+
+        public byte GetPixelsRow(int y)
+        {
+            if (y < 0 || y > 7)
+                throw new ArgumentOutOfRangeException(nameof(y));
+
+            byte[] pixels = _grid[y];
+
+
+
+            throw new NotImplementedException();
         }
     }
 }

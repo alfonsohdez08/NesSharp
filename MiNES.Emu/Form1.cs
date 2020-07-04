@@ -168,7 +168,7 @@ namespace MiNES.Emu
                 var nametableDebugger = new NametableDebugger();
 
                 //nametableDebugger.DrawNametable(nes.GetNametable0(), nes.GetBackgroundTiles());
-                nametableDebugger.DrawNametable(nes.GetNametable0(), nes.GetBackgroundTiles());
+                nametableDebugger.DrawNametable(nes.GetNametable2(), nes.GetBackgroundTiles());
                 nametableDebugger.Show();
 
                 //var nametableDebugger = new NametableDebugger();
