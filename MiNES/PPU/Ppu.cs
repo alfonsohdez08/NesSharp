@@ -481,18 +481,25 @@ namespace MiNES.PPU
 
                                 _msbPixelsRow = _ppuBus.Read(pixelsRowAddress);
 
-                                // Increments horizontal coordinates in V register
-                                IncrementHorizontalPosition();
-                            }
-                            break;
-                        case 1:
-                            // Load shift registers
-                            {
                                 // Load background shift registers
                                 _lsbBackgroundShiftRegister = (ushort)(((_lsbBackgroundShiftRegister | 0x00FF) ^ 0x00FF) | _lsbPixelsRow);
                                 _msbBackgroundShiftRegister = (ushort)(((_msbBackgroundShiftRegister | 0x00FF) ^ 0x00FF) | _msbPixelsRow);
 
-                                // Load attribute shift registers
+                                // coarse y = 6 and coarse x = 10 -> good one (ladder block)
+                                // coarse y = 6 and coarse x = 11  -> bad one (ladder block)
+                                // might i compare memory dump?
+
+                                if (V.CoarseY == 6 && V.CoarseX == 9) // checking here we will see how it loads the palette for the next tile in x axis (good ladder)
+                                {
+                                    Console.WriteLine();
+                                }
+
+                                //if (V.CoarseY == 6 && V.CoarseX == 11)
+                                //{
+                                //    Console.WriteLine();
+                                //}
+
+                                // Load attribute shift registers (I THINK IM LOADING THE WRONG BLOCK, I SHOULD READ THE NEXT BLOCK, NOT MINE)
                                 byte blockId = GetBlock(V.CoarseX, V.CoarseY); // goes from 0 up to 3
                                 byte palette = ParsePalette(_attributeTableEntry, blockId); // 2 bit value
 
@@ -508,6 +515,48 @@ namespace MiNES.PPU
                                     _msbAttributeShiftRegister = (ushort)(((_msbAttributeShiftRegister | 0x00FF) ^ 0x00FF) | 0xFF);
                                 else
                                     _msbAttributeShiftRegister = (ushort)(((_msbAttributeShiftRegister | 0x00FF) ^ 0x00FF));
+
+                                // Increments horizontal coordinates in V register
+                                IncrementHorizontalPosition();
+                            }
+                            break;
+                        case 1:
+                            // Load shift registers
+                            {
+                                //// Load background shift registers
+                                //_lsbBackgroundShiftRegister = (ushort)(((_lsbBackgroundShiftRegister | 0x00FF) ^ 0x00FF) | _lsbPixelsRow);
+                                //_msbBackgroundShiftRegister = (ushort)(((_msbBackgroundShiftRegister | 0x00FF) ^ 0x00FF) | _msbPixelsRow);
+
+                                //// coarse y = 6 and coarse x = 10 -> good one (ladder block)
+                                //// coarse y = 6 and coarse x = 11  -> bad one (ladder block)
+                                //// might i compare memory dump?
+
+                                //if (V.CoarseY == 6 && V.CoarseX == 9) // checking here we will see how it loads the palette for the next tile in x axis (good ladder)
+                                //{
+                                //    Console.WriteLine();
+                                //}
+
+                                ////if (V.CoarseY == 6 && V.CoarseX == 11)
+                                ////{
+                                ////    Console.WriteLine();
+                                ////}
+
+                                //// Load attribute shift registers (I THINK IM LOADING THE WRONG BLOCK, I SHOULD READ THE NEXT BLOCK, NOT MINE)
+                                //byte blockId = GetBlock(V.CoarseX, V.CoarseY); // goes from 0 up to 3
+                                //byte palette = ParsePalette(_attributeTableEntry, blockId); // 2 bit value
+
+                                //// The same bit is propagated to all bits in the attribute shift register
+                                //bool lowBit = palette.GetBit(0);
+                                //if (lowBit)
+                                //    _lsbAttributeShiftRegister = (ushort)(((_lsbAttributeShiftRegister | 0x00FF) ^ 0x00FF) | 0xFF);
+                                //else
+                                //    _lsbAttributeShiftRegister = (ushort)(((_lsbAttributeShiftRegister | 0x00FF) ^ 0x00FF));
+
+                                //bool highBit = palette.GetBit(1);
+                                //if (highBit)
+                                //    _msbAttributeShiftRegister = (ushort)(((_msbAttributeShiftRegister | 0x00FF) ^ 0x00FF) | 0xFF);
+                                //else
+                                //    _msbAttributeShiftRegister = (ushort)(((_msbAttributeShiftRegister | 0x00FF) ^ 0x00FF));
                             }
                             break;
                         // Fetch nametable byte
@@ -732,6 +781,11 @@ namespace MiNES.PPU
         {
             if (_cycles < 1 || _cycles > 256)
                 return;
+
+            //if (V.CoarseY == 6 && V.CoarseX == 10)
+            //{
+            //    Console.WriteLine();
+            //}
 
             // Multiplexor
             ushort colorPixelMux = (ushort)(0x8000 >> _fineX);
