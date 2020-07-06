@@ -464,6 +464,11 @@ namespace MiNES.PPU
 
         private void LoadShiftRegisters()
         {
+            /*Note: When jumping to next scanline, in the first cycle i reload the low byte of all registers
+             * with the data that i already had in the latches from the last "useful" 8 cycles of previous scanline (remember that
+             * at the ending of each scanline, we load the shift registers with the data of the the first 2 tiles of the next scanline).
+             */
+
             // Load background shift registers
             _lowBackgroundShiftRegister = (ushort)(((_lowBackgroundShiftRegister | 0x00FF) ^ 0x00FF) | _lowPixelsRow);
             _highBackgroundShiftRegister = (ushort)(((_highBackgroundShiftRegister | 0x00FF) ^ 0x00FF) | _highPixelsRow);
