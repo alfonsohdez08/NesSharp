@@ -27,7 +27,7 @@ namespace MiNES.PPU
         /// the data is inserted sequentially, and once the data is loaded, it's output at once (this one it's used by the MUX in order to identify which pixel will
         /// be drawn in the current cycle).
         /// </summary>
-        private ushort _lsbBackgroundShiftRegister;
+        private ushort _lowBackgroundShiftRegister;
 
         /// <summary>
         /// This register is divided into 2 registers: the low byte (right side) correspond the PISO register, which is
@@ -36,16 +36,26 @@ namespace MiNES.PPU
         /// means the data is filled and it's output shift by shift (clock by clock). The SIPI is a shift register of type Serial In - Parallel Out, which means
         /// the data is inserted sequentially, and once the data is loaded, it's output at once (this one it's used by the MUX in order to identify which pixel will
         /// be drawn in the current cycle).
-        private ushort _msbBackgroundShiftRegister;
+        private ushort _highBackgroundShiftRegister;
 
-        private ushort _lsbAttributeShiftRegister;
-        private ushort _msbAttributeShiftRegister;
+        private ushort _lowAttributeShiftRegister;
+        private ushort _highAttributeShiftRegister;
 
         private byte _tileId;
-        private byte _attributeTableEntry;
+        
+        private byte _attribute;
+        private byte _blockId;
 
-        private byte _lsbPixelsRow;
-        private byte _msbPixelsRow;
+        private byte _lowPixelsRow;
+        private byte _highPixelsRow;
+        private bool _isRenderEnabled => Mask.RenderBackground || Mask.RenderSprites;
+
+        /// <summary>
+        /// Count how many frames has been rendered.
+        /// </summary>
+        private byte _framesRendered = 1;
+
+        public Bitmap FrameBuffer { get; private set; }
 
         /// <summary>
         /// Controls the state of the address latch (false = high byte; true = low byte).
@@ -84,7 +94,6 @@ namespace MiNES.PPU
         /// Object Attribute Memory (OAM) data register.
         /// </summary>
         public byte OamData { get; set; }
-
 
         /// <summary>
         /// The compiled address from the PPU Address register (this is known as Video RAM address or VRAM).
@@ -190,13 +199,10 @@ namespace MiNES.PPU
         /// <summary>
         /// Resets the address latch used by the PPU address register and PPU scroll register.
         /// </summary>
-        //public void ResetAddressLatch() => _addressLatch = false;
         public void ResetAddressLatch()
         {
             _addressLatch = false;
-            //_address = 0;
         }
-
 
         /// <summary>
         /// Sets the address into the PPU address register.
@@ -339,13 +345,6 @@ namespace MiNES.PPU
                 V.Value++;
         }
 
-        public Bitmap FrameBuffer { get; private set; }
-
-        /// <summary>
-        /// Count how many frames has been rendered.
-        /// </summary>
-        private byte _framesRendered = 1;
-
         public void DrawPixel()
         {
             // Cycle 0 does not do anything (it's idle)
@@ -358,100 +357,33 @@ namespace MiNES.PPU
             // Pre-render scanline (in the NTSC frame diagram it's labeled as scanline 261)
             if (_scanline >= -1 && _scanline < 240)
             {
+                // Update shift registers by shifting one position to the left
+                if ((_cycles >= 2 && _cycles <= 257) || (_cycles >= 322 && _cycles <= 337))
+                    ShiftRegisters();
+
                 if (_scanline == -1)
-                    PreRender();
+                    PreRenderScanline();
                 else
-                    Render();
+                    RenderScanlines();
 
                 if ((_cycles >= 1 && _cycles <= 256) || (_cycles >= 321 && _cycles <= 336))
                 {
                     var stage = _cycles % 8;
                     switch (stage)
                     {
-                        // Fetch high background pattern table byte (this is the last cycle within the pixels reload process that happens every 8 cycle)
+                        // Load high background pattern table byte
                         case 0:
                             {
                                 ushort patternTableAddress = (ushort)(ControlRegister.BackgroundPatternTableAddress ? 0x1000 : 0);
                                 ushort pixelsRowAddress = (ushort)(patternTableAddress + (_tileId * 16) + V.FineY + 8);
 
-                                _msbPixelsRow = _ppuBus.Read(pixelsRowAddress);
-
-                                // Load background shift registers
-                                _lsbBackgroundShiftRegister = (ushort)(((_lsbBackgroundShiftRegister | 0x00FF) ^ 0x00FF) | _lsbPixelsRow);
-                                _msbBackgroundShiftRegister = (ushort)(((_msbBackgroundShiftRegister | 0x00FF) ^ 0x00FF) | _msbPixelsRow);
-
-                                // coarse y = 6 and coarse x = 10 -> good one (ladder block)
-                                // coarse y = 6 and coarse x = 11  -> bad one (ladder block)
-                                // might i compare memory dump?
-
-                                if (V.CoarseY == 6 && V.CoarseX == 9) // checking here we will see how it loads the palette for the next tile in x axis (good ladder)
-                                {
-                                    Console.WriteLine();
-                                }
-
-                                //if (V.CoarseY == 6 && V.CoarseX == 11)
-                                //{
-                                //    Console.WriteLine();
-                                //}
-
-                                // Load attribute shift registers (I THINK IM LOADING THE WRONG BLOCK, I SHOULD READ THE NEXT BLOCK, NOT MINE)
-                                byte blockId = GetBlock(V.CoarseX, V.CoarseY); // goes from 0 up to 3
-                                byte palette = ParsePalette(_attributeTableEntry, blockId); // 2 bit value
-
-                                // The same bit is propagated to all bits in the attribute shift register
-                                bool lowBit = palette.GetBit(0);
-                                if (lowBit)
-                                    _lsbAttributeShiftRegister = (ushort)(((_lsbAttributeShiftRegister | 0x00FF) ^ 0x00FF) | 0xFF);
-                                else
-                                    _lsbAttributeShiftRegister = (ushort)(((_lsbAttributeShiftRegister | 0x00FF) ^ 0x00FF));
-
-                                bool highBit = palette.GetBit(1);
-                                if (highBit)
-                                    _msbAttributeShiftRegister = (ushort)(((_msbAttributeShiftRegister | 0x00FF) ^ 0x00FF) | 0xFF);
-                                else
-                                    _msbAttributeShiftRegister = (ushort)(((_msbAttributeShiftRegister | 0x00FF) ^ 0x00FF));
-
-                                // Increments horizontal coordinates in V register
-                                IncrementHorizontalPosition();
+                                _highPixelsRow = _ppuBus.Read(pixelsRowAddress);
                             }
                             break;
                         case 1:
                             // Load shift registers
                             {
-                                //// Load background shift registers
-                                //_lsbBackgroundShiftRegister = (ushort)(((_lsbBackgroundShiftRegister | 0x00FF) ^ 0x00FF) | _lsbPixelsRow);
-                                //_msbBackgroundShiftRegister = (ushort)(((_msbBackgroundShiftRegister | 0x00FF) ^ 0x00FF) | _msbPixelsRow);
-
-                                //// coarse y = 6 and coarse x = 10 -> good one (ladder block)
-                                //// coarse y = 6 and coarse x = 11  -> bad one (ladder block)
-                                //// might i compare memory dump?
-
-                                //if (V.CoarseY == 6 && V.CoarseX == 9) // checking here we will see how it loads the palette for the next tile in x axis (good ladder)
-                                //{
-                                //    Console.WriteLine();
-                                //}
-
-                                ////if (V.CoarseY == 6 && V.CoarseX == 11)
-                                ////{
-                                ////    Console.WriteLine();
-                                ////}
-
-                                //// Load attribute shift registers (I THINK IM LOADING THE WRONG BLOCK, I SHOULD READ THE NEXT BLOCK, NOT MINE)
-                                //byte blockId = GetBlock(V.CoarseX, V.CoarseY); // goes from 0 up to 3
-                                //byte palette = ParsePalette(_attributeTableEntry, blockId); // 2 bit value
-
-                                //// The same bit is propagated to all bits in the attribute shift register
-                                //bool lowBit = palette.GetBit(0);
-                                //if (lowBit)
-                                //    _lsbAttributeShiftRegister = (ushort)(((_lsbAttributeShiftRegister | 0x00FF) ^ 0x00FF) | 0xFF);
-                                //else
-                                //    _lsbAttributeShiftRegister = (ushort)(((_lsbAttributeShiftRegister | 0x00FF) ^ 0x00FF));
-
-                                //bool highBit = palette.GetBit(1);
-                                //if (highBit)
-                                //    _msbAttributeShiftRegister = (ushort)(((_msbAttributeShiftRegister | 0x00FF) ^ 0x00FF) | 0xFF);
-                                //else
-                                //    _msbAttributeShiftRegister = (ushort)(((_msbAttributeShiftRegister | 0x00FF) ^ 0x00FF));
+                                LoadShiftRegisters();
                             }
                             break;
                         // Fetch nametable byte
@@ -465,7 +397,9 @@ namespace MiNES.PPU
                         case 4:
                             {
                                 ushort attributeEntryAddress = (ushort)(0x23C0 | (V.Value & 0x0C00) | ((V.Value >> 4) & 0x38) | ((V.Value >> 2) & 0x07));
-                                _attributeTableEntry = _ppuBus.Read(attributeEntryAddress);
+                                
+                                _attribute = _ppuBus.Read(attributeEntryAddress);
+                                _blockId = ParseBlock(V.CoarseX, V.CoarseY);
                             }
                             break;
                         // Fetch low background pattern table byte
@@ -474,33 +408,28 @@ namespace MiNES.PPU
                                 ushort patternTableAddress = (ushort)(ControlRegister.BackgroundPatternTableAddress ? 0x1000 : 0);
                                 ushort pixelsRowAddress = (ushort)(patternTableAddress + (_tileId * 16) + V.FineY);
 
-                                _lsbPixelsRow = _ppuBus.Read(pixelsRowAddress);
+                                _lowPixelsRow = _ppuBus.Read(pixelsRowAddress);
                             }
                             break;
                     }
                 }
 
-                // Update shift registers by shifting one position to the left
-                if ((_cycles >= 2 && _cycles <= 257) || (_cycles >= 321 && _cycles <= 337))
-                {
-                    _lsbBackgroundShiftRegister <<= 1;
-                    _msbBackgroundShiftRegister <<= 1;
-                    _lsbAttributeShiftRegister <<= 1;
-                    _msbAttributeShiftRegister <<= 1;
-                }
+                // Increments the horizontal component in the V register
+                if (_isRenderEnabled && ((_cycles >= 1 && _cycles <= 256) || (_cycles >= 328 && _cycles <= 336)) && _cycles % 8 == 0)
+                    IncrementHorizontalPosition();
 
                 // Increments the vertical component in the V register
-                if (_cycles == 256)
+                if (_isRenderEnabled && _cycles == 256)
                     IncrementVerticalPosition();
 
                 // Copy the horizontal component from T register into V register
-                if (_cycles == 257)
+                if (_isRenderEnabled && _cycles == 257)
                     CopyHorizontalPositionToV();
             }
             else if (_scanline == 240)
-                PostRenderScanline();
+                PostRenderScanlines();
             else if (_scanline >= 241 && _scanline < 261)
-                VerticalBlankArea();
+                VerticalBlankScanlines();
 
             _cycles++;
             if (_cycles >= 341)
@@ -512,7 +441,6 @@ namespace MiNES.PPU
                 }
                 else
                 {
-                    //ResetCoordinates();
                     _scanline = -1;
                     _framesRendered++;
                     //if (_framesRendered > 60)
@@ -526,12 +454,38 @@ namespace MiNES.PPU
 
         }
 
-        private void LoadShiftRegisters()
+        private void ShiftRegisters()
         {
-
+            _lowBackgroundShiftRegister <<= 1;
+            _highBackgroundShiftRegister <<= 1;
+            _lowAttributeShiftRegister <<= 1;
+            _highAttributeShiftRegister <<= 1;
         }
 
-        private static byte GetBlock(int coarseX, int coarseY)
+        private void LoadShiftRegisters()
+        {
+            // Load background shift registers
+            _lowBackgroundShiftRegister = (ushort)(((_lowBackgroundShiftRegister | 0x00FF) ^ 0x00FF) | _lowPixelsRow);
+            _highBackgroundShiftRegister = (ushort)(((_highBackgroundShiftRegister | 0x00FF) ^ 0x00FF) | _highPixelsRow);
+
+            // Load attribute shift registers
+            byte palette = ParsePalette(_attribute, _blockId); // 2 bit value
+
+            // The same bit is propagated to all bits in the attribute shift register
+            bool lowBit = palette.GetBit(0);
+            if (lowBit)
+                _lowAttributeShiftRegister = (ushort)(((_lowAttributeShiftRegister | 0x00FF) ^ 0x00FF) | 0xFF);
+            else
+                _lowAttributeShiftRegister = (ushort)(((_lowAttributeShiftRegister | 0x00FF) ^ 0x00FF));
+
+            bool highBit = palette.GetBit(1);
+            if (highBit)
+                _highAttributeShiftRegister = (ushort)(((_highAttributeShiftRegister | 0x00FF) ^ 0x00FF) | 0xFF);
+            else
+                _highAttributeShiftRegister = (ushort)(((_highAttributeShiftRegister | 0x00FF) ^ 0x00FF));
+        }
+
+        private static byte ParseBlock(int coarseX, int coarseY)
         {
             var x = coarseX % 4;
             var y = coarseY % 4;
@@ -556,12 +510,8 @@ namespace MiNES.PPU
         /// </summary>
         private void CopyHorizontalPositionToV()
         {
-            if (Mask.RenderBackground || Mask.RenderSprites)
-            {
-
-                V.CoarseX = T.CoarseX;
-                V.Value = (ushort)(((V.Value | 0x0400) ^ 0x0400) | (T.Value & 0x0400)); // copy bit 10 (nametable x) from T register
-            }
+            V.CoarseX = T.CoarseX;
+            V.Value = (ushort)(((V.Value | 0x0400) ^ 0x0400) | (T.Value & 0x0400)); // copy bit 10 (nametable x) from T register
         }
 
         /// <summary>
@@ -569,13 +519,10 @@ namespace MiNES.PPU
         /// </summary>
         private void CopyVerticalPositionToV()
         {
-            if (Mask.RenderBackground || Mask.RenderSprites)
-            {
-                V.CoarseY = T.CoarseY;
-                V.FineY = T.FineY;
+            V.CoarseY = T.CoarseY;
+            V.FineY = T.FineY;
 
-                V.Value = (ushort)(((V.Value | 0x0800) ^ 0x0800) | (T.Value & 0x0800)); // copy bit 11 (nametable y) from T register
-            }
+            V.Value = (ushort)(((V.Value | 0x0800) ^ 0x0800) | (T.Value & 0x0800)); // copy bit 11 (nametable y) from T register
         }
 
         /// <summary>
@@ -584,123 +531,83 @@ namespace MiNES.PPU
         /// </summary>
         private void IncrementVerticalPosition()
         {
-            /*
-                if ((v & 0x7000) != 0x7000)        // if fine Y < 7
-                  v += 0x1000                      // increment fine Y
-                else
-                  v &= ~0x7000                     // fine Y = 0
-                  int y = (v & 0x03E0) >> 5        // let y = coarse Y
-                  if (y == 29)
-                    y = 0                          // coarse Y = 0
-                    v ^= 0x0800                    // switch vertical nametable
-                  else if (y == 31)
-                    y = 0                          // coarse Y = 0, nametable not switched
-                  else
-                    y += 1                         // increment coarse Y
-                  v = (v & ~0x03E0) | (y << 5)     // put coarse Y back into v                          
-             */
-
-            if (Mask.RenderBackground || Mask.RenderSprites)
+            byte fineY = (byte)((V.Value & 0x7000) >> 12);
+            if (fineY < 7)
             {
-                byte fineY = (byte)((V.Value & 0x7000) >> 12);
-                if (fineY < 7)
+                fineY++;
+            }
+            else
+            {
+                fineY = 0;
+
+                // Increments coarse Y then
+                byte coarseY = (byte)((V.Value & 0x03E0) >> 5);
+                if (coarseY == 29)
                 {
-                    fineY++;
+                    coarseY = 0;
+
+                    byte yNametable = (byte)((V.Value & 0x0800) >> 11);
+                    yNametable = (byte)~yNametable; // by toggling bit 11, we switch vertical nametable
+
+                    V.Value = (ushort)(((V.Value | 0x0800) ^ 0x0800) | ((yNametable & 1) << 11));
+                }
+                else if (coarseY == 31)
+                {
+                    coarseY = 0;
                 }
                 else
                 {
-                    fineY = 0;
-
-                    // Increments coarse Y then
-                    byte coarseY = (byte)((V.Value & 0x03E0) >> 5);
-                    if (coarseY == 29)
-                    {
-                        coarseY = 0;
-
-                        byte yNametable = (byte)((V.Value & 0x0800) >> 11);
-                        yNametable = (byte)~yNametable; // by toggling bit 11, we switch vertical nametable
-
-                        V.Value = (ushort)(((V.Value | 0x0800) ^ 0x0800) | ((yNametable & 1) << 11));
-                    }
-                    else if (coarseY == 31)
-                    {
-                        coarseY = 0;
-                    }
-                    else
-                    {
-                        coarseY++;
-                    }
-
-                    V.Value = (ushort)(((V.Value | 0x03E0) ^ 0x03E0) | (coarseY << 5)); // Put coarse Y into the V register
+                    coarseY++;
                 }
 
-                V.Value = (ushort)(((V.Value | 0x7000) ^ 0x7000) | (fineY << 12)); // Put fineY into the V register
+                V.Value = (ushort)(((V.Value | 0x03E0) ^ 0x03E0) | (coarseY << 5)); // Put coarse Y into the V register
             }
+
+            V.Value = (ushort)(((V.Value | 0x7000) ^ 0x7000) | (fineY << 12)); // Put fineY into the V register
         }
 
         private void IncrementHorizontalPosition()
         {
-            /*
-                if ((v & 0x001F) == 31) // if coarse X == 31
-                  v &= ~0x001F          // coarse X = 0
-                  v ^= 0x0400           // switch horizontal nametable
-                else
-                  v += 1                // increment coarse X             
-             */
-
-            if (Mask.RenderBackground || Mask.RenderSprites)
+            byte coarseX = (byte)(V.Value & 0x001F);
+            if (coarseX == 31)
             {
-                byte coarseX = (byte)(V.Value & 0x001F);
-                if (coarseX == 31)
-                {
-                    coarseX = 0;
+                coarseX = 0;
 
-                    byte xNametable = (byte)((V.Value & 0x0400) >> 10);
-                    xNametable = (byte)~xNametable; // by toggling bit 10, we switch horizontal nametable
+                byte xNametable = (byte)((V.Value & 0x0400) >> 10);
+                xNametable = (byte)~xNametable; // by toggling bit 10, we switch horizontal nametable
 
-                    V.Value = (ushort)(((V.Value | 0x0400) ^ 0x0400) | ((xNametable & 1) << 10));
-                }
-                else
-                {
-                    coarseX++;
-                }
-
-                V.Value = (ushort)(((V.Value | 0x001F) ^ 0x001F) | coarseX);
+                V.Value = (ushort)(((V.Value | 0x0400) ^ 0x0400) | ((xNametable & 1) << 10));
             }
+            else
+            {
+                coarseX++;
+            }
+
+            V.Value = (ushort)(((V.Value | 0x001F) ^ 0x001F) | coarseX);
         }
 
-        private void PreRender()
+        private void PreRenderScanline()
         {
             if (_cycles == 1)
                 StatusRegister.VerticalBlank = false;
-            else if (_cycles >= 280 && _cycles <= 304)
+            else if (_isRenderEnabled && _cycles >= 280 && _cycles <= 304)
                 CopyVerticalPositionToV();
         }
 
-        private void Render()
+        private void RenderScanlines()
         {
             if (_cycles < 1 || _cycles > 256)
                 return;
 
-            //if (V.CoarseY == 6 && V.CoarseX == 10)
-            //{
-            //    Console.WriteLine();
-            //}
-
             // Multiplexor
             ushort colorPixelMux = (ushort)(0x8000 >> _fineX);
-            var lsbPixelColorIdx = (_lsbBackgroundShiftRegister & colorPixelMux) == colorPixelMux ? 1 : 0;
-            var msbPixelColorIdx = (_msbBackgroundShiftRegister & colorPixelMux) == colorPixelMux ? 1 : 0;
+            var lsbPixelColorIdx = (_lowBackgroundShiftRegister & colorPixelMux) == colorPixelMux ? 1 : 0;
+            var msbPixelColorIdx = (_highBackgroundShiftRegister & colorPixelMux) == colorPixelMux ? 1 : 0;
 
             byte pixelColorIndex = (byte)(lsbPixelColorIdx | (msbPixelColorIdx << 1));
 
-            // Multiplexor
-            //ushort paletteMux = (byte)(0xFF >> _fineX);
-            //var lsbPaletteIdx = (_lsbAttributeShiftRegister & paletteMux) == paletteMux ? 1 : 0;
-            //var msbPaletteIdx = (_msbAttributeShiftRegister & paletteMux) == paletteMux ? 1 : 0;
-
-            var lsbPaletteIdx = (_lsbAttributeShiftRegister & colorPixelMux) == colorPixelMux ? 1 : 0;
-            var msbPaletteIdx = (_msbAttributeShiftRegister & colorPixelMux) == colorPixelMux ? 1 : 0;
+            var lsbPaletteIdx = (_lowAttributeShiftRegister & colorPixelMux) == colorPixelMux ? 1 : 0;
+            var msbPaletteIdx = (_highAttributeShiftRegister & colorPixelMux) == colorPixelMux ? 1 : 0;
 
             byte palette = (byte)((lsbPaletteIdx) | (msbPaletteIdx << 1));
 
@@ -723,34 +630,6 @@ namespace MiNES.PPU
             _frame = new Bitmap(256, 240);
             //IsFrameCompleted = false;
         }
-
-        //private void PreRenderScanline()
-        //{
-        //    if (_cycles == 1)
-        //        StatusRegister.VerticalBlank = false;
-        //}
-
-        //private byte GetTileIndex()
-        //{
-        //    /*
-        //     * Each 8 cycles within a scanline we move to the next tile.
-        //     * Each 8 scanline, we move to a row of tiles.
-        //     * 
-        //     * We perform some calculation to produce an offset that would be added to a base address (the first address of a nametable). At least for this
-        //     * approach, we do NOT store this addition (base address + offset); instead, we update the offset periodically to produce an address; this address
-        //     * would be used to lookup the tile ID (indexed to a pattern table) in the nametable.
-        //     */
-        //    byte xOffset = (byte)((_cycles - 1) / 8); // offset in X axis
-        //    //int xOffset = ((_cycles - 1) / 8); // offset in X axis
-        //    //if (xOffset > 31)
-        //    //    Console.WriteLine();
-
-        //    int yOffset = _scanline / 8 * 32; // offset in Y axis (it's multipled by 32 for denote that we are skipping rows: a row = 32 tiles)
-
-        //    ushort tileAddress = (ushort)(GetNametableBaseAddress() + (xOffset + yOffset));
-
-        //    return _ppuBus.Read(tileAddress);
-        //}
 
         private ushort GetNametableBaseAddress()
         {
@@ -778,93 +657,8 @@ namespace MiNES.PPU
             return baseAddress;
         }
 
-        //private byte GetColorIndex(byte tileIndex)
-        //{
-        //    //byte patternTable = Control.GetPatternTableAddress();
-
-        //    // TODO: change this structure in the future
-        //    //Bitmap tile = _patternTables[patternTable][tileIndex];
-        //    Tile tile = _backgroundTiles[tileIndex];
-        //    if (tileIndex > 0)
-        //        Console.WriteLine();
-
-        //    int xOffset = (_cycles - 1) / 8; // offset in X axis
-        //    int yOffset = _scanline / 8; // offset in Y axis (it's multipled by 32 for denote that we are skipping rows: a row = 32 tiles)
-
-        //    int xOrigin = xOffset * 8;
-        //    int yOrigin = yOffset * 8;
-
-        //    byte colorIdx = tile.GetPixel(X - xOrigin, Y - yOrigin); // a 2 bit value
-        //    //if (colorIdx > 3)
-        //    //    Console.WriteLine();
-
-        //    return colorIdx;
-        //    //return tile.GetPixel(Y - yOrigin, X - xOrigin); // a 2 bit value
-        //}
-
-        //private byte GetAttribute()
-        //{
-        //    int xOffset = (_cycles - 1) / 32;
-        //    int yOffset = _scanline / 32 * 8;
-
-        //    int megaBlockOffset = xOffset + yOffset;
-        //    ushort attributeEntryAddress = (ushort)(GetNametableBaseAddress() + 0x03C0 + megaBlockOffset);
-
-        //    return _ppuBus.Read(attributeEntryAddress);
-        //}
-
-        //private void ParseCoordinatesForMegaBlock(out byte x, out byte y)
-        //{
-        //    int xOffset = (_cycles - 1) / 32; // a number from 0 to 7
-        //    //int yOffset = (_scanline / 32) * 8; // a number from 0 to 7
-        //    int yOffset = _scanline / 32; // a number from 0 to 7
-
-        //    x = (byte)(xOffset * 32);
-        //    y = (byte)(yOffset * 32);
-        //}
-
-        //private byte GetBlockId()
-        //{
-        //    ParseCoordinatesForMegaBlock(out byte xBlockOrigin, out byte yBlockOrigin);
-
-        //    int x = X - xBlockOrigin;
-        //    int y = Y - yBlockOrigin;
-
-        //    byte blockId; // from 1 up to 4
-        //    if (x >= 0 && x < 16 && y >= 0 && y < 16) // Top left block
-        //        blockId = 4;
-        //    else if (x >= 16 && x < 32 && y >= 0 && y < 16) // Top right block
-        //        blockId = 3;
-        //    else if (x >= 0 && x < 16 && y >= 16 && y < 32) // Bottom left block
-        //        blockId = 2;
-        //    else if (x >= 16 && x < 32 && y >= 16 && y < 32) // Bottom right block
-        //        blockId = 1;
-        //    else
-        //    {
-        //        Console.WriteLine();
-        //        throw new InvalidOperationException($"The given coordinates (${x},{y}) are invalid in terms of mega blocks.");
-        //    }
-
-        //    return blockId;
-        //}
-
-        //private int X => _cycles - 1;
-        //private int Y => _scanline;
-
-
         private static byte ParsePalette(byte attribute, byte blockId)
         {
-            // TODO: the palette is a 2 bit value as well; ensure this
-
-            /*
-                        int mask = 1 << j;
-                        int lowBit = (lowBitsRow & mask) == mask ? 1 : 0;
-                        int highBit = (highBitsRow & mask) == mask ? 1 : 0;
-
-                        // A 2 bit value
-                        byte paletteColorIdx = (byte)(lowBit | (highBit << 1));             
-             */
-
             byte palette;
             int lowBit;
             int highBit;
@@ -895,33 +689,6 @@ namespace MiNES.PPU
                     throw new InvalidOperationException($"The given block ID is invalid: ${blockId}.");
             }
 
-            //switch (blockId)
-            //{
-            //    case 1: // Bottom right
-            //        //palette = (byte)(attribute & (0b11000000));
-            //        highBit = (attribute & 0b10000000) == 0b10000000 ? 1 : 0;
-            //        lowBit = (attribute & 0b01000000) == 0b01000000 ? 1 : 0;
-
-            //        break;
-            //    case 2: // Bottom left
-            //        //palette = (byte)(attribute & (0b00110000));
-            //        highBit = (attribute & 0b00100000) == 0b00100000 ? 1 : 0;
-            //        lowBit = (attribute & 0b00010000) == 0b00010000 ? 1 : 0;
-            //        break;
-            //    case 3: // Top right
-            //        //palette = (byte)(attribute & (0b00001100));
-            //        highBit = (attribute & 0b00001000) == 0b00001000 ? 1 : 0;
-            //        lowBit = (attribute & 0b00000100) == 0b00000100 ? 1 : 0;
-            //        break;
-            //    case 4: // Top left
-            //        //palette = (byte)(attribute & (0b00000011));
-            //        highBit = (attribute & 0b00000010) == 0b00000010 ? 1 : 0;
-            //        lowBit = (attribute & 0b00000001) == 0b00000001 ? 1 : 0;
-            //        break;
-            //    default:
-            //        throw new InvalidOperationException($"The given block ID is invalid: ${blockId}.");
-            //}
-
             palette = (byte)(lowBit | highBit << 1);
 
             return palette;
@@ -938,57 +705,14 @@ namespace MiNES.PPU
             return SystemColorPalette[paletteColor];
         }
 
-        private static ushort ParseBackgroundPaletteAddress(byte paletteId, byte colorIndex)
-        {
-            ushort baseAddress = 0x3F00;
-            var offset = (byte)(paletteId * 4 + colorIndex);
+        private static ushort ParseBackgroundPaletteAddress(byte paletteId, byte colorIndex) => (ushort)(0x3F00 + paletteId * 4 + colorIndex);
 
-            return (ushort)(baseAddress + offset);
-        }
-
-        //private void RenderVisibleScanlines()
-        //{
-        //    // Do not paint a pixel if it's a cycle outside of the visible boundary
-        //    if (_cycles < 1 || _cycles > 256)
-        //        return;
-
-        //    //var ids = new List<byte>();
-        //    ////for (var u = 0x2000; u < 0x2400; u++)
-        //    //for (var u = 0x2000; u < 0x23C0; u++)
-        //    //    ids.Add(_ppuBus.Read((ushort)u));
-
-        //    byte tileIdx = GetTileIndex(); // Identified Tile ID
-
-        //    byte colorIndex = GetColorIndex(tileIdx); // Identified color index within the colors palette
-        //    byte attribute = GetAttribute(); // Fetched the attribute entry
-        //    byte blockId = GetBlockId(); // Identified the block within the "mega" block
-        //    byte palette = ParsePalette(attribute, blockId); // Parsed the pallete id based on the block id and the attribute's entry
-
-        //    //int x = _cycles - 1;
-        //    //int y = _scanline;
-
-        //    //If bit 3 from Mask register is set, it means we can render the background
-        //    if (Mask.RenderBackground)
-        //        _frame.SetPixel(X, Y, GetBackgroundColor(palette, colorIndex));
-        //    else
-        //        _frame.SetPixel(X, Y, Color.Black);
-
-        //}
-
-        //private void ResetCoordinates()
-        //{
-        //    _fineX = 0;
-        //    _fineY = 0;
-        //    _coarseX = 0;
-        //    _coarseY = 0;
-        //}
-
-        private void PostRenderScanline()
+        private void PostRenderScanlines()
         {
             // Do nothing
         }
 
-        private void VerticalBlankArea()
+        private void VerticalBlankScanlines()
         {
             if (_scanline == 241 && _cycles == 1)
             {
@@ -1001,7 +725,6 @@ namespace MiNES.PPU
         public byte[][] GetNametable0()
         {
             ushort nametableAddress = GetNametableBaseAddress();
-            //ushort finalAddress = (ushort)(nametableAddress + 0x03C0);
 
             byte[][] nametable = new byte[30][]; // 30 tiles high
             for (int i = 0; i < nametable.Length; i++)

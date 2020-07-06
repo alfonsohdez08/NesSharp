@@ -49,8 +49,6 @@ namespace MiNES.Emu
             //nes = new NES(nesTestRom);
             //nes = new NES(iceClimbersRom);
 
-            //TODO: check palletes, cpu and ppu buses; and ensure mirroring is implemented properly in all places (compare against olc mirroring)
-
             //EnableEmulation.Checked = true;
 
             StartEmulation();
