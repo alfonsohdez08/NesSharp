@@ -156,8 +156,6 @@ namespace MiNES.CPU
                 case 0x2007:
                     _ppu.SetPpuData(value); // The value that will be stored in the address set by the PPU address register
                     break;
-                //default:
-                //    throw new InvalidOperationException($"The address {address.ToString("X")} is not mapped to any PPU register.");
             }
         }
     }

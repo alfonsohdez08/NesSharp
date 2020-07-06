@@ -206,9 +206,6 @@ namespace MiNES.PPU
         {
             if (!_addressLatch) // w is 0
             {
-                //_address = (ushort)((_address | 0xFF00) ^ 0xFF00 | value << 8);
-                //_address.SetHighByte(value);
-
                 value = (byte)((value | 0xC0) ^ 0xC0);
 
                 T.Value = (ushort)(((T.Value | 0x3F00) ^ 0x3F00) | (value << 8));
@@ -218,9 +215,6 @@ namespace MiNES.PPU
             }
             else // w is 1
             {
-                //_address = (ushort)((_address | 0x00FF) ^ 0x00FF | value);
-                //_address.SetLowByte(value);
-
                 T.Value = (ushort)(((T.Value | 0xFF) ^ 0xFF) | value);
                 V.Value = T.Value;
 
@@ -310,15 +304,11 @@ namespace MiNES.PPU
             byte data = _dataBuffer;
 
             // Updates the buffer with the data allocated in the compiled address
-            //_dataBuffer = _ppuBus.Read(_address);
-            //_dataBuffer = _ppuBus.Read(V.Value);
             _dataBuffer = _ppuBus.Read(V.Address);
-
 
             /* If the compiled address does not overlap the color palette address range, then return
              * the data read from the buffer; otherwise return the data read from the address right away
              */
-            //if (_address >= 0x3F00)
             if (V.Value >= 0x3F00)
                 data = _dataBuffer;
 
@@ -333,10 +323,7 @@ namespace MiNES.PPU
         /// <param name="val">The value that will be stored.</param>
         public void SetPpuData(byte val)
         {
-            //_ppuBus.Write(_address, val);
-            //_ppuBus.Write(V.Value, val);
             _ppuBus.Write(V.Address, val);
-
             IncrementVRamAddress();
         }
 
@@ -346,17 +333,10 @@ namespace MiNES.PPU
         private void IncrementVRamAddress()
         {
             // If bit 3 from control register is set, add 32 to VRAM address; otherwise 1
-            //if ((Control & 0x0004) == 0x0004)
             if (ControlRegister.VRamAddressIncrement)
-            {
                 V.Value += 32;
-                //_address += 32;
-            }
             else
-            {
                 V.Value++;
-                //_address++;
-            }
         }
 
         public Bitmap FrameBuffer { get; private set; }
@@ -365,91 +345,6 @@ namespace MiNES.PPU
         /// Count how many frames has been rendered.
         /// </summary>
         private byte _framesRendered = 1;
-
-        ///// <summary>
-        ///// Draws the frame.
-        ///// </summary>
-        //public void Draw()
-        //{
-        //    /*
-        //     * The PPU has only 2kb of RAM: the nametables. The nametables are changed based on the
-        //     * execution of the program. The pattern tables are allocated in the cartridge memory (CHR-ROM).
-        //     */
-
-        //    /*
-        //     * There are 240 visible scanlines. Each pixel within each scanline is drawn in each clock cycle.
-        //     * For draw a scanline (background purpose), this is the process:
-        //     * 1. Identify the tile currently working on: looking up the tile index from the name table (the _address field points to the nametables: be careful, it must
-        //     * check the PPUCNTRL register to see which nametable i should look up... mirroring).
-        //     * 2. Once identify which is the tile that I should be work on in the next 8 cycles (1 cycle = 1 px); determine its color index within the color pallete by
-        //     * looking up the tile from the pattern table (this is again is controlled by some register which would tell me which pattern table to look).
-        //     * 3. Once the color index is identified, just take it from the color palette assigned to the block (2 x 2 tiles region).
-        //     * 4. Draw the pixel in the bitmap object.
-        //     * 
-        //     * Very important: you must track the X and Y coordinates for draw the pixel and know when to go the next tile; when a scanline is done, must go to the next
-        //     * row of pixels (next scanline). Also, be aware that you need 8 scalines for write a full row of 32 tiles.
-        //     * 
-        //     * Fine x: each pixel in X axis within a tile (from 0 to 7)
-        //     * Fine Y: each pixel in Y axis within a tile (from 0 to 7)... for each scanline, this gets incremented
-        //     * Coarse X: tiles processed horizontally (within a scanline)
-        //     * Coarse Y: tiles processed vertically (within 8 scanlines)
-        //     */
-
-
-        //    /*
-        //        When doing the scroll, there is a X offset and Y offset; each offset represents
-        //        how many pixels we need to skip (either X axis or Y axis) for produce a "scroll", meaning
-        //        that we will be crossing a nametable (horizontally if mirroing mode is vertical; or vertically if morring
-        //        mode is horizontal). The challenge of scrolling is that we are fetching "offset" pixels from the next nametable tile,
-        //        so this gets things really complicated, also we are leaving the initial nametable, so we are not rendering anymore some
-        //        of the pixels of that nametable.
-
-        //        Remember that the scroll happens per pixel, not per tile. Meaning, you push pixels, not the whole tile. That being said,
-        //        you can scroll 256 pixels in the X axis (remember the NES resolution is 256 wide); meanwhile you can scroll 240 pixels
-        //        in the Y axis (NES resolution is 240 high).
-        //     */
-
-        //    /*
-        //     * The cycle 0 (first tick) the PPU is idle (it does nothing). However, when the frame rendered is 
-        //     * odd, the cycle 0 gets ignored and go straigh to cycle 1.
-        //     */
-        //    //if (_cycles++ == 0 && _framesRendered % 2 != 0 && Mask)
-        //    //    return;
-        //    //if (_scanline == 0 && _cycles == 0)
-        //    //    _cycles = 1;
-
-        //    //if (_scanline == -1 || _scanline == 261)
-        //    if (_scanline == -1) // 261
-        //        PreRenderScanline();
-        //    else if (_scanline >= 0 && _scanline <= 239)
-        //        RenderVisibleScanlines();
-        //    else if (_scanline == 240)
-        //        PostRenderScanline();
-        //    else if (_scanline >= 241 && _scanline <= 260)
-        //        VerticalBlankArea();
-
-        //    _cycles++;
-        //    if (_cycles >= 341)
-        //    {
-        //        _cycles = 0;
-        //        if (_scanline < 260)
-        //        {
-        //            _scanline++;
-        //        }
-        //        else
-        //        {
-        //            //ResetCoordinates();
-        //            _scanline = -1;
-        //            _framesRendered++;
-        //            if (_framesRendered > 60)
-        //                _framesRendered = 1;
-
-        //            IsFrameCompleted = true;
-        //            FrameBuffer = _frame;
-        //            ResetFrame();
-        //        }
-        //    }
-        //}
 
         public void DrawPixel()
         {
@@ -631,7 +526,12 @@ namespace MiNES.PPU
 
         }
 
-        private static byte GetBlock(byte coarseX, byte coarseY)
+        private void LoadShiftRegisters()
+        {
+
+        }
+
+        private static byte GetBlock(int coarseX, int coarseY)
         {
             var x = coarseX % 4;
             var y = coarseY % 4;
