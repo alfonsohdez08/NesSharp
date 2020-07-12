@@ -14,6 +14,8 @@ namespace MiNES.PPU.Registers
 
         public bool VRamAddressIncrement => Value.GetBit(2);
 
+        public bool SpritesPatternTableAddress => Value.GetBit(3);
+
         public bool BackgroundPatternTableAddress => Value.GetBit(4);
 
         public bool GenerateNMI => Value.GetBit(7);

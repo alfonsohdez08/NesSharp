@@ -110,5 +110,26 @@ namespace MiNES.Extensions
         {
             value = (ushort)(((value | 0x00FF) ^ 0x00FF) | val);
         }
+
+
+        /// <summary>
+        /// "Mirrors" the bits within a byte (bit 0 would be allocated in bit 7, bit 1 would be in bit 6, and so on).
+        /// </summary>
+        /// <param name="value">The byte that will get mirrored.</param>
+        public static void MirrorBits(this ref byte value)
+        {
+            byte flipped = 1;
+
+            // There should be a formula for flip bits within a byte
+            for (int i = 0; i < 8; i++)
+            {
+                int mask = 1 << i;
+                int bit = value & mask;
+
+                flipped = (byte)(flipped | (bit << (7 - i)));
+            }
+
+            value = flipped;
+        }
     }
 }

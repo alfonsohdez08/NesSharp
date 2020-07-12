@@ -108,8 +108,9 @@ namespace MiNES.PPU
                 /*  When Oam Address is divisible by 4, it means we attempting to write the position of the sprite in Y axis, so we must substract 1 from it because
                  *  delayed scanline.
                  */
-                int val = OamAddress % 4 == 0 ? data - 1 : data;
-                _oam[OamAddress] = (byte)val;
+                //int val = OamAddress % 4 == 0 ? data - 1 : data;
+                //_oam[OamAddress] = (byte)val;
+                _oam[OamAddress] = data;
 
                 // OAM address gets incremented by one when data is written
                 OamAddress++;
@@ -367,6 +368,18 @@ namespace MiNES.PPU
         private byte _oamBufferIndex;
         private byte _spritesInBuffer;
 
+        private byte[] _spriteXCounters = new byte[8];
+        private byte[] _spriteAttributes = new byte[8];
+        private byte[] _spriteLowPlaneTiles = new byte[8];
+        private byte[] _spriteHighPlaneTiles = new byte[8];
+
+        private byte _spriteBufferIndex = 0;
+        private byte _spriteY;
+        private byte _spriteTileIndex;
+        private bool _flipSpriteVertically;
+        private bool _flipSpriteHorizontally;
+
+
         public void DrawPixel()
         {
             // Cycle 0 does not do anything (it's idle)
@@ -480,19 +493,70 @@ namespace MiNES.PPU
                                 OamAddress += 4;
                             }
 
-                            // OAM Address overflow
-                            if (OamAddress == 0)
-                            {
-                                Console.WriteLine();
-                            }
+                            // Workaround for set empty sprite slots to $FF
+                            if (_cycles == 256)
+                                for (int i = _spritesInBuffer * 4; i < _oamBuffer.Length; i++)
+                                    _oamBuffer[i] = 0xFF;
                         }
                     }else if (_cycles >= 257 && _cycles <= 320)
                     {
+                        var stage = (_cycles - 1) % 8;
+                        switch (stage)
+                        {
+                            // Parse the Y coordinate
+                            case 0:
+                                _spriteY = (byte)(_scanline - _oamBuffer[_spriteBufferIndex * 4]);
+                                break;
+                            case 1:
+                                // TODO: see how to handle this when sprite is 8 x 16
+                                _spriteTileIndex = _oamBuffer[(_spriteBufferIndex * 4) + 1];
+                                break;
+                            // Parse attributes (palette, flip horizontally, flip vertically, priority)
+                            case 2:
+                                {
+                                    byte attributes = _oamBuffer[(_spriteBufferIndex * 4) + 2];
 
+                                    _spriteAttributes[_spriteBufferIndex] = attributes;
+
+                                    _flipSpriteHorizontally = attributes.GetBit(6);
+                                    _flipSpriteVertically = attributes.GetBit(7);
+                                }
+                                break;
+                            case 3:
+                                _spriteXCounters[_spriteBufferIndex] = _oamBuffer[(_spriteBufferIndex * 4) + 3];
+                                break;
+                            case 5:
+                                {
+                                    // fetch sprite low tile
+                                    ushort patternTableAddress = (ushort)(ControlRegister.SpritesPatternTableAddress ? 0x1000 : 0);
+                                    var flipOffset = _flipSpriteVertically ? (7 - _spriteY) : _spriteY;
+                                    
+                                    byte lowPlane = _ppuBus.Read((ushort)(patternTableAddress + (_spriteTileIndex * 16) + flipOffset));
+                                    if (_flipSpriteHorizontally)
+                                        lowPlane.MirrorBits();
+
+                                    _spriteLowPlaneTiles[_spriteBufferIndex] = lowPlane;
+                                }
+                                break;
+                            case 7:
+                                {
+                                    // fetch sprite high tile
+                                    ushort patternTableAddress = (ushort)(ControlRegister.SpritesPatternTableAddress ? 0x1000 : 0);
+                                    var flipOffset = _flipSpriteVertically ? (7 - _spriteY) : _spriteY;
+                                    
+                                    byte highPlane = _ppuBus.Read((ushort)(patternTableAddress + (_spriteTileIndex * 16) + flipOffset + 8));
+                                    if (_flipSpriteHorizontally)
+                                        highPlane.MirrorBits();
+
+                                    _spriteHighPlaneTiles[_spriteBufferIndex] = highPlane;
+
+                                    _spriteBufferIndex++;
+                                }
+                                break;
+                        }
                     }
 
                 }
-
 
                 // Increments the horizontal component in the V register
                 if (_isRenderingEnabled && ((_cycles >= 1 && _cycles <= 256) || (_cycles >= 328 && _cycles <= 336)) && _cycles % 8 == 0)
@@ -522,6 +586,7 @@ namespace MiNES.PPU
                 
                 _oamBufferIndex = 0;
                 _spritesInBuffer = 0;
+                _spriteBufferIndex = 0;
 
                 if (_scanline < 260)
                 {
@@ -694,9 +759,14 @@ namespace MiNES.PPU
         private void PreRenderScanline()
         {
             if (_cycles == 1)
+            {
+                StatusRegister.SpriteOverflow = false;
                 StatusRegister.VerticalBlank = false;
+            }
             else if (_isRenderingEnabled && _cycles >= 280 && _cycles <= 304)
+            {
                 CopyVerticalPositionToV();
+            }
         }
 
         private void RenderScanlines()
