@@ -1663,5 +1663,19 @@ namespace MiNES.CPU
         /// </summary>
         /// <returns>The number of cycles spent for execute the instruction.</returns>
         public byte Step() => ExecuteInstruction();
+
+        public byte[] GetOam(byte cpuPage)
+        {
+            byte[] oam = new byte[256];
+
+            ushort address = (ushort)(0 | (cpuPage << 8));
+            for (int i = 0; i < 256; i++)
+            {
+                byte oamEntry = _bus.Read(address++);
+                oam[i] = oamEntry;
+            }
+
+            return oam;
+        }
     }
 }

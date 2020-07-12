@@ -18,6 +18,8 @@ namespace MiNES.PPU.Registers
 
         public bool GenerateNMI => Value.GetBit(7);
 
+        public bool SpriteSize => Value.GetBit(5);
+
         public Control()
         {
 

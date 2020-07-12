@@ -67,7 +67,8 @@ namespace MiNES.CPU
 
                 // PPU OAM data register
                 case 0x2004:
-                    value = _ppu.OamData;
+                    //value = _ppu.OamData;
+                    value = _ppu.GetOamData();
                     break;
 
                 // PPU Scroll register (write only)
@@ -96,7 +97,14 @@ namespace MiNES.CPU
                 WriteRam(address, val);
             else if (address >= 0x2000 && address < 0x4000)
                 WritePpuRegister((ushort)(0x2000 + address % 8), val);
-                //WriteInputOutputRegisters(address, val);
+            // DMA port
+            else if (address == 0x4014) 
+            {
+                // The value written to this port is the page within the CPU RAM where a copy of the OAM resides
+                _ppu.OamCpuPage = val;
+                //_ppu.OamAddress = 0;
+                _ppu.DmaTriggered = true;
+            }
         }
 
         /// <summary>
@@ -142,7 +150,8 @@ namespace MiNES.CPU
 
                 // PPU OAM data register
                 case 0x2004:
-                    _ppu.OamData = value;
+                    //_ppu.OamData = value;
+                    _ppu.SetOamData(value);
                     break;
                 // PPU Scroll register (write only)
                 case 0x2005:

@@ -48,7 +48,7 @@ namespace MiNES.PPU
 
         private byte _lowPixelsRow;
         private byte _highPixelsRow;
-        private bool _isRenderEnabled => Mask.RenderBackground || Mask.RenderSprites;
+        private bool _isRenderingEnabled => Mask.RenderBackground || Mask.RenderSprites;
 
         /// <summary>
         /// Count how many frames has been rendered.
@@ -91,21 +91,39 @@ namespace MiNES.PPU
         public byte OamAddress { get; set; }
 
         /// <summary>
-        /// Object Attribute Memory (OAM) data register.
+        /// The PPU OAM (it's 256 bytes long, capable of store 64 sprites, sprite data is 4 bytes long).
         /// </summary>
-        public byte OamData { get; set; }
+        private readonly byte[] _oam = new byte[256];
 
-        /// <summary>
-        /// The compiled address from the PPU Address register (this is known as Video RAM address or VRAM).
-        /// </summary>
-        //private ushort _address = 0;
-        
+        private readonly byte[] _oamBuffer = new byte[32];
+
+        public byte OamCpuPage { get; set; }
+        public bool DmaTriggered { get; set; }
+
+        public void SetOamData(byte data)
+        {
+            // Only writes to OAM Data port when rendering is disabled
+            if (!_isRenderingEnabled)
+            {
+                /*  When Oam Address is divisible by 4, it means we attempting to write the position of the sprite in Y axis, so we must substract 1 from it because
+                 *  delayed scanline.
+                 */
+                int val = OamAddress % 4 == 0 ? data - 1 : data;
+                _oam[OamAddress] = (byte)val;
+
+                // OAM address gets incremented by one when data is written
+                OamAddress++;
+            }
+        }
+
+        public byte GetOamData()
+        {
+            // TODO: does a read during pre render and render scanlines increment the oam adddress?
+
+            return _oam[OamAddress];
+        }
+
         private byte _dataBuffer = 0;
-
-        /// <summary>
-        /// The OAM DMA page.
-        /// </summary>
-        public byte OamDmaPage { get; set; }
 
         #region NES color palette
         public static readonly Color[] SystemColorPalette = new Color[]
@@ -345,6 +363,10 @@ namespace MiNES.PPU
                 V.Value++;
         }
 
+        private byte _oamLatch;
+        private byte _oamBufferIndex;
+        private byte _spritesInBuffer;
+
         public void DrawPixel()
         {
             // Cycle 0 does not do anything (it's idle)
@@ -366,6 +388,7 @@ namespace MiNES.PPU
                 else
                     RenderScanlines();
 
+                // Background rendering process
                 if ((_cycles >= 1 && _cycles <= 256) || (_cycles >= 321 && _cycles <= 336))
                 {
                     var stage = _cycles % 8;
@@ -414,17 +437,78 @@ namespace MiNES.PPU
                     }
                 }
 
+                // Sprite Evaluation
+                if (_scanline >= 0)
+                {
+                    // Initializes to $FF the OAM buffer
+                    if (_cycles >= 1 && _cycles <= 64)
+                    {
+                        _oamBuffer[_cycles % 32] = 0xFF;
+                    }
+                    else if (_cycles > 64 && _cycles <= 256)
+                    {
+                        // Read mode (odd cycles)
+                        if (_cycles % 2 != 0)
+                        {
+                            _oamLatch = _oam[OamAddress];
+                        }
+                        // Write mode (even cycles)
+                        else
+                        {
+                            var currentSpriteYPos = _oam[(OamAddress / 4) * 4];
+                            bool isSpriteInRange = IsSpriteInRange(currentSpriteYPos);
+
+                            if (_spritesInBuffer < 8)
+                            {
+                                _oamBuffer[_oamBufferIndex] = _oamLatch;
+                            }
+                            else if (!StatusRegister.SpriteOverflow)
+                            {
+                                if (isSpriteInRange)
+                                    StatusRegister.SpriteOverflow = true;
+                            }
+
+                            if (isSpriteInRange && !StatusRegister.SpriteOverflow)
+                            {
+                                OamAddress++;
+                                _oamBufferIndex++;
+
+                                _spritesInBuffer = (byte)(_oamBufferIndex / 4);
+                            }
+                            else
+                            {
+                                OamAddress += 4;
+                            }
+
+                            // OAM Address overflow
+                            if (OamAddress == 0)
+                            {
+                                Console.WriteLine();
+                            }
+                        }
+                    }else if (_cycles >= 257 && _cycles <= 320)
+                    {
+
+                    }
+
+                }
+
+
                 // Increments the horizontal component in the V register
-                if (_isRenderEnabled && ((_cycles >= 1 && _cycles <= 256) || (_cycles >= 328 && _cycles <= 336)) && _cycles % 8 == 0)
+                if (_isRenderingEnabled && ((_cycles >= 1 && _cycles <= 256) || (_cycles >= 328 && _cycles <= 336)) && _cycles % 8 == 0)
                     IncrementHorizontalPosition();
 
                 // Increments the vertical component in the V register
-                if (_isRenderEnabled && _cycles == 256)
+                if (_isRenderingEnabled && _cycles == 256)
                     IncrementVerticalPosition();
 
                 // Copy the horizontal component from T register into V register
-                if (_isRenderEnabled && _cycles == 257)
+                if (_isRenderingEnabled && _cycles == 257)
                     CopyHorizontalPositionToV();
+
+                // During cycles elapesed between 257 and 320 (inclusive), the OAM address is set to 0
+                if (_cycles >= 257 && _cycles <= 320)
+                    OamAddress = 0;
             }
             else if (_scanline == 240)
                 PostRenderScanlines();
@@ -435,6 +519,10 @@ namespace MiNES.PPU
             if (_cycles >= 341)
             {
                 _cycles = 0;
+                
+                _oamBufferIndex = 0;
+                _spritesInBuffer = 0;
+
                 if (_scanline < 260)
                 {
                     _scanline++;
@@ -452,6 +540,18 @@ namespace MiNES.PPU
                 }
             }
 
+        }
+
+        /// <summary>
+        /// Checks if the sprite is in the Y-axis range.
+        /// </summary>
+        /// <param name="y">The top position of the sprite in the Y-axis.</param>
+        /// <returns>True if it is in the range, otherwise false.</returns>
+        private bool IsSpriteInRange(byte y)
+        {
+            int spriteHeight = ControlRegister.SpriteSize ? 16 : 8;
+
+            return _scanline >= y && _scanline < (y + spriteHeight);
         }
 
         private void ShiftRegisters()
@@ -595,7 +695,7 @@ namespace MiNES.PPU
         {
             if (_cycles == 1)
                 StatusRegister.VerticalBlank = false;
-            else if (_isRenderEnabled && _cycles >= 280 && _cycles <= 304)
+            else if (_isRenderingEnabled && _cycles >= 280 && _cycles <= 304)
                 CopyVerticalPositionToV();
         }
 
@@ -618,7 +718,7 @@ namespace MiNES.PPU
 
             Color pixelColor = GetBackgroundColor(palette, pixelColorIndex);
 
-            if (!Mask.RenderBackground)
+            if (!_isRenderingEnabled)
                 pixelColor = Color.Black;
 
             _frame.SetPixel(_cycles - 1, _scanline, pixelColor);
