@@ -916,7 +916,29 @@ namespace MiNES.PPU
             byte pixel = 0;
             byte palette = 0;
 
-            //if ()
+            if (backgroundPixel == 0 && spritePixel != 0)
+            {
+                pixel = spritePixel;
+                palette = spritePalette;
+            }else if (backgroundPixel != 0 && spritePixel == 0)
+            {
+                pixel = backgroundPixel;
+                palette = backgroundPalette;
+            }else if (backgroundPixel != 0 && spritePixel != 0)
+            {
+                // Behind background
+                if (spritePriority)
+                {
+                    pixel = backgroundPixel;
+                    palette = backgroundPalette;
+                }
+                // In front of background
+                else
+                {
+                    pixel = spritePixel;
+                    palette = spritePalette;
+                }
+            }
 
             _frame.SetPixel(_cycles - 1, _scanline, GetPaletteColor(palette, pixel));
         }
