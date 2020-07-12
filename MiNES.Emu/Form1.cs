@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -28,6 +29,7 @@ namespace MiNES.Emu
 
         //private NametableDebugger _nametableDebugger;
 
+        private ulong _frames;
 
         public bool RunEmulation
         {
@@ -56,31 +58,33 @@ namespace MiNES.Emu
 
         private void StartEmulation()
         {
-            //var nes = new NES(superMarioBrosRom);
-
-            // TODO: see if i can add a debugger for see my nametables per frame
+            var stopWatch = new Stopwatch();
 
             Task.Factory.StartNew(() =>
             {
                 while (true)
                 {
+                    if (!stopWatch.IsRunning)
+                        stopWatch.Start();
+
                     if (RunEmulation)
                     {
                         //GameScreen.Image = GetDummyBitmap();
                         GameScreen.Image = nes.Frame();
+                        _frames++;
+
+                        if (_frames % 60 == 0)
+                        {
+                            stopWatch.Stop();
+                            var seconds = stopWatch.ElapsedMilliseconds/1000;
+                            stopWatch.Reset();
+
+                        }
                     }
 
                 }
             }, TaskCreationOptions.LongRunning);
 
-        }
-
-        private static Bitmap GetDummyBitmap()
-        {
-            var bitmap = new Bitmap(256, 240);
-            bitmap.SetPixel(230, 1, Color.Red);
-
-            return bitmap;
         }
 
         private void tableLayoutPanel1_Paint(object sender, PaintEventArgs e)

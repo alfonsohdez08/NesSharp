@@ -395,6 +395,7 @@ namespace MiNES.PPU
         private byte _spriteTileIndex;
         private bool _flipSpriteVertically;
         private bool _flipSpriteHorizontally;
+        private bool _emptySprite;
 
         public void DrawPixel()
         {
@@ -412,13 +413,13 @@ namespace MiNES.PPU
                 if ((_cycles >= 2 && _cycles <= 257) || (_cycles >= 322 && _cycles <= 337))
                     ShiftBackgroundRegisters();
 
-                if (_cycles >= 2 && _cycles <= 257)
-                    ShiftSpriteRegisters();
-
                 if (_scanline == -1)
                     PreRenderScanline();
                 else
                     RenderScanlines();
+
+                if (_scanline > 0 && _cycles >= 1 && _cycles <= 257)
+                    ShiftSpriteRegisters();
 
                 // Background rendering process
                 if ((_cycles >= 1 && _cycles <= 256) || (_cycles >= 321 && _cycles <= 336))
@@ -523,6 +524,7 @@ namespace MiNES.PPU
                             // Parse the Y coordinate
                             case 0:
                                 _spriteY = (byte)(_scanline - _oamBuffer[_spriteBufferIndex * 4]);
+                                _emptySprite = _oamBuffer[_spriteBufferIndex * 4] == 0xFF;
                                 break;
                             case 1:
                                 _spriteTileIndex = _oamBuffer[(_spriteBufferIndex * 4) + 1];
@@ -544,38 +546,41 @@ namespace MiNES.PPU
                             case 5:
                                 {
                                     // fetch sprite low tile
-                                    byte lowPlane;
+                                    byte lowPlane = 0;
 
-                                    // 8 x 16 sprites
-                                    if (ControlRegister.SpriteSize)
+                                    if (!_emptySprite)
                                     {
-                                        ushort patternTableAddress = (ushort)(_spriteTileIndex.GetBit(0) ? 0x1000 : 0);
-                                        byte spriteId = (byte)(_spriteTileIndex & 0xFE);
-                                        var y = _flipSpriteVertically ? (15 - _spriteY) : _spriteY;
-
-                                        // top half
-                                        if (y < 8)
+                                        // 8 x 16 sprites
+                                        if (ControlRegister.SpriteSize)
                                         {
-                                            lowPlane = _ppuBus.Read((ushort)(patternTableAddress + (spriteId * 16) + y));
+                                            ushort patternTableAddress = (ushort)(_spriteTileIndex.GetBit(0) ? 0x1000 : 0);
+                                            byte spriteId = (byte)(_spriteTileIndex & 0xFE);
+                                            var y = _flipSpriteVertically ? (15 - _spriteY) : _spriteY;
 
-                                        } // bottom half
+                                            // top half
+                                            if (y < 8)
+                                            {
+                                                lowPlane = _ppuBus.Read((ushort)(patternTableAddress + (spriteId * 16) + y));
+
+                                            } // bottom half
+                                            else
+                                            {
+                                                spriteId++; // bottom half tile is next to the top half tile in the pattern table
+                                                lowPlane = _ppuBus.Read((ushort)(patternTableAddress + (spriteId * 16) + (y - 8)));
+                                            }
+
+                                        } // 8 x 8 sprites
                                         else
                                         {
-                                            spriteId++; // bottom half tile is next to the top half tile in the pattern table
-                                            lowPlane = _ppuBus.Read((ushort)(patternTableAddress + (spriteId * 16) + (y - 8)));
+                                            ushort patternTableAddress = (ushort)(ControlRegister.SpritesPatternTableAddress ? 0x1000 : 0);
+                                            var flipOffset = _flipSpriteVertically ? (7 - _spriteY) : _spriteY;
+
+                                            lowPlane = _ppuBus.Read((ushort)(patternTableAddress + (_spriteTileIndex * 16) + flipOffset));
                                         }
 
-                                    } // 8 x 8 sprites
-                                    else
-                                    {
-                                        ushort patternTableAddress = (ushort)(ControlRegister.SpritesPatternTableAddress ? 0x1000 : 0);
-                                        var flipOffset = _flipSpriteVertically ? (7 - _spriteY) : _spriteY;
-
-                                        lowPlane = _ppuBus.Read((ushort)(patternTableAddress + (_spriteTileIndex * 16) + flipOffset));
+                                        if (_flipSpriteHorizontally)
+                                            lowPlane.MirrorBits();
                                     }
-
-                                    if (_flipSpriteHorizontally)
-                                        lowPlane.MirrorBits();
 
                                     _spriteLowPlaneTiles[_spriteBufferIndex] = lowPlane;
                                 }
@@ -583,38 +588,41 @@ namespace MiNES.PPU
                             case 7:
                                 {
                                     // fetch sprite high tile
-                                    byte highPlane;
+                                    byte highPlane = 0;
 
-                                    // 8 x 16 sprites
-                                    if (ControlRegister.SpriteSize)
+                                    if (!_emptySprite)
                                     {
-                                        ushort patternTableAddress = (ushort)(_spriteTileIndex.GetBit(0) ? 0x1000 : 0);
-                                        byte spriteId = (byte)(_spriteTileIndex & 0xFE);
-                                        var y = _flipSpriteVertically ? (15 - _spriteY) : _spriteY;
-
-                                        // top half
-                                        if (y < 8)
+                                        // 8 x 16 sprites
+                                        if (ControlRegister.SpriteSize)
                                         {
-                                            highPlane = _ppuBus.Read((ushort)(patternTableAddress + (spriteId * 16) + y + 8));
+                                            ushort patternTableAddress = (ushort)(_spriteTileIndex.GetBit(0) ? 0x1000 : 0);
+                                            byte spriteId = (byte)(_spriteTileIndex & 0xFE);
+                                            var y = _flipSpriteVertically ? (15 - _spriteY) : _spriteY;
 
-                                        } // bottom half
+                                            // top half
+                                            if (y < 8)
+                                            {
+                                                highPlane = _ppuBus.Read((ushort)(patternTableAddress + (spriteId * 16) + y + 8));
+
+                                            } // bottom half
+                                            else
+                                            {
+                                                spriteId++; // bottom half tile is next to the top half tile in the pattern table
+                                                highPlane = _ppuBus.Read((ushort)(patternTableAddress + (spriteId * 16) + (y - 8) + 8));
+                                            }
+
+                                        } // 8 x 8 sprites
                                         else
                                         {
-                                            spriteId++; // bottom half tile is next to the top half tile in the pattern table
-                                            highPlane = _ppuBus.Read((ushort)(patternTableAddress + (spriteId * 16) + (y - 8) + 8));
+                                            ushort patternTableAddress = (ushort)(ControlRegister.SpritesPatternTableAddress ? 0x1000 : 0);
+                                            var flipOffset = _flipSpriteVertically ? (7 - _spriteY) : _spriteY;
+
+                                            highPlane = _ppuBus.Read((ushort)(patternTableAddress + (_spriteTileIndex * 16) + flipOffset + 8));
                                         }
 
-                                    } // 8 x 8 sprites
-                                    else
-                                    {
-                                        ushort patternTableAddress = (ushort)(ControlRegister.SpritesPatternTableAddress ? 0x1000 : 0);
-                                        var flipOffset = _flipSpriteVertically ? (7 - _spriteY) : _spriteY;
-
-                                        highPlane = _ppuBus.Read((ushort)(patternTableAddress + (_spriteTileIndex * 16) + flipOffset + 8));
+                                        if (_flipSpriteHorizontally)
+                                            highPlane.MirrorBits();
                                     }
-
-                                    if (_flipSpriteHorizontally)
-                                        highPlane.MirrorBits();
 
                                     _spriteHighPlaneTiles[_spriteBufferIndex] = highPlane;
 
@@ -904,7 +912,7 @@ namespace MiNES.PPU
                         if (spritePixel != 0)
                         {
                             // When the pixel of the sprite 0 is opaque, we must set the flag of sprite zero hit
-                            if (i == 0)
+                            if (i == 0 && backgroundPixel != 0)
                                 StatusRegister.SpriteZeroHit = true;
 
                             break;
