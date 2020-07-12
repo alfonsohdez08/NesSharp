@@ -93,40 +93,45 @@ namespace MiNES.PPU
         /// <summary>
         /// The PPU OAM (it's 256 bytes long, capable of store 64 sprites, sprite data is 4 bytes long).
         /// </summary>
-        private readonly byte[] _oam = new byte[256];
+        private byte[] _oam = new byte[256];
 
         private readonly byte[] _oamBuffer = new byte[32];
 
         public byte OamCpuPage { get; set; }
         public bool DmaTriggered { get; set; }
 
+        public void SetOam(byte[] oam)
+        {
+            _oam = oam;
+        }
+
         public void SetOamData(byte data)
         {
             //// Only writes to OAM Data port when rendering is disabled
-            //if (!_isRenderingEnabled)
-            //{
-            //    /*  When Oam Address is divisible by 4, it means we attempting to write the position of the sprite in Y axis, so we must substract 1 from it because
-            //     *  delayed scanline.
-            //     */
-            //    //int val = OamAddress % 4 == 0 ? data - 1 : data;
-            //    //_oam[OamAddress] = (byte)val;
-            //    _oam[OamAddress] = data;
+            if (!_isRenderingEnabled)
+            {
+                /*  When Oam Address is divisible by 4, it means we attempting to write the position of the sprite in Y axis, so we must substract 1 from it because
+                 *  delayed scanline.
+                 */
+                //int val = OamAddress % 4 == 0 ? data - 1 : data;
+                //_oam[OamAddress] = (byte)val;
+                _oam[OamAddress] = data;
 
-            //    // OAM address gets incremented by one when data is written
-            //    OamAddress++;
-            //}
+                // OAM address gets incremented by one when data is written
+                OamAddress++;
+            }
 
-            // TODO: confirm this: writes to OAM data port occurs when rendering is disabled
+            //// TODO: confirm this: writes to OAM data port occurs when rendering is disabled
 
-            /*  When Oam Address is divisible by 4, it means we attempting to write the position of the sprite in Y axis, so we must substract 1 from it because
-             *  delayed scanline.
-             */
-            //int val = OamAddress % 4 == 0 ? data - 1 : data;
-            //_oam[OamAddress] = (byte)val;
-            _oam[OamAddress] = data;
+            ///*  When Oam Address is divisible by 4, it means we attempting to write the position of the sprite in Y axis, so we must substract 1 from it because
+            // *  delayed scanline.
+            // */
+            ////int val = OamAddress % 4 == 0 ? data - 1 : data;
+            ////_oam[OamAddress] = (byte)val;
+            //_oam[OamAddress] = data;
 
-            // OAM address gets incremented by one when data is written
-            OamAddress++;
+            //// OAM address gets incremented by one when data is written
+            //OamAddress++;
         }
 
         public byte GetOamData()
@@ -405,7 +410,10 @@ namespace MiNES.PPU
             {
                 // Update shift registers by shifting one position to the left
                 if ((_cycles >= 2 && _cycles <= 257) || (_cycles >= 322 && _cycles <= 337))
-                    ShiftRegisters();
+                    ShiftBackgroundRegisters();
+
+                if (_cycles >= 2 && _cycles <= 257)
+                    ShiftSpriteRegisters();
 
                 if (_scanline == -1)
                     PreRenderScanline();
@@ -429,9 +437,7 @@ namespace MiNES.PPU
                             break;
                         case 1:
                             // Load shift registers
-                            {
-                                LoadShiftRegisters();
-                            }
+                                LoadBackgroundShiftRegisters();
                             break;
                         // Fetch nametable byte
                         case 2:
@@ -617,7 +623,6 @@ namespace MiNES.PPU
                                 break;
                         }
                     }
-
                 }
 
                 // Increments the horizontal component in the V register
@@ -681,15 +686,37 @@ namespace MiNES.PPU
             return _scanline >= y && _scanline < (y + spriteHeight);
         }
 
-        private void ShiftRegisters()
+        private void ShiftBackgroundRegisters()
         {
-            _lowBackgroundShiftRegister <<= 1;
-            _highBackgroundShiftRegister <<= 1;
-            _lowAttributeShiftRegister <<= 1;
-            _highAttributeShiftRegister <<= 1;
+            if (Mask.RenderBackground)
+            {
+                _lowBackgroundShiftRegister <<= 1;
+                _highBackgroundShiftRegister <<= 1;
+                _lowAttributeShiftRegister <<= 1;
+                _highAttributeShiftRegister <<= 1;
+            }
         }
 
-        private void LoadShiftRegisters()
+        private void ShiftSpriteRegisters()
+        {
+            if (Mask.RenderSprites)
+            {
+                for (int i = 0; i < _spriteXCounters.Length; i++)
+                {
+                    if (_spriteXCounters[i] > 0)
+                    {
+                        _spriteXCounters[i]--;
+                    }
+                    else
+                    {
+                        _spriteLowPlaneTiles[i] <<= 1;
+                        _spriteHighPlaneTiles[i] <<= 1;
+                    }
+                }
+            }
+        }
+
+        private void LoadBackgroundShiftRegisters()
         {
             /*Note: When jumping to next scanline, in the first cycle i reload the low byte of all registers
              * with the data that i already had in the latches from the last "useful" 8 cycles of previous scanline (remember that
@@ -823,6 +850,7 @@ namespace MiNES.PPU
             if (_cycles == 1)
             {
                 StatusRegister.SpriteOverflow = false;
+                StatusRegister.SpriteZeroHit = false;
                 StatusRegister.VerticalBlank = false;
             }
             else if (_isRenderingEnabled && _cycles >= 280 && _cycles <= 304)
@@ -835,25 +863,62 @@ namespace MiNES.PPU
         {
             if (_cycles < 1 || _cycles > 256)
                 return;
+            
+            // When a pixel equals 0, it means the pixel is transparent. When pixel is different than 0, then pixel is opaque
+            byte backgroundPixel = 0;
+            byte backgroundPalette = 0;
 
-            // Multiplexor
-            ushort colorPixelMux = (ushort)(0x8000 >> _fineX);
-            var lsbPixelColorIdx = (_lowBackgroundShiftRegister & colorPixelMux) == colorPixelMux ? 1 : 0;
-            var msbPixelColorIdx = (_highBackgroundShiftRegister & colorPixelMux) == colorPixelMux ? 1 : 0;
+            if (Mask.RenderBackground)
+            {
+                ushort pixelMux = (ushort)(0x8000 >> _fineX);
+                var lsbPixelColorIdx = (_lowBackgroundShiftRegister & pixelMux) == pixelMux ? 1 : 0;
+                var msbPixelColorIdx = (_highBackgroundShiftRegister & pixelMux) == pixelMux ? 1 : 0;
 
-            byte pixelColorIndex = (byte)(lsbPixelColorIdx | (msbPixelColorIdx << 1));
+                backgroundPixel = (byte)(lsbPixelColorIdx | (msbPixelColorIdx << 1));
 
-            var lsbPaletteIdx = (_lowAttributeShiftRegister & colorPixelMux) == colorPixelMux ? 1 : 0;
-            var msbPaletteIdx = (_highAttributeShiftRegister & colorPixelMux) == colorPixelMux ? 1 : 0;
+                var lsbPaletteIdx = (_lowAttributeShiftRegister & pixelMux) == pixelMux ? 1 : 0;
+                var msbPaletteIdx = (_highAttributeShiftRegister & pixelMux) == pixelMux ? 1 : 0;
 
-            byte palette = (byte)((lsbPaletteIdx) | (msbPaletteIdx << 1));
+                backgroundPalette = (byte)((lsbPaletteIdx) | (msbPaletteIdx << 1));
+            }
 
-            Color pixelColor = GetBackgroundColor(palette, pixelColorIndex);
+            byte spritePixel = 0;
+            byte spritePalette = 0;
+            bool spritePriority = false;
 
-            if (!_isRenderingEnabled)
-                pixelColor = Color.Black;
+            if (Mask.RenderSprites)
+            {
+                for (int i = 0; i < _spriteXCounters.Length; i++)
+                {
+                    // If counter equals to 0, then the sprite became active
+                    if (_spriteXCounters[i] == 0)
+                    {
+                        var pixelLowBit = (_spriteLowPlaneTiles[i] & 0x80) == 0x80 ? 1 : 0;
+                        var pixelHighBit = (_spriteHighPlaneTiles[i] & 0x80) == 0x80 ? 1 : 0;
 
-            _frame.SetPixel(_cycles - 1, _scanline, pixelColor);
+                        spritePixel = (byte)((pixelLowBit) | (pixelHighBit << 1));
+                        spritePalette = (byte)((_spriteAttributes[i] & 3) + 4); // Add 4 because the sprite palettes are from 4-7
+                        spritePriority = (_spriteAttributes[i] & 0x20) == 0x20;
+
+                        // Sprite pixel is opaque
+                        if (spritePixel != 0)
+                        {
+                            // When the pixel of the sprite 0 is opaque, we must set the flag of sprite zero hit
+                            if (i == 0)
+                                StatusRegister.SpriteZeroHit = true;
+
+                            break;
+                        }
+                    }
+                }
+            }
+
+            byte pixel = 0;
+            byte palette = 0;
+
+            //if ()
+
+            _frame.SetPixel(_cycles - 1, _scanline, GetPaletteColor(palette, pixel));
         }
 
 
@@ -931,7 +996,13 @@ namespace MiNES.PPU
             return palette;
         }
 
-        private Color GetBackgroundColor(byte palette, byte colorIndex)
+        /// <summary>
+        /// Retrieves the color given the palette and its color entry.
+        /// </summary>
+        /// <param name="palette">The color palette (0-7).</param>
+        /// <param name="colorIndex">The color index (0-4, where 0 means transparent color: background color).</param>
+        /// <returns></returns>
+        private Color GetPaletteColor(byte palette, byte colorIndex)
         {
             //byte paletteColor = _ppuBus.Read((ushort)(0x3F00 + (palette << 2) + colorIndex));
             ushort paletteColorAddress = ParseBackgroundPaletteAddress(palette, colorIndex);

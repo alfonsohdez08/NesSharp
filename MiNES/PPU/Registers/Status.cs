@@ -34,6 +34,19 @@ namespace MiNES.PPU.Registers
             }
         }
 
+        public bool SpriteZeroHit
+        {
+            get => Value.GetBit(6);
+            set
+            {
+                // Workaround
+                byte v = Value;
+
+                v.SetBit(6, value);
+                Value = v;
+            }
+        }
+
         public Status()
         {
             Value = 0xA0;

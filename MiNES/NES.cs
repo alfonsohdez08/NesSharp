@@ -53,10 +53,11 @@ namespace MiNES
                 if (_ppu.DmaTriggered)
                 {
                     byte[] oam = _cpu.GetOam(_ppu.OamCpuPage);
-                    for (int i = 0; i < oam.Length; i++)
-                    {
-                        _ppu.SetOamData(oam[i]);
-                    }
+                    _ppu.SetOam(oam);
+                    //for (int i = 0; i < oam.Length; i++)
+                    //{
+                    //    _ppu.SetOamData(oam[i]);
+                    //}
 
                     // Condition when DMA is requested; if cycles number is odd, add an additional cycle
                     cpuCyclesSpent += (cpuCyclesSpent % 2 == 0 ? 513 : 514);
