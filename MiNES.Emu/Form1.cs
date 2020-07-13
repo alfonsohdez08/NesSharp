@@ -29,6 +29,7 @@ namespace MiNES.Emu
 
         private byte[] vblTestRom = File.ReadAllBytes(Path.Combine(NesRootPath, "vram_access.nes"));
 
+        //private BackgroundWorker _backgroundWorker = new BackgroundWorker();
 
         private object _lockObject = new object();
         private bool _runEmulation = true;
@@ -45,6 +46,27 @@ namespace MiNES.Emu
                 lock (_lockObject)
                 {
                     return _runEmulation;
+                }
+            }
+        }
+
+        private void DrawTileBorders(ref Bitmap frame)
+        {
+            Color color = Color.White;
+
+            for (int y = 0; y < 240; y += 8)
+            {
+                for (int x = 0; x < 256; x++)
+                {
+                    frame.SetPixel(x, y, color);
+                }
+            }
+
+            for (int x = 0; x < 256; x += 8)
+            {
+                for (int y = 0; y < 240; y++)
+                {
+                    frame.SetPixel(x, y, color);
                 }
             }
         }
@@ -86,7 +108,9 @@ namespace MiNES.Emu
                     if (RunEmulation)
                     {
                         //GameScreen.Image = GetDummyBitmap();
-                        GameScreen.Image = nes.Frame();
+                        var frame = nes.Frame();
+                        //DrawTileBorders(ref frame);
+                        GameScreen.Image = frame;
                         _frames++;
 
                         if (_frames % 60 == 0)
@@ -100,7 +124,6 @@ namespace MiNES.Emu
 
                 }
             }, TaskCreationOptions.LongRunning);
-
         }
 
         private void tableLayoutPanel1_Paint(object sender, PaintEventArgs e)

@@ -118,6 +118,7 @@ namespace MiNES.Extensions
         /// <param name="value">The byte that will get mirrored.</param>
         public static void MirrorBits(this ref byte value)
         {
+            //FIXME/TODO: THIS IS WRONG! RESEARCH ABOUT THIS! IT WAS CAUSING WEIRD GLITCHES IN SPRITES
             byte flipped = 1;
 
             // There should be a formula for flip bits within a byte
