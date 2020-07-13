@@ -21,6 +21,13 @@ namespace MiNES.Emu
         private byte[] superMarioBrosRom = File.ReadAllBytes(Path.Combine(NesRootPath, "super_mario_bros.nes"));
         private byte[] nesTestRom = File.ReadAllBytes(Path.Combine(NesRootPath, "nestest.nes"));
         private byte[] iceClimbersRom = File.ReadAllBytes(Path.Combine(NesRootPath, "ice_climbers.nes"));
+        private byte[] scanlineTestRom = File.ReadAllBytes(Path.Combine(NesRootPath, "scanline_a1.nes"));
+
+        private byte[] spriteRamTestRom = File.ReadAllBytes(Path.Combine(NesRootPath, "sprite_ram.nes"));
+
+        private byte[] vramTestRom = File.ReadAllBytes(Path.Combine(NesRootPath, "vbl_clear_time.nes"));
+
+        private byte[] vblTestRom = File.ReadAllBytes(Path.Combine(NesRootPath, "vram_access.nes"));
 
 
         private object _lockObject = new object();
@@ -50,6 +57,14 @@ namespace MiNES.Emu
             //nes = new NES(superMarioBrosRom);
             //nes = new NES(nesTestRom);
             //nes = new NES(iceClimbersRom);
+            //nes = new NES(scanlineTestRom);
+
+            //nes = new NES(spriteRamTestRom);
+
+            //nes = new NES(vramTestRom);
+
+            //nes = new NES(vblTestRom);
+
 
             //EnableEmulation.Checked = true;
 
@@ -59,7 +74,8 @@ namespace MiNES.Emu
         private void StartEmulation()
         {
             var stopWatch = new Stopwatch();
-
+            // TODO: instead of creating a new object for bitmaps, just use once, and rewrite the pixels (UI thread must do this)
+            // Also, for see that the emulation frame rate is "ok", measure how it takes for execute the frame method 60 times
             Task.Factory.StartNew(() =>
             {
                 while (true)

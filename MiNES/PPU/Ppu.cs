@@ -418,7 +418,7 @@ namespace MiNES.PPU
                 else
                     RenderScanlines();
 
-                if (_scanline > 0 && _cycles >= 1 && _cycles <= 257)
+                if (_cycles >= 1 && _cycles <= 257)
                     ShiftSpriteRegisters();
 
                 // Background rendering process
@@ -565,8 +565,8 @@ namespace MiNES.PPU
                                             } // bottom half
                                             else
                                             {
-                                                spriteId++; // bottom half tile is next to the top half tile in the pattern table
-                                                lowPlane = _ppuBus.Read((ushort)(patternTableAddress + (spriteId * 16) + (y - 8)));
+                                                //spriteId++; // bottom half tile is next to the top half tile in the pattern table
+                                                lowPlane = _ppuBus.Read((ushort)(patternTableAddress + ((spriteId + 1) * 16) + (y - 8)));
                                             }
 
                                         } // 8 x 8 sprites
@@ -607,8 +607,8 @@ namespace MiNES.PPU
                                             } // bottom half
                                             else
                                             {
-                                                spriteId++; // bottom half tile is next to the top half tile in the pattern table
-                                                highPlane = _ppuBus.Read((ushort)(patternTableAddress + (spriteId * 16) + (y - 8) + 8));
+                                                //spriteId++; // bottom half tile is next to the top half tile in the pattern table
+                                                highPlane = _ppuBus.Read((ushort)(patternTableAddress + ((spriteId + 1) * 16) + (y - 8) + 8));
                                             }
 
                                         } // 8 x 8 sprites
@@ -860,6 +860,12 @@ namespace MiNES.PPU
                 StatusRegister.SpriteOverflow = false;
                 StatusRegister.SpriteZeroHit = false;
                 StatusRegister.VerticalBlank = false;
+
+                for (int i = 0; i < _spriteHighPlaneTiles.Length; i++)
+                {
+                    _spriteHighPlaneTiles[i] = 0;
+                    _spriteLowPlaneTiles[i] = 0;
+                }
             }
             else if (_isRenderingEnabled && _cycles >= 280 && _cycles <= 304)
             {
@@ -911,9 +917,9 @@ namespace MiNES.PPU
                         // Sprite pixel is opaque
                         if (spritePixel != 0)
                         {
-                            // When the pixel of the sprite 0 is opaque, we must set the flag of sprite zero hit
-                            if (i == 0 && backgroundPixel != 0)
-                                StatusRegister.SpriteZeroHit = true;
+                            //// When the pixel of the sprite 0 is opaque, we must set the flag of sprite zero hit
+                            //if (i == 0 && backgroundPixel != 0)
+                            //    StatusRegister.SpriteZeroHit = true;
 
                             break;
                         }
@@ -946,6 +952,8 @@ namespace MiNES.PPU
                     pixel = spritePixel;
                     palette = spritePalette;
                 }
+
+                // TODO: see how to deal with sprite zero hit flag
             }
 
             _frame.SetPixel(_cycles - 1, _scanline, GetPaletteColor(palette, pixel));
