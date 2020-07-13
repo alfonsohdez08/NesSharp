@@ -303,8 +303,8 @@ namespace MiNES.CPU
             TestLineResult = $"{instructionAddress.ToString("X").PadLeft(4, '0')} {instructionHexDump.PadRight(10, ' ')}{registersSnapshot}";
             _instructionHex.Clear();
 #else
-            string instructionDissasembled = ParseInstruction(instruction);
-            Console.WriteLine($"{instructionAddress.ToString("X").PadLeft(4, '0')}: {instructionDissasembled}");
+            //string instructionDissasembled = ParseInstruction(instruction);
+            //Console.WriteLine($"{instructionAddress.ToString("X").PadLeft(4, '0')}: {instructionDissasembled}");
 #endif
 
             // Executes the instruction based on its mnemonic code
