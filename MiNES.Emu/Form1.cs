@@ -52,7 +52,7 @@ namespace MiNES.Emu
 
         private void DrawTileBorders(ref Bitmap frame)
         {
-            Color color = Color.LightGreen;
+            Color color = Color.White;
 
             for (int y = 0; y < 240; y += 8)
             {
@@ -76,7 +76,7 @@ namespace MiNES.Emu
             InitializeComponent();
 
             //nes = new NES(donkeyKongRom);
-            nes = new NES(superMarioBrosRom);
+            //nes = new NES(superMarioBrosRom);
             //nes = new NES(nesTestRom);
             //nes = new NES(iceClimbersRom);
             //nes = new NES(scanlineTestRom);

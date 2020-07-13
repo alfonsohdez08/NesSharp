@@ -108,30 +108,30 @@ namespace MiNES.PPU
         public void SetOamData(byte data)
         {
             //// Only writes to OAM Data port when rendering is disabled
-            if (!_isRenderingEnabled)
-            {
-                /*  When Oam Address is divisible by 4, it means we attempting to write the position of the sprite in Y axis, so we must substract 1 from it because
-                 *  delayed scanline.
-                 */
-                //int val = OamAddress % 4 == 0 ? data - 1 : data;
-                //_oam[OamAddress] = (byte)val;
-                _oam[OamAddress] = data;
+            //if (!_isRenderingEnabled)
+            //{
+            //    /*  When Oam Address is divisible by 4, it means we attempting to write the position of the sprite in Y axis, so we must substract 1 from it because
+            //     *  delayed scanline.
+            //     */
+            //    //int val = OamAddress % 4 == 0 ? data - 1 : data;
+            //    //_oam[OamAddress] = (byte)val;
+            //    _oam[OamAddress] = data;
 
-                // OAM address gets incremented by one when data is written
-                OamAddress++;
-            }
+            //    // OAM address gets incremented by one when data is written
+            //    OamAddress++;
+            //}
 
-            //// TODO: confirm this: writes to OAM data port occurs when rendering is disabled
+            // TODO: confirm this: writes to OAM data port occurs when rendering is disabled
 
-            ///*  When Oam Address is divisible by 4, it means we attempting to write the position of the sprite in Y axis, so we must substract 1 from it because
-            // *  delayed scanline.
-            // */
-            ////int val = OamAddress % 4 == 0 ? data - 1 : data;
-            ////_oam[OamAddress] = (byte)val;
-            //_oam[OamAddress] = data;
+            /*  When Oam Address is divisible by 4, it means we attempting to write the position of the sprite in Y axis, so we must substract 1 from it because
+             *  delayed scanline.
+             */
+            //int val = OamAddress % 4 == 0 ? data - 1 : data;
+            //_oam[OamAddress] = (byte)val;
+            _oam[OamAddress] = data;
 
-            //// OAM address gets incremented by one when data is written
-            //OamAddress++;
+            // OAM address gets incremented by one when data is written
+            OamAddress++;
         }
 
         public byte GetOamData()
@@ -579,7 +579,11 @@ namespace MiNES.PPU
                                         }
 
                                         if (_flipSpriteHorizontally)
-                                            lowPlane.MirrorBits();
+                                        {
+                                            lowPlane = Flip(lowPlane);
+
+                                            //lowPlane.MirrorBits();
+                                        }
                                     }
 
                                     _spriteLowPlaneTiles[_spriteBufferIndex] = lowPlane;
@@ -621,7 +625,11 @@ namespace MiNES.PPU
                                         }
 
                                         if (_flipSpriteHorizontally)
-                                            highPlane.MirrorBits();
+                                        {
+                                            highPlane = Flip(highPlane);
+
+                                            //highPlane.MirrorBits();
+                                        }
                                     }
 
                                     _spriteHighPlaneTiles[_spriteBufferIndex] = highPlane;
@@ -680,6 +688,17 @@ namespace MiNES.PPU
                 }
             }
 
+        }
+
+        private static byte Flip(byte _b)
+        {
+            int b = _b;
+
+            b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
+            b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
+            b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
+
+            return (byte)b;
         }
 
         /// <summary>
@@ -918,8 +937,8 @@ namespace MiNES.PPU
                         if (spritePixel != 0)
                         {
                             //// When the pixel of the sprite 0 is opaque, we must set the flag of sprite zero hit
-                            //if (i == 0 && backgroundPixel != 0)
-                            //    StatusRegister.SpriteZeroHit = true;
+                            if (i == 0 && backgroundPixel != 0)
+                                StatusRegister.SpriteZeroHit = true;
 
                             break;
                         }
