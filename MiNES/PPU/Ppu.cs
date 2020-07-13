@@ -1,17 +1,17 @@
 ﻿using MiNES.Extensions;
 using MiNES.PPU.Registers;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
-using System.Xml;
 
 namespace MiNES.PPU
 {
     public class Ppu
-    {
+    {        
+        /// <summary>
+        /// Count how many frames has been rendered so far.
+        /// </summary>
+        public int Frames { get; private set; } = 0;
+
         private readonly PpuBus _ppuBus;
 
         private int _fineX;
@@ -49,11 +49,6 @@ namespace MiNES.PPU
         private byte _lowPixelsRow;
         private byte _highPixelsRow;
         private bool _isRenderingEnabled => Mask.RenderBackground || Mask.RenderSprites;
-
-        /// <summary>
-        /// Count how many frames has been rendered.
-        /// </summary>
-        private byte _framesRendered = 1;
 
         public Bitmap FrameBuffer { get; private set; }
 
@@ -97,9 +92,6 @@ namespace MiNES.PPU
 
         private readonly byte[] _oamBuffer = new byte[32];
 
-        public byte OamCpuPage { get; set; }
-        public bool DmaTriggered { get; set; }
-
         public void SetOam(byte[] oam)
         {
             _oam = oam;
@@ -120,8 +112,6 @@ namespace MiNES.PPU
             //    // OAM address gets incremented by one when data is written
             //    OamAddress++;
             //}
-
-            // TODO: confirm this: writes to OAM data port occurs when rendering is disabled
 
             /*  When Oam Address is divisible by 4, it means we attempting to write the position of the sprite in Y axis, so we must substract 1 from it because
              *  delayed scanline.
@@ -397,6 +387,14 @@ namespace MiNES.PPU
         private bool _flipSpriteHorizontally;
         private bool _emptySprite;
 
+        /// <summary>
+        /// Denotes whether frame being rendered is odd or not.
+        /// </summary>
+        /// <remarks>
+        /// Initially would be false because frame 0 would be the first frame to render.
+        /// </remarks>
+        private bool _isOddFrame = false;
+
         public void DrawPixel()
         {
             // Cycle 0 does not do anything (it's idle)
@@ -424,7 +422,8 @@ namespace MiNES.PPU
                 // Background rendering process
                 if ((_cycles >= 1 && _cycles <= 256) || (_cycles >= 321 && _cycles <= 336))
                 {
-                    var stage = _cycles % 8;
+                    //var stage = _cycles % 8;
+                    var stage = _cycles & 7;
                     switch (stage)
                     {
                         // Load high background pattern table byte
@@ -489,6 +488,7 @@ namespace MiNES.PPU
                             var currentSpriteYPos = _oam[(OamAddress / 4) * 4];
                             bool isSpriteInRange = IsSpriteInRange(currentSpriteYPos);
 
+                            // TODO: check this logic
                             if (_spritesInBuffer < 8)
                             {
                                 _oamBuffer[_oamBufferIndex] = _oamLatch;
@@ -518,7 +518,8 @@ namespace MiNES.PPU
                         }
                     }else if (_cycles >= 257 && _cycles <= 320)
                     {
-                        var stage = (_cycles - 1) % 8;
+                        //var stage = (_cycles - 1) % 8;
+                        var stage = (_cycles - 1) & 7;
                         switch (stage)
                         {
                             // Parse the Y coordinate
@@ -663,7 +664,7 @@ namespace MiNES.PPU
                 VerticalBlankScanlines();
 
             _cycles++;
-            if (_cycles >= 341)
+            if (_cycles >= 341 || (_cycles >= 340 && _scanline == -1 && _isOddFrame)) // When is an odd frame and we are in pre render scanline, the scanline is 340 cycles long
             {
                 _cycles = 0;
                 
@@ -678,9 +679,8 @@ namespace MiNES.PPU
                 else
                 {
                     _scanline = -1;
-                    _framesRendered++;
-                    //if (_framesRendered > 60)
-                    //    _framesRendered = 1;
+                    Frames++;
+                    _isOddFrame = Frames % 2 != 0;
 
                     IsFrameCompleted = true;
                     FrameBuffer = _frame;

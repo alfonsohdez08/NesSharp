@@ -12,7 +12,7 @@ namespace MiNES
 
         public Ppu Ppu => _ppu;
 
-        private ulong _masterClock;
+        //private ulong _masterClock;
 
         public NES(byte[] gameCartridge)
         {
@@ -49,21 +49,6 @@ namespace MiNES
                 }
 
                 int cpuCyclesSpent = _cpu.Step();
-
-                if (_ppu.DmaTriggered)
-                {
-                    byte[] oam = _cpu.GetOam(_ppu.OamCpuPage);
-                    _ppu.SetOam(oam);
-                    //for (int i = 0; i < oam.Length; i++)
-                    //{
-                    //    _ppu.SetOamData(oam[i]);
-                    //}
-
-                    // Condition when DMA is requested; if cycles number is odd, add an additional cycle
-                    cpuCyclesSpent += (cpuCyclesSpent % 2 == 0 ? 513 : 514);
-                    _ppu.DmaTriggered = false;
-                }
-
                 for (int ppuCycles = 0; ppuCycles < cpuCyclesSpent * 3; ppuCycles++)
                 {
                     _ppu.DrawPixel();

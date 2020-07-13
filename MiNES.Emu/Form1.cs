@@ -128,7 +128,6 @@ namespace MiNES.Emu
 
         private void tableLayoutPanel1_Paint(object sender, PaintEventArgs e)
         {
-            //NametableGrid.Colu
         }
 
         private void ResumeEmulation()

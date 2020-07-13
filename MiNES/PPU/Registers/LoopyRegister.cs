@@ -70,35 +70,5 @@ namespace MiNES.PPU.Registers
                 return addr;
             }
         }
-
-        //public byte NametableX
-        //{
-        //    get => (byte)(Nametable & 1);
-        //    //set
-        //    //{
-        //    //    if (value < 0 || value > 1)
-        //    //        throw new ArgumentOutOfRangeException();
-
-        //    //    byte nametable = Nametable;
-        //    //    nametable = (byte)(((nametable | 1) ^ 1) | value);
-
-        //    //    Nametable = nametable;
-        //    //}
-        //}
-
-        //public byte NametableY
-        //{
-        //    get => (byte)(Nametable & 2);
-        //    //set
-        //    //{
-        //    //    if (value < 0 || value > 1)
-        //    //        throw new ArgumentOutOfRangeException();
-
-        //    //    byte nametable = Nametable;
-        //    //    nametable = (byte)(((nametable | 2) ^ 2) | value);
-
-        //    //    Nametable = nametable;
-        //    //}
-        //}
     }
 }
