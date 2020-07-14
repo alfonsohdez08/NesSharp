@@ -1,4 +1,5 @@
 ﻿using MiNES.Emu.Debugger;
+using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -115,6 +116,8 @@ namespace MiNES.Emu
 
                         if (_frames % 60 == 0)
                         {
+                            // It seems creating a Bitmap object and drawing on it it's costly... I commented them, and my running time went from an average of 3.5 seconds 
+                            // to a 1.5 seconds... use an array instead of a bitmap, and let someone else take care of the draw!
                             stopWatch.Stop();
                             var seconds = stopWatch.ElapsedMilliseconds/1000;
                             stopWatch.Reset();
