@@ -38,7 +38,7 @@ namespace MiNES
                 // Finish the ppu cycles leftover
                 while(_ppuCyclesLeftover > 0)
                 {
-                    _ppu.Step();
+                    _ppu.DrawPixel();
                     _ppuCyclesLeftover--;
                 }
 
@@ -51,7 +51,7 @@ namespace MiNES
                 int cpuCyclesSpent = _cpu.Step();
                 for (int ppuCycles = 0; ppuCycles < cpuCyclesSpent * 3; ppuCycles++)
                 {
-                    _ppu.Step();
+                    _ppu.DrawPixel();
                     if(_ppu.FrameBuffer != null)
                     {
                         _ppuCyclesLeftover = (cpuCyclesSpent * 3) - ppuCycles; // Is this substraction accurate?
