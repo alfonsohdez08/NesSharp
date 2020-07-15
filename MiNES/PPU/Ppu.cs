@@ -88,48 +88,19 @@ namespace MiNES.PPU
         /// <summary>
         /// The PPU OAM (it's 256 bytes long, capable of store 64 sprites, sprite data is 4 bytes long).
         /// </summary>
-        private byte[] _oam = new byte[256];
+        private readonly byte[] _oam = new byte[256];
 
         private readonly byte[] _oamBuffer = new byte[32];
 
-        public void SetOam(byte[] oam)
-        {
-            _oam = oam;
-        }
-
         public void SetOamData(byte data)
         {
-            //// Only writes to OAM Data port when rendering is disabled
-            //if (!_isRenderingEnabled)
-            //{
-            //    /*  When Oam Address is divisible by 4, it means we attempting to write the position of the sprite in Y axis, so we must substract 1 from it because
-            //     *  delayed scanline.
-            //     */
-            //    //int val = OamAddress % 4 == 0 ? data - 1 : data;
-            //    //_oam[OamAddress] = (byte)val;
-            //    _oam[OamAddress] = data;
-
-            //    // OAM address gets incremented by one when data is written
-            //    OamAddress++;
-            //}
-
-            /*  When Oam Address is divisible by 4, it means we attempting to write the position of the sprite in Y axis, so we must substract 1 from it because
-             *  delayed scanline.
-             */
-            //int val = OamAddress % 4 == 0 ? data - 1 : data;
-            //_oam[OamAddress] = (byte)val;
             _oam[OamAddress] = data;
 
             // OAM address gets incremented by one when data is written
             OamAddress++;
         }
 
-        public byte GetOamData()
-        {
-            // TODO: does a read during pre render and render scanlines increment the oam adddress?
-
-            return _oam[OamAddress];
-        }
+        public byte GetOamData() => _oam[OamAddress];
 
         private byte _dataBuffer = 0;
 
@@ -371,10 +342,6 @@ namespace MiNES.PPU
                 V.Value++;
         }
 
-        private byte _oamLatch;
-        private byte _oamBufferIndex;
-        private byte _spritesInBuffer;
-
         private byte[] _spriteXCounters = new byte[8];
         private byte[] _spriteAttributes = new byte[8];
         private byte[] _spriteLowPlaneTiles = new byte[8];
@@ -385,7 +352,7 @@ namespace MiNES.PPU
         private byte _spriteTileIndex;
         private bool _flipSpriteVertically;
         private bool _flipSpriteHorizontally;
-        private bool _emptySprite;
+        private bool _isEmptySprite;
 
         /// <summary>
         /// Denotes whether frame being rendered is odd or not.
@@ -477,38 +444,33 @@ namespace MiNES.PPU
                     }
                     else if (_cycles > 64 && _cycles <= 256)
                     {
-                        // Read mode (odd cycles)
-                        if (_cycles % 2 != 0)
+                        // Fill the secondary oam buffer at once
+                        if (_cycles == 256)
                         {
-                            _oamLatch = _oam[OamAddress];
-                        }
-                        // Write mode (even cycles)
-                        else
-                        {
-                            var currentSpriteYPos = _oam[(OamAddress / 4) * 4];
-                            bool isSpriteInRange = IsSpriteInRange(currentSpriteYPos);
+                            int bufferIndex = 0;
+                            int spritesBuffered = 0;
 
-                            if (_spritesInBuffer < 8)
-                                _oamBuffer[_oamBufferIndex] = _oamLatch;
-                            else if (isSpriteInRange && !StatusRegister.SpriteOverflow)
-                                StatusRegister.SpriteOverflow = true;
-
-                            if (isSpriteInRange && _oamBufferIndex < 32)
+                            for (int n = 0; n < _oam.Length; n += 4)
                             {
-                                OamAddress++;
-                                _oamBufferIndex++;
-                            }
-                            else
-                            {
-                                OamAddress += 4;
-                            }
+                                byte spriteYPos = _oam[n];
+                                if (IsSpriteInRange(spriteYPos))
+                                {
+                                    if (spritesBuffered < 8)
+                                    {
+                                        _oamBuffer[bufferIndex] = spriteYPos;
+                                        _oamBuffer[bufferIndex + 1] = _oam[n + 1];
+                                        _oamBuffer[bufferIndex + 2] = _oam[n + 2];
+                                        _oamBuffer[bufferIndex + 3] = _oam[n + 3];
 
-                            _spritesInBuffer = (byte)(_oamBufferIndex / 4);
-
-                            //// Workaround for set empty sprite slots to $FF (what's the difference letting the flow set the entries to $FF rather than doing this?)
-                            if (_cycles == 256)
-                                for (int i = _spritesInBuffer * 4; i < _oamBuffer.Length; i++)
-                                    _oamBuffer[i] = 0xFF;
+                                        bufferIndex += 4;
+                                        spritesBuffered++;
+                                    }
+                                    else if (!StatusRegister.SpriteOverflow) // An overflow has ocurred then!
+                                    {
+                                        StatusRegister.SpriteOverflow = true;
+                                    }
+                                }
+                            }
                         }
                     }else if (_cycles >= 257 && _cycles <= 320)
                     {
@@ -519,7 +481,7 @@ namespace MiNES.PPU
                             // Parse the Y coordinate
                             case 0:
                                 _spriteY = (byte)(_scanline - _oamBuffer[_spriteBufferIndex * 4]);
-                                _emptySprite = _oamBuffer[_spriteBufferIndex * 4] == 0xFF;
+                                _isEmptySprite = _oamBuffer[_spriteBufferIndex * 4] == 0xFF;
                                 break;
                             case 1:
                                 _spriteTileIndex = _oamBuffer[(_spriteBufferIndex * 4) + 1];
@@ -543,7 +505,7 @@ namespace MiNES.PPU
                                     // fetch sprite low tile
                                     byte lowPlane = 0;
 
-                                    if (!_emptySprite)
+                                    if (!_isEmptySprite)
                                     {
                                         // 8 x 16 sprites
                                         if (ControlRegister.SpriteSize)
@@ -589,7 +551,7 @@ namespace MiNES.PPU
                                     // fetch sprite high tile
                                     byte highPlane = 0;
 
-                                    if (!_emptySprite)
+                                    if (!_isEmptySprite)
                                     {
                                         // 8 x 16 sprites
                                         if (ControlRegister.SpriteSize)
@@ -661,9 +623,6 @@ namespace MiNES.PPU
             if (_cycles >= 341 || (_cycles >= 340 && _scanline == -1 && _isOddFrame)) // When is an odd frame and we are in pre render scanline, the scanline is 340 cycles long
             {
                 _cycles = 0;
-                
-                _oamBufferIndex = 0;
-                _spritesInBuffer = 0;
                 _spriteBufferIndex = 0;
 
                 if (_scanline < 260)
@@ -930,7 +889,7 @@ namespace MiNES.PPU
                         // Sprite pixel is opaque
                         if (spritePixel != 0)
                         {
-                            //// When the pixel of the sprite 0 is opaque, we must set the flag of sprite zero hit
+                            // When the pixel of the sprite 0 is opaque, we must set the flag of sprite zero hit
                             if (i == 0 && backgroundPixel != 0)
                                 StatusRegister.SpriteZeroHit = true;
 
