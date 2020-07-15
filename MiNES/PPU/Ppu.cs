@@ -488,30 +488,24 @@ namespace MiNES.PPU
                             var currentSpriteYPos = _oam[(OamAddress / 4) * 4];
                             bool isSpriteInRange = IsSpriteInRange(currentSpriteYPos);
 
-                            // TODO: check this logic
                             if (_spritesInBuffer < 8)
-                            {
                                 _oamBuffer[_oamBufferIndex] = _oamLatch;
-                            }
-                            else if (!StatusRegister.SpriteOverflow)
-                            {
-                                if (isSpriteInRange)
-                                    StatusRegister.SpriteOverflow = true;
-                            }
+                            else if (isSpriteInRange && !StatusRegister.SpriteOverflow)
+                                StatusRegister.SpriteOverflow = true;
 
-                            if (isSpriteInRange && !StatusRegister.SpriteOverflow)
+                            if (isSpriteInRange && _oamBufferIndex < 32)
                             {
                                 OamAddress++;
                                 _oamBufferIndex++;
-
-                                _spritesInBuffer = (byte)(_oamBufferIndex / 4);
                             }
                             else
                             {
                                 OamAddress += 4;
                             }
 
-                            // Workaround for set empty sprite slots to $FF
+                            _spritesInBuffer = (byte)(_oamBufferIndex / 4);
+
+                            //// Workaround for set empty sprite slots to $FF (what's the difference letting the flow set the entries to $FF rather than doing this?)
                             if (_cycles == 256)
                                 for (int i = _spritesInBuffer * 4; i < _oamBuffer.Length; i++)
                                     _oamBuffer[i] = 0xFF;
