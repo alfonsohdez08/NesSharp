@@ -10,17 +10,28 @@ namespace MiNES.PPU.Registers
     /// </summary>
     class Control: Register<byte>
     {
-        public byte BaseNametableAddress => (byte)((Value.GetBit(0) ? 1 : 0) | ((Value.GetBit(1) ? 1 : 0) << 1));
+        public byte BaseNametableAddress => (byte)((RegisterValue.GetBit(0) ? 1 : 0) | ((RegisterValue.GetBit(1) ? 1 : 0) << 1));
 
-        public bool VRamAddressIncrement => Value.GetBit(2);
+        public bool VRamAddressIncrement { get; private set; }
+        public int SpritesPatternTableBaseAddress { get; private set; }
+        public int BackgroundPatternTableBaseAddress { get; private set; }
+        public bool GenerateNmi { get; private set; }
+        public bool SpriteSize { get; private set; }
 
-        public bool SpritesPatternTableAddress => Value.GetBit(3);
+        public override byte RegisterValue
+        { 
+            get => base.RegisterValue;
+            set
+            {
+                VRamAddressIncrement = value.GetBit(2);
+                SpritesPatternTableBaseAddress = value.GetBit(3) ? 0x1000 : 0;
+                BackgroundPatternTableBaseAddress = value.GetBit(4) ? 0x1000 : 0;
+                SpriteSize = value.GetBit(5);
+                GenerateNmi = value.GetBit(7);
 
-        public bool BackgroundPatternTableAddress => Value.GetBit(4);
-
-        public bool GenerateNMI => Value.GetBit(7);
-
-        public bool SpriteSize => Value.GetBit(5);
+                base.RegisterValue = value;
+            }
+        }
 
         public Control()
         {

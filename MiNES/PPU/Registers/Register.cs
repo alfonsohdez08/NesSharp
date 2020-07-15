@@ -6,6 +6,8 @@ namespace MiNES.PPU.Registers
 {
     internal abstract class Register<T>
     {
-        public T Value { get; set; }
+        protected T InternalValue;
+
+        public virtual T RegisterValue { get => InternalValue; set => InternalValue = value; }
     }
 }

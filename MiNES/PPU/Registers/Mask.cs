@@ -7,7 +7,19 @@ namespace MiNES.PPU.Registers
 {
     class Mask: Register<byte>
     {
-        public bool RenderBackground => Value.GetBit(3);
-        public bool RenderSprites => Value.GetBit(4);
+        public override byte RegisterValue
+        {
+            get => base.RegisterValue;
+            set
+            {
+                RenderBackground = value.GetBit(3);
+                RenderSprites = value.GetBit(4);
+
+                base.RegisterValue = value;
+            }
+        }
+
+        public bool RenderBackground { get; private set; }
+        public bool RenderSprites { get; private set; }
     }
 }

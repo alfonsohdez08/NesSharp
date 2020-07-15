@@ -48,7 +48,7 @@ namespace MiNES.PPU
 
         private byte _lowPixelsRow;
         private byte _highPixelsRow;
-        private bool _isRenderingEnabled => Mask.RenderBackground || Mask.RenderSprites;
+        private bool IsRenderingEnabled => Mask.RenderBackground || Mask.RenderSprites;
 
         public Bitmap FrameBuffer { get; private set; }
 
@@ -211,15 +211,15 @@ namespace MiNES.PPU
             {
                 value = (byte)((value | 0xC0) ^ 0xC0);
 
-                T.Value = (ushort)(((T.Value | 0x3F00) ^ 0x3F00) | (value << 8));
-                T.Value = (ushort)((T.Value | 0x4000) ^ 0x4000); // Sets bit 14 to 0
+                T.RegisterValue = (ushort)(((T.RegisterValue | 0x3F00) ^ 0x3F00) | (value << 8));
+                T.RegisterValue = (ushort)((T.RegisterValue | 0x4000) ^ 0x4000); // Sets bit 14 to 0
 
                 _addressLatch = true; // Flips to the low byte state
             }
             else // w is 1
             {
-                T.Value = (ushort)(((T.Value | 0xFF) ^ 0xFF) | value);
-                V.Value = T.Value;
+                T.RegisterValue = (ushort)(((T.RegisterValue | 0xFF) ^ 0xFF) | value);
+                V.RegisterValue = T.RegisterValue;
 
                 _addressLatch = false; // Flips to the high byte state
             }
@@ -312,7 +312,7 @@ namespace MiNES.PPU
             /* If the compiled address does not overlap the color palette address range, then return
              * the data read from the buffer; otherwise return the data read from the address right away
              */
-            if (V.Value >= 0x3F00)
+            if (V.RegisterValue >= 0x3F00)
                 data = _dataBuffer;
 
             IncrementVRamAddress();
@@ -337,9 +337,9 @@ namespace MiNES.PPU
         {
             // If bit 3 from control register is set, add 32 to VRAM address; otherwise 1
             if (ControlRegister.VRamAddressIncrement)
-                V.Value += 32;
+                V.RegisterValue += 32;
             else
-                V.Value++;
+                V.RegisterValue++;
         }
 
         private byte[] _spriteXCounters = new byte[8];
@@ -396,8 +396,7 @@ namespace MiNES.PPU
                         // Load high background pattern table byte
                         case 0:
                             {
-                                ushort patternTableAddress = (ushort)(ControlRegister.BackgroundPatternTableAddress ? 0x1000 : 0);
-                                ushort pixelsRowAddress = (ushort)(patternTableAddress + (_tileId * 16) + V.FineY + 8);
+                                ushort pixelsRowAddress = (ushort)(ControlRegister.BackgroundPatternTableBaseAddress + (_tileId * 16) + V.FineY + 8);
 
                                 _highPixelsRow = _ppuBus.Read(pixelsRowAddress);
                             }
@@ -409,14 +408,14 @@ namespace MiNES.PPU
                         // Fetch nametable byte
                         case 2:
                             {
-                                ushort tileIdAddress = (ushort)(0x2000 | (V.Value & 0x0FFF));
+                                ushort tileIdAddress = (ushort)(0x2000 | (V.RegisterValue & 0x0FFF));
                                 _tileId = _ppuBus.Read(tileIdAddress);
                             }
                             break;
                         // Fetch attribute table byte
                         case 4:
                             {
-                                ushort attributeEntryAddress = (ushort)(0x23C0 | (V.Value & 0x0C00) | ((V.Value >> 4) & 0x38) | ((V.Value >> 2) & 0x07));
+                                ushort attributeEntryAddress = (ushort)(0x23C0 | (V.RegisterValue & 0x0C00) | ((V.RegisterValue >> 4) & 0x38) | ((V.RegisterValue >> 2) & 0x07));
                                 
                                 _attribute = _ppuBus.Read(attributeEntryAddress);
                                 _blockId = ParseBlock(V.CoarseX, V.CoarseY);
@@ -425,8 +424,7 @@ namespace MiNES.PPU
                         // Fetch low background pattern table byte
                         case 6:
                             {
-                                ushort patternTableAddress = (ushort)(ControlRegister.BackgroundPatternTableAddress ? 0x1000 : 0);
-                                ushort pixelsRowAddress = (ushort)(patternTableAddress + (_tileId * 16) + V.FineY);
+                                ushort pixelsRowAddress = (ushort)(ControlRegister.BackgroundPatternTableBaseAddress + (_tileId * 16) + V.FineY);
 
                                 _lowPixelsRow = _ppuBus.Read(pixelsRowAddress);
                             }
@@ -529,10 +527,9 @@ namespace MiNES.PPU
                                         } // 8 x 8 sprites
                                         else
                                         {
-                                            ushort patternTableAddress = (ushort)(ControlRegister.SpritesPatternTableAddress ? 0x1000 : 0);
                                             var flipOffset = _flipSpriteVertically ? (7 - _spriteY) : _spriteY;
 
-                                            lowPlane = _ppuBus.Read((ushort)(patternTableAddress + (_spriteTileIndex * 16) + flipOffset));
+                                            lowPlane = _ppuBus.Read((ushort)(ControlRegister.SpritesPatternTableBaseAddress + (_spriteTileIndex * 16) + flipOffset));
                                         }
 
                                         if (_flipSpriteHorizontally)
@@ -575,10 +572,9 @@ namespace MiNES.PPU
                                         } // 8 x 8 sprites
                                         else
                                         {
-                                            ushort patternTableAddress = (ushort)(ControlRegister.SpritesPatternTableAddress ? 0x1000 : 0);
                                             var flipOffset = _flipSpriteVertically ? (7 - _spriteY) : _spriteY;
 
-                                            highPlane = _ppuBus.Read((ushort)(patternTableAddress + (_spriteTileIndex * 16) + flipOffset + 8));
+                                            highPlane = _ppuBus.Read((ushort)(ControlRegister.SpritesPatternTableBaseAddress + (_spriteTileIndex * 16) + flipOffset + 8));
                                         }
 
                                         if (_flipSpriteHorizontally)
@@ -599,15 +595,15 @@ namespace MiNES.PPU
                 }
 
                 // Increments the horizontal component in the V register
-                if (_isRenderingEnabled && ((_cycles >= 1 && _cycles <= 256) || (_cycles >= 328 && _cycles <= 336)) && _cycles % 8 == 0)
+                if (IsRenderingEnabled && ((_cycles >= 1 && _cycles <= 256) || (_cycles >= 328 && _cycles <= 336)) && _cycles % 8 == 0)
                     IncrementHorizontalPosition();
 
                 // Increments the vertical component in the V register
-                if (_isRenderingEnabled && _cycles == 256)
+                if (IsRenderingEnabled && _cycles == 256)
                     IncrementVerticalPosition();
 
                 // Copy the horizontal component from T register into V register
-                if (_isRenderingEnabled && _cycles == 257)
+                if (IsRenderingEnabled && _cycles == 257)
                     CopyHorizontalPositionToV();
 
                 // During cycles elapesed between 257 and 320 (inclusive), the OAM address is set to 0
@@ -750,7 +746,7 @@ namespace MiNES.PPU
         private void CopyHorizontalPositionToV()
         {
             V.CoarseX = T.CoarseX;
-            V.Value = (ushort)(((V.Value | 0x0400) ^ 0x0400) | (T.Value & 0x0400)); // copy bit 10 (nametable x) from T register
+            V.RegisterValue = (ushort)(((V.RegisterValue | 0x0400) ^ 0x0400) | (T.RegisterValue & 0x0400)); // copy bit 10 (nametable x) from T register
         }
 
         /// <summary>
@@ -761,7 +757,7 @@ namespace MiNES.PPU
             V.CoarseY = T.CoarseY;
             V.FineY = T.FineY;
 
-            V.Value = (ushort)(((V.Value | 0x0800) ^ 0x0800) | (T.Value & 0x0800)); // copy bit 11 (nametable y) from T register
+            V.RegisterValue = (ushort)(((V.RegisterValue | 0x0800) ^ 0x0800) | (T.RegisterValue & 0x0800)); // copy bit 11 (nametable y) from T register
         }
 
         /// <summary>
@@ -770,7 +766,7 @@ namespace MiNES.PPU
         /// </summary>
         private void IncrementVerticalPosition()
         {
-            byte fineY = (byte)((V.Value & 0x7000) >> 12);
+            byte fineY = (byte)((V.RegisterValue & 0x7000) >> 12);
             if (fineY < 7)
             {
                 fineY++;
@@ -780,15 +776,15 @@ namespace MiNES.PPU
                 fineY = 0;
 
                 // Increments coarse Y then
-                byte coarseY = (byte)((V.Value & 0x03E0) >> 5);
+                byte coarseY = (byte)((V.RegisterValue & 0x03E0) >> 5);
                 if (coarseY == 29)
                 {
                     coarseY = 0;
 
-                    byte yNametable = (byte)((V.Value & 0x0800) >> 11);
+                    byte yNametable = (byte)((V.RegisterValue & 0x0800) >> 11);
                     yNametable = (byte)~yNametable; // by toggling bit 11, we switch vertical nametable
 
-                    V.Value = (ushort)(((V.Value | 0x0800) ^ 0x0800) | ((yNametable & 1) << 11));
+                    V.RegisterValue = (ushort)(((V.RegisterValue | 0x0800) ^ 0x0800) | ((yNametable & 1) << 11));
                 }
                 else if (coarseY == 31)
                 {
@@ -799,30 +795,30 @@ namespace MiNES.PPU
                     coarseY++;
                 }
 
-                V.Value = (ushort)(((V.Value | 0x03E0) ^ 0x03E0) | (coarseY << 5)); // Put coarse Y into the V register
+                V.RegisterValue = (ushort)(((V.RegisterValue | 0x03E0) ^ 0x03E0) | (coarseY << 5)); // Put coarse Y into the V register
             }
 
-            V.Value = (ushort)(((V.Value | 0x7000) ^ 0x7000) | (fineY << 12)); // Put fineY into the V register
+            V.RegisterValue = (ushort)(((V.RegisterValue | 0x7000) ^ 0x7000) | (fineY << 12)); // Put fineY into the V register
         }
 
         private void IncrementHorizontalPosition()
         {
-            byte coarseX = (byte)(V.Value & 0x001F);
+            byte coarseX = (byte)(V.RegisterValue & 0x001F);
             if (coarseX == 31)
             {
                 coarseX = 0;
 
-                byte xNametable = (byte)((V.Value & 0x0400) >> 10);
+                byte xNametable = (byte)((V.RegisterValue & 0x0400) >> 10);
                 xNametable = (byte)~xNametable; // by toggling bit 10, we switch horizontal nametable
 
-                V.Value = (ushort)(((V.Value | 0x0400) ^ 0x0400) | ((xNametable & 1) << 10));
+                V.RegisterValue = (ushort)(((V.RegisterValue | 0x0400) ^ 0x0400) | ((xNametable & 1) << 10));
             }
             else
             {
                 coarseX++;
             }
 
-            V.Value = (ushort)(((V.Value | 0x001F) ^ 0x001F) | coarseX);
+            V.RegisterValue = (ushort)(((V.RegisterValue | 0x001F) ^ 0x001F) | coarseX);
         }
 
         private void PreRenderScanline()
@@ -839,7 +835,7 @@ namespace MiNES.PPU
                     _spriteLowPlaneTiles[i] = 0;
                 }
             }
-            else if (_isRenderingEnabled && _cycles >= 280 && _cycles <= 304)
+            else if (IsRenderingEnabled && _cycles >= 280 && _cycles <= 304)
             {
                 CopyVerticalPositionToV();
             }
@@ -1035,7 +1031,7 @@ namespace MiNES.PPU
             if (_scanline == 241 && _cycles == 1)
             {
                 StatusRegister.VerticalBlank = true;
-                if (ControlRegister.GenerateNMI)
+                if (ControlRegister.GenerateNmi)
                     NmiRequested = true;
             }
         }

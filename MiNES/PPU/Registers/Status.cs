@@ -7,49 +7,57 @@ namespace MiNES.PPU.Registers
 {
     class Status: Register<byte>
     {
-
+        private bool _verticalBlank;
         public bool VerticalBlank
         {
-            get => Value.GetBit(7);
+            get => _verticalBlank;
             set
             {
-                // Workaround
-                byte v = Value;
+                _verticalBlank = value;
 
-                v.SetBit(7, value);
-                Value = v;
+                InternalValue.SetBit(7, value);
             }
         }
 
+        private bool _spriteOverflow; 
         public bool SpriteOverflow
         {
-            get => Value.GetBit(5);
+            get => _spriteOverflow;
             set
             {
-                // Workaround
-                byte v = Value;
+                _spriteOverflow = value;
 
-                v.SetBit(5, value);
-                Value = v;
+                InternalValue.SetBit(5, value);
             }
         }
 
+        private bool _spriteZeroHit;
         public bool SpriteZeroHit
         {
-            get => Value.GetBit(6);
+            get => _spriteZeroHit;
             set
             {
-                // Workaround
-                byte v = Value;
+                _spriteZeroHit = value;
 
-                v.SetBit(6, value);
-                Value = v;
+                InternalValue.SetBit(6, value);
+            }
+        }
+
+        public override byte RegisterValue
+        {
+            get => base.RegisterValue;
+            set
+            {
+                VerticalBlank = value.GetBit(7);
+                SpriteOverflow = value.GetBit(5);
+
+                base.RegisterValue = value;
             }
         }
 
         public Status()
         {
-            Value = 0xA0;
+            RegisterValue = 0xA0;
         }
     }
 }
