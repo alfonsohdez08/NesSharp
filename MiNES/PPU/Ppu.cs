@@ -92,6 +92,8 @@ namespace MiNES.PPU
 
         private readonly byte[] _oamBuffer = new byte[32];
 
+        private bool _isSpriteZeroInBuffer;
+
         public void SetOamData(byte data)
         {
             _oam[OamAddress] = data;
@@ -447,6 +449,7 @@ namespace MiNES.PPU
                         {
                             int bufferIndex = 0;
                             int spritesBuffered = 0;
+                            _isSpriteZeroInBuffer = false;
 
                             for (int n = 0; n < _oam.Length; n += 4)
                             {
@@ -462,6 +465,9 @@ namespace MiNES.PPU
 
                                         bufferIndex += 4;
                                         spritesBuffered++;
+
+                                        if (n == 0 && !_isSpriteZeroInBuffer)
+                                            _isSpriteZeroInBuffer = true;
                                     }
                                     else if (!StatusRegister.SpriteOverflow) // An overflow has ocurred then!
                                     {
@@ -628,6 +634,7 @@ namespace MiNES.PPU
                 else
                 {
                     _scanline = -1;
+
                     Frames++;
                     _isOddFrame = Frames % 2 != 0;
 
@@ -828,12 +835,11 @@ namespace MiNES.PPU
                 StatusRegister.SpriteOverflow = false;
                 StatusRegister.SpriteZeroHit = false;
                 StatusRegister.VerticalBlank = false;
-
-                for (int i = 0; i < _spriteHighPlaneTiles.Length; i++)
-                {
-                    _spriteHighPlaneTiles[i] = 0;
-                    _spriteLowPlaneTiles[i] = 0;
-                }
+                //for (int i = 0; i < _spriteHighPlaneTiles.Length; i++)
+                //{
+                //    _spriteHighPlaneTiles[i] = 0;
+                //    _spriteLowPlaneTiles[i] = 0;
+                //}
             }
             else if (IsRenderingEnabled && _cycles >= 280 && _cycles <= 304)
             {
@@ -867,6 +873,7 @@ namespace MiNES.PPU
             byte spritePixel = 0;
             byte spritePalette = 0;
             bool spritePriority = false;
+            bool spriteZeroRendering = false;
 
             if (Mask.RenderSprites)
             {
@@ -886,8 +893,9 @@ namespace MiNES.PPU
                         if (spritePixel != 0)
                         {
                             // When the pixel of the sprite 0 is opaque, we must set the flag of sprite zero hit
-                            if (i == 0 && backgroundPixel != 0)
-                                StatusRegister.SpriteZeroHit = true;
+                            if (_isSpriteZeroInBuffer && i == 0 && backgroundPixel != 0)
+                                spriteZeroRendering = true;
+                                //StatusRegister.SpriteZeroHit = true;
 
                             break;
                         }
@@ -921,7 +929,19 @@ namespace MiNES.PPU
                     palette = spritePalette;
                 }
 
-                // TODO: see how to deal with sprite zero hit flag
+                if (_isSpriteZeroInBuffer && spriteZeroRendering && Mask.RenderBackground && Mask.RenderSprites)
+                {
+                    // If either sprites or background must be hidden (in the first 8 pixels), then don't set the sprite zero hit unless the first 8 pixels has been rendered
+                    if (!Mask.ShowBackgroundLeftSideScreen || !Mask.ShowSpritesLeftSideScreen)
+                    {
+                        if (_cycles > 8)
+                            StatusRegister.SpriteZeroHit = true;
+                    }
+                    else
+                    {
+                        StatusRegister.SpriteZeroHit = true;
+                    }
+                }
             }
 
             _frame.SetPixel(_cycles - 1, _scanline, GetPaletteColor(palette, pixel));

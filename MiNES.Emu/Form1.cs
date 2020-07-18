@@ -8,6 +8,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml;
@@ -116,7 +117,7 @@ namespace MiNES.Emu
                         if (_frames % 60 == 0)
                         {
                             stopWatch.Stop();
-                            var seconds = stopWatch.ElapsedMilliseconds/1000;
+                            var seconds = stopWatch.ElapsedMilliseconds / 1000;
                             stopWatch.Reset();
 
                         }
@@ -124,6 +125,36 @@ namespace MiNES.Emu
 
                 }
             }, TaskCreationOptions.LongRunning);
+
+            //var thread = new Thread(() =>
+            //{
+            //    while (true)
+            //    {
+            //        if (!stopWatch.IsRunning)
+            //            stopWatch.Start();
+
+            //        if (RunEmulation)
+            //        {
+            //            //GameScreen.Image = GetDummyBitmap();
+            //            var frame = nes.Frame();
+            //            //DrawTileBorders(ref frame);
+            //            GameScreen.Image = frame;
+
+            //            _frames++;
+
+            //            if (_frames % 60 == 0)
+            //            {
+            //                stopWatch.Stop();
+            //                var seconds = stopWatch.ElapsedMilliseconds / 1000;
+            //                stopWatch.Reset();
+
+            //            }
+            //        }
+
+            //    }
+            //});
+
+            //thread.Start();
         }
 
         private void tableLayoutPanel1_Paint(object sender, PaintEventArgs e)
