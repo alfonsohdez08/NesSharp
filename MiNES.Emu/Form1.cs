@@ -111,6 +111,8 @@ namespace MiNES.Emu
                         //GameScreen.Image = GetDummyBitmap();
                         var frame = nes.Frame();
                         //DrawTileBorders(ref frame);
+
+
                         GameScreen.Image = frame;
                         _frames++;
 

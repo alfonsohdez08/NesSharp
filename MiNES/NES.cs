@@ -1,6 +1,7 @@
 ﻿using MiNES.CPU;
 using MiNES.PPU;
 using MiNES.Rom;
+using System;
 using System.Drawing;
 
 namespace MiNES
@@ -9,6 +10,10 @@ namespace MiNES
     {
         private readonly Cpu _cpu;
         private readonly Ppu _ppu;
+
+        private int _ppuCyclesLeftOver;
+
+        private int _cpuCyclesLeftOver;
 
         public Ppu Ppu => _ppu;
 
@@ -25,8 +30,6 @@ namespace MiNES
             _cpu = new Cpu(cpuBus);
         }
 
-        private int _ppuCyclesLeftover;
-
         /// <summary>
         /// Produces/emulates a frame (an image).
         /// </summary>
@@ -35,38 +38,91 @@ namespace MiNES
         {
             do
             {
-                // Finish the ppu cycles leftover
-                while(_ppuCyclesLeftover > 0)
-                {
-                    _ppu.DrawPixel();
-                    _ppuCyclesLeftover--;
-                }
-
                 if (_ppu.NmiRequested)
                 {
                     _cpu.NMI();
                     _ppu.NmiRequested = false;
                 }
 
-                int cpuCyclesSpent = _cpu.Step();
-                for (int ppuCycles = 0; ppuCycles < cpuCyclesSpent * 3; ppuCycles++)
+                int cpuCyclesSpent;
+                int totalPpuCycles;
+                try
                 {
-                    _ppu.DrawPixel();
-                    if(_ppu.FrameBuffer != null)
+                    cpuCyclesSpent = _cpu.Step() + _cpuCyclesLeftOver;
+                    totalPpuCycles = (cpuCyclesSpent * 3) + _ppuCyclesLeftOver;
+                }
+                finally
+                { 
+                    _cpuCyclesLeftOver = 0;
+                    _ppuCyclesLeftOver = 0;
+                }
+                
+                for (int ppuCycles = 0; ppuCycles < totalPpuCycles; ppuCycles++)
+                {
+                    _ppu.Step();
+                    //if(_ppu.FrameBuffer != null)
+                    //{
+                    //    ppuCycles++;
+                    //    _ppuCyclesLeftover = (totalPpuCycles - ppuCycles) % 3;
+                    //    _cpuCyclesLeftOver = (totalPpuCycles - ppuCycles)/3;
+
+                    //    break;
+                    //}
+
+                }
+
+            } while (null == null);
+
+            Bitmap frame = null;
+            //_ppu.DisposeBuffer();
+            //_ppu.ResetFrame();
+
+            return frame;
+        }
+
+
+        public int[] EmulateFrame()
+        {
+            do
+            {
+                if (_ppu.NmiRequested)
+                {
+                    // TODO: should i count the cycles spent by the NMI interrupt?
+                    _cpu.NMI();
+                    _ppu.NmiRequested = false;
+                }
+
+                int totalPpuCycles;
+                try
+                {
+                    int cpuCyclesSpent = _cpu.Step() + _cpuCyclesLeftOver;
+                    totalPpuCycles = (cpuCyclesSpent * 3) + _ppuCyclesLeftOver;
+                }
+                finally
+                {
+                    _cpuCyclesLeftOver = 0;
+                    _ppuCyclesLeftOver = 0;
+                }
+
+                for (int ppuCycles = 0; ppuCycles < totalPpuCycles; ppuCycles++)
+                {
+                    _ppu.Step();
+                    if (_ppu.IsFrameCompleted) // circuit breaker
                     {
-                        _ppuCyclesLeftover = (cpuCyclesSpent * 3) - ppuCycles; // Is this substraction accurate?
+                        ppuCycles++;
+                        _ppuCyclesLeftOver = (totalPpuCycles - ppuCycles) % 3;
+                        _cpuCyclesLeftOver = (totalPpuCycles - ppuCycles) / 3;
+
                         break;
                     }
 
                 }
 
-            } while (_ppu.FrameBuffer == null);
+            } while (!_ppu.IsFrameCompleted);
 
-            Bitmap frame = (Bitmap)_ppu.FrameBuffer.Clone();
-            _ppu.DisposeBuffer();
-            //_ppu.ResetFrame();
+            _ppu.ResetFrameRenderingStatus();
 
-            return frame;
+            return _ppu.Frame;
         }
 
         public byte[][] GetNametable0() => _ppu.GetNametable0();

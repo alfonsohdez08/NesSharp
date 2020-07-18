@@ -17,7 +17,11 @@ namespace MiNES.PPU
         private int _fineX;
         private int _cycles = 0;
         private int _scanline = -1;
-        private Bitmap _frame;
+
+        private const int Width = 256;
+        private const int Height = 240;
+        private readonly int[] _frameBuffer = new int[Width * Height];
+        public int[] Frame => _frameBuffer;
 
         /// <summary>
         /// This register is divided into 2 registers: the low byte (right side) correspond the PISO register, which is
@@ -49,8 +53,6 @@ namespace MiNES.PPU
         private byte _lowPixelsRow;
         private byte _highPixelsRow;
         private bool IsRenderingEnabled => Mask.RenderBackground || Mask.RenderSprites;
-
-        public Bitmap FrameBuffer { get; private set; }
 
         /// <summary>
         /// Controls the state of the address latch (false = high byte; true = low byte).
@@ -192,7 +194,7 @@ namespace MiNES.PPU
             _ppuBus = ppuBus;
 
             _backgroundTiles = GetPatternTable();
-            ResetFrame();
+            ResetFrameRenderingStatus();
         }
 
         /// <summary>
@@ -364,7 +366,7 @@ namespace MiNES.PPU
         /// </remarks>
         private bool _isOddFrame = false;
 
-        public void DrawPixel()
+        public void Step()
         {
             // Cycle 0 does not do anything (it's idle)
             if (_cycles == 0)
@@ -639,8 +641,6 @@ namespace MiNES.PPU
                     _isOddFrame = Frames % 2 != 0;
 
                     IsFrameCompleted = true;
-                    FrameBuffer = _frame;
-                    ResetFrame();
                 }
             }
 
@@ -835,11 +835,6 @@ namespace MiNES.PPU
                 StatusRegister.SpriteOverflow = false;
                 StatusRegister.SpriteZeroHit = false;
                 StatusRegister.VerticalBlank = false;
-                //for (int i = 0; i < _spriteHighPlaneTiles.Length; i++)
-                //{
-                //    _spriteHighPlaneTiles[i] = 0;
-                //    _spriteLowPlaneTiles[i] = 0;
-                //}
             }
             else if (IsRenderingEnabled && _cycles >= 280 && _cycles <= 304)
             {
@@ -895,7 +890,6 @@ namespace MiNES.PPU
                             // When the pixel of the sprite 0 is opaque, we must set the flag of sprite zero hit
                             if (_isSpriteZeroInBuffer && i == 0 && backgroundPixel != 0)
                                 spriteZeroRendering = true;
-                                //StatusRegister.SpriteZeroHit = true;
 
                             break;
                         }
@@ -944,19 +938,16 @@ namespace MiNES.PPU
                 }
             }
 
-            _frame.SetPixel(_cycles - 1, _scanline, GetPaletteColor(palette, pixel));
+            //_frame.SetPixel(_cycles - 1, _scanline, GetPaletteColor(palette, pixel));
+            _frameBuffer[(_cycles - 1) + _scanline * 256] = GetPaletteColor(palette, pixel).ToArgb();
         }
 
-
-        public void DisposeBuffer()
+        /// <summary>
+        /// Resets the frame rendering status.
+        /// </summary>
+        public void ResetFrameRenderingStatus()
         {
-            FrameBuffer = null;
-        }
-
-        public void ResetFrame()
-        {
-            _frame = new Bitmap(256, 240);
-            //IsFrameCompleted = false;
+            IsFrameCompleted = false;
         }
 
         private ushort GetNametableBaseAddress()
