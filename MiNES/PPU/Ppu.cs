@@ -10,7 +10,7 @@ namespace MiNES.PPU
         /// <summary>
         /// Count how many frames has been rendered so far.
         /// </summary>
-        public int Frames { get; private set; } = 0;
+        public int Frames { get; private set; } = 1;
 
         private readonly PpuBus _ppuBus;
 
@@ -362,9 +362,9 @@ namespace MiNES.PPU
         /// Denotes whether frame being rendered is odd or not.
         /// </summary>
         /// <remarks>
-        /// Initially would be false because frame 0 would be the first frame to render.
+        /// Initially would be false because frame 1 would be the first frame to render.
         /// </remarks>
-        private bool _isOddFrame = false;
+        private bool _isOddFrame = true;
 
         public void Step()
         {
@@ -624,7 +624,7 @@ namespace MiNES.PPU
                 VerticalBlankScanlines();
 
             _cycles++;
-            if (_cycles >= 341 || (_cycles >= 340 && _scanline == -1 && _isOddFrame)) // When is an odd frame and we are in pre render scanline, the scanline is 340 cycles long
+            if (_cycles >= 341 || (_cycles >= 340 && _scanline == -1 && _isOddFrame && IsRenderingEnabled)) // When is an odd frame and we are in pre render scanline, the scanline is 340 cycles long (only when rendering is enabled)
             {
                 _cycles = 0;
                 _spriteBufferIndex = 0;

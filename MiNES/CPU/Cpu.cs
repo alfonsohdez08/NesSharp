@@ -71,6 +71,8 @@ namespace MiNES.CPU
         /// </summary>
         public int CyclesElapsed { get; private set; }
 
+        public bool NmiTriggered { get; set; }
+
 #if CPU_NES_TEST
         private readonly List<byte> _instructionHex = new List<byte>();
         private int _cyclesElapsed = 7; // Initially 7 cycles has elapsed 
@@ -1651,9 +1653,19 @@ namespace MiNES.CPU
         /// <summary>
         /// Executes a NMI interruption.
         /// </summary>
-        public void NMI()
+        private int NMI()
         {
-            Interrupt(InterruptionType.NMI);
+            try
+            {
+                Interrupt(InterruptionType.NMI);
+            }
+            finally
+            {
+                NmiTriggered = false;
+            }
+
+            // TODO: verify that NMI takes 7 cpu cycles
+            return 7;
         }
 
         /// <summary>
@@ -1662,7 +1674,9 @@ namespace MiNES.CPU
         /// <returns>The number of cycles spent for execute the instruction.</returns>
         public int Step()
         {
-            if (_bus.DmaTransferTriggered)
+            if (NmiTriggered)
+                return NMI();
+            else if (_bus.DmaTransferTriggered)
                 return TransferOam();
             else
                 return ExecuteInstruction();

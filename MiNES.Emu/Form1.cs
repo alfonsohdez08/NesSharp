@@ -31,6 +31,12 @@ namespace MiNES.Emu
 
         private byte[] vblTestRom = File.ReadAllBytes(Path.Combine(NesRootPath, "vram_access.nes"));
 
+        private byte[] oamReadTestRom = File.ReadAllBytes(Path.Combine(NesRootPath, "oam_read.nes"));
+
+        private byte[] ppuSpriteHitTestRom = File.ReadAllBytes(Path.Combine(NesRootPath, "ppu_sprite_hit.nes"));
+
+        private byte[] vblBasicsTestRom = File.ReadAllBytes(Path.Combine(NesRootPath, "01-vbl_basics.nes"));
+
         //private BackgroundWorker _backgroundWorker = new BackgroundWorker();
 
         private object _lockObject = new object();
@@ -79,8 +85,8 @@ namespace MiNES.Emu
         {
             InitializeComponent();
 
-            //nes = new NES(donkeyKongRom);
-            nes = new NES(superMarioBrosRom);
+            nes = new NES(donkeyKongRom);
+            //nes = new NES(superMarioBrosRom);
             //nes = new NES(nesTestRom);
             //nes = new NES(iceClimbersRom);
             //nes = new NES(scanlineTestRom);
@@ -91,6 +97,11 @@ namespace MiNES.Emu
 
             //nes = new NES(vblTestRom);
 
+            //nes = new NES(oamReadTestRom);
+
+
+            //nes = new NES(ppuSpriteHitTestRom);
+            //nes = new NES(vblBasicsTestRom);
 
             //EnableEmulation.Checked = true;
 

@@ -34,8 +34,7 @@ namespace MiNES
             {
                 if (_ppu.NmiRequested)
                 {
-                    // TODO: should i count the cycles spent by the NMI interrupt?
-                    _cpu.NMI();
+                    _cpu.NmiTriggered = true;
                     _ppu.NmiRequested = false;
                 }
 
