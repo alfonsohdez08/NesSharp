@@ -17,8 +17,6 @@ namespace MiNES
 
         public Ppu Ppu => _ppu;
 
-        //private ulong _masterClock;
-
         public NES(byte[] gameCartridge)
         {
             iNESParser.ParseNesCartridge(gameCartridge, out Memory cpuMemory, out Memory ppuMemory, out Mirroring mirroring);
@@ -30,58 +28,7 @@ namespace MiNES
             _cpu = new Cpu(cpuBus);
         }
 
-        /// <summary>
-        /// Produces/emulates a frame (an image).
-        /// </summary>
-        /// <returns>A frame (an image).</returns>
-        public Bitmap Frame()
-        {
-            do
-            {
-                if (_ppu.NmiRequested)
-                {
-                    _cpu.NMI();
-                    _ppu.NmiRequested = false;
-                }
-
-                int cpuCyclesSpent;
-                int totalPpuCycles;
-                try
-                {
-                    cpuCyclesSpent = _cpu.Step() + _cpuCyclesLeftOver;
-                    totalPpuCycles = (cpuCyclesSpent * 3) + _ppuCyclesLeftOver;
-                }
-                finally
-                { 
-                    _cpuCyclesLeftOver = 0;
-                    _ppuCyclesLeftOver = 0;
-                }
-                
-                for (int ppuCycles = 0; ppuCycles < totalPpuCycles; ppuCycles++)
-                {
-                    _ppu.Step();
-                    //if(_ppu.FrameBuffer != null)
-                    //{
-                    //    ppuCycles++;
-                    //    _ppuCyclesLeftover = (totalPpuCycles - ppuCycles) % 3;
-                    //    _cpuCyclesLeftOver = (totalPpuCycles - ppuCycles)/3;
-
-                    //    break;
-                    //}
-
-                }
-
-            } while (null == null);
-
-            Bitmap frame = null;
-            //_ppu.DisposeBuffer();
-            //_ppu.ResetFrame();
-
-            return frame;
-        }
-
-
-        public int[] EmulateFrame()
+        public int[] Frame()
         {
             do
             {

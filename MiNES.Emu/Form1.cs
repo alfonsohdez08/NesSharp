@@ -1,4 +1,5 @@
 ﻿using MiNES.Emu.Debugger;
+using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -38,7 +39,9 @@ namespace MiNES.Emu
 
         //private NametableDebugger _nametableDebugger;
 
-        private ulong _frames;
+        private delegate void UpdateGameScreen(int[] buffer);
+
+        private readonly SKBitmap _gameScreen = new SKBitmap(256, 240);
 
         public bool RunEmulation
         {
@@ -96,67 +99,67 @@ namespace MiNES.Emu
 
         private void StartEmulation()
         {
-            var stopWatch = new Stopwatch();
-            // TODO: instead of creating a new object for bitmaps, just use once, and rewrite the pixels (UI thread must do this)
-            // Also, for see that the emulation frame rate is "ok", measure how it takes for execute the frame method 60 times
             Task.Factory.StartNew(() =>
             {
-                while (true)
-                {
-                    if (!stopWatch.IsRunning)
-                        stopWatch.Start();
-
-                    if (RunEmulation)
-                    {
-                        //GameScreen.Image = GetDummyBitmap();
-                        var frame = nes.Frame();
-                        //DrawTileBorders(ref frame);
-
-
-                        GameScreen.Image = frame;
-                        _frames++;
-
-                        if (_frames % 60 == 0)
-                        {
-                            stopWatch.Stop();
-                            var seconds = stopWatch.ElapsedMilliseconds / 1000;
-                            stopWatch.Reset();
-
-                        }
-                    }
-
-                }
+                RunGame();
             }, TaskCreationOptions.LongRunning);
+        }
 
-            //var thread = new Thread(() =>
-            //{
-            //    while (true)
-            //    {
-            //        if (!stopWatch.IsRunning)
-            //            stopWatch.Start();
+        private void RunGame()
+        {
+            var stopWatch = new Stopwatch();
+            var updateScreen = new UpdateGameScreen(UpdateScreen);
 
-            //        if (RunEmulation)
-            //        {
-            //            //GameScreen.Image = GetDummyBitmap();
-            //            var frame = nes.Frame();
-            //            //DrawTileBorders(ref frame);
-            //            GameScreen.Image = frame;
+            while (true)
+            {
+                if (!stopWatch.IsRunning)
+                    stopWatch.Start();
 
-            //            _frames++;
+                if (RunEmulation)
+                {
+                    int[] frame = nes.Frame();
+                    GameScreen.Invoke(updateScreen, new object[] { frame });
 
-            //            if (_frames % 60 == 0)
-            //            {
-            //                stopWatch.Stop();
-            //                var seconds = stopWatch.ElapsedMilliseconds / 1000;
-            //                stopWatch.Reset();
+                    if (nes.Ppu.Frames % 60 == 0)
+                    {
+                        stopWatch.Stop();
+                        var ms = stopWatch.ElapsedMilliseconds;
+                        var seconds = stopWatch.ElapsedMilliseconds / 1000;
+                        
+                        stopWatch.Reset();
+                    }
+                }
 
-            //            }
-            //        }
+            }
+        }
 
-            //    }
-            //});
+        private void UpdateScreen(int[] pixelsBuffer)
+        {
+            unsafe
+            {
+                fixed(int* ptr = pixelsBuffer)
+                {
+                    _gameScreen.SetPixels((IntPtr)ptr);
+                }
+            }
 
-            //thread.Start();
+            /*
+using (SKImage image = surface.Snapshot())
+using (SKData data = image.Encode(SKEncodedImageFormat.Png, 100))
+using (MemoryStream mStream = new MemoryStream(data.ToArray()))
+{
+    Bitmap bm = new Bitmap(mStream, false);
+    pictureBox1.Image = bm;
+}             
+             */
+
+            using (var image = SKImage.FromBitmap(_gameScreen))
+            using (var data = image.Encode())
+            using (var stream = new MemoryStream(data.ToArray()))
+            {
+                var bitmap = new Bitmap(stream);
+                GameScreen.Image = bitmap;
+            }
         }
 
         private void tableLayoutPanel1_Paint(object sender, PaintEventArgs e)
