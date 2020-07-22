@@ -1,6 +1,7 @@
 ﻿using MiNES.CPU;
 using MiNES.PPU;
 using MiNES.Rom;
+using System;
 using System.Drawing;
 
 namespace MiNES
@@ -10,9 +11,11 @@ namespace MiNES
         private readonly Cpu _cpu;
         private readonly Ppu _ppu;
 
-        public Ppu Ppu => _ppu;
+        private int _ppuCyclesLeftOver;
 
-        private ulong _masterClock;
+        private int _cpuCyclesLeftOver;
+
+        public Ppu Ppu => _ppu;
 
         public NES(byte[] gameCartridge)
         {
@@ -25,63 +28,47 @@ namespace MiNES
             _cpu = new Cpu(cpuBus);
         }
 
-        private int _ppuCyclesLeftover;
-
-        /// <summary>
-        /// Produces/emulates a frame (an image).
-        /// </summary>
-        /// <returns>A frame (an image).</returns>
-        public Bitmap Frame()
+        public int[] Frame()
         {
             do
             {
-                // Finish the ppu cycles leftover
-                while(_ppuCyclesLeftover > 0)
-                {
-                    _ppu.DrawPixel();
-                    _ppuCyclesLeftover--;
-                }
-
                 if (_ppu.NmiRequested)
                 {
-                    _cpu.NMI();
+                    _cpu.NmiTriggered = true;
                     _ppu.NmiRequested = false;
                 }
 
-                int cpuCyclesSpent = _cpu.Step();
-
-                if (_ppu.DmaTriggered)
+                int totalPpuCycles;
+                try
                 {
-                    byte[] oam = _cpu.GetOam(_ppu.OamCpuPage);
-                    _ppu.SetOam(oam);
-                    //for (int i = 0; i < oam.Length; i++)
-                    //{
-                    //    _ppu.SetOamData(oam[i]);
-                    //}
-
-                    // Condition when DMA is requested; if cycles number is odd, add an additional cycle
-                    cpuCyclesSpent += (cpuCyclesSpent % 2 == 0 ? 513 : 514);
-                    _ppu.DmaTriggered = false;
+                    int cpuCyclesSpent = _cpu.Step() + _cpuCyclesLeftOver;
+                    totalPpuCycles = (cpuCyclesSpent * 3) + _ppuCyclesLeftOver;
+                }
+                finally
+                {
+                    _cpuCyclesLeftOver = 0;
+                    _ppuCyclesLeftOver = 0;
                 }
 
-                for (int ppuCycles = 0; ppuCycles < cpuCyclesSpent * 3; ppuCycles++)
+                for (int ppuCycles = 0; ppuCycles < totalPpuCycles; ppuCycles++)
                 {
-                    _ppu.DrawPixel();
-                    if(_ppu.FrameBuffer != null)
+                    _ppu.Step();
+                    if (_ppu.IsFrameCompleted) // circuit breaker
                     {
-                        _ppuCyclesLeftover = (cpuCyclesSpent * 3) - ppuCycles; // Is this substraction accurate?
+                        ppuCycles++;
+                        _ppuCyclesLeftOver = (totalPpuCycles - ppuCycles) % 3;
+                        _cpuCyclesLeftOver = (totalPpuCycles - ppuCycles) / 3;
+
                         break;
                     }
 
                 }
 
-            } while (_ppu.FrameBuffer == null);
+            } while (!_ppu.IsFrameCompleted);
 
-            Bitmap frame = (Bitmap)_ppu.FrameBuffer.Clone();
-            _ppu.DisposeBuffer();
-            //_ppu.ResetFrame();
+            _ppu.ResetFrameRenderingStatus();
 
-            return frame;
+            return _ppu.Frame;
         }
 
         public byte[][] GetNametable0() => _ppu.GetNametable0();

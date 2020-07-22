@@ -66,6 +66,13 @@ namespace MiNES.CPU
         /// </summary>
         private readonly CpuBus _bus;
 
+        /// <summary>
+        /// Counter of how many cycles has been elapsed along instructions executed.
+        /// </summary>
+        public int CyclesElapsed { get; private set; }
+
+        public bool NmiTriggered { get; set; }
+
 #if CPU_NES_TEST
         private readonly List<byte> _instructionHex = new List<byte>();
         private int _cyclesElapsed = 7; // Initially 7 cycles has elapsed 
@@ -523,7 +530,19 @@ namespace MiNES.CPU
             _cyclesElapsed += _cycles;
 #endif
 
+            CyclesElapsed += _cycles;
+
             return _cycles;
+        }
+
+        /// <summary>
+        /// Evaluates the conditions for set/unset the flags Zero and Negative.
+        /// </summary>
+        /// <param name="value">The value that would be used for the conditions.</param>
+        private void UpdateZeroNegativeFlags(byte value)
+        {
+            _flags.SetFlag(StatusFlag.Zero, value == 0);
+            _flags.SetFlag(StatusFlag.Negative, value.IsNegative());
         }
 
         /// <summary>
@@ -637,8 +656,7 @@ namespace MiNES.CPU
         {
             byte val = _y;
 
-            _flags.SetFlag(StatusFlag.Zero, val == 0);
-            _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
+            UpdateZeroNegativeFlags(val);
 
             _a = val;
         }
@@ -658,8 +676,7 @@ namespace MiNES.CPU
         {
             byte val = _x;
 
-            _flags.SetFlag(StatusFlag.Zero, val == 0);
-            _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
+            UpdateZeroNegativeFlags(val);
 
             _a = _x;
         }
@@ -671,8 +688,7 @@ namespace MiNES.CPU
         {
             byte val = _stackPointer;
 
-            _flags.SetFlag(StatusFlag.Zero, val == 0);
-            _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
+            UpdateZeroNegativeFlags(val);
 
             _x = val;
         }
@@ -684,8 +700,7 @@ namespace MiNES.CPU
         {
             byte val = _a;
 
-            _flags.SetFlag(StatusFlag.Zero, val == 0);
-            _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
+            UpdateZeroNegativeFlags(val);
 
             _y = val;
         }
@@ -697,8 +712,7 @@ namespace MiNES.CPU
         {
             byte val = _a;
 
-            _flags.SetFlag(StatusFlag.Zero, val == 0);
-            _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
+            UpdateZeroNegativeFlags(val);
 
             _x = val;
         }
@@ -776,8 +790,7 @@ namespace MiNES.CPU
         {
             byte val = Pop();
 
-            _flags.SetFlag(StatusFlag.Zero, val == 0);
-            _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
+            UpdateZeroNegativeFlags(val);
 
             _a = val;
         }
@@ -820,8 +833,7 @@ namespace MiNES.CPU
         {
             byte val = _bus.Read(_operandAddress);
 
-            _flags.SetFlag(StatusFlag.Zero, val == 0);
-            _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
+            UpdateZeroNegativeFlags(val);
 
             _y = val;
         }
@@ -833,8 +845,7 @@ namespace MiNES.CPU
         {
             byte val = _bus.Read(_operandAddress);
 
-            _flags.SetFlag(StatusFlag.Zero, val == 0);
-            _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
+            UpdateZeroNegativeFlags(val);
 
             _x = val;
         }
@@ -872,8 +883,7 @@ namespace MiNES.CPU
         {
             _y++;
 
-            _flags.SetFlag(StatusFlag.Zero, _y == 0);
-            _flags.SetFlag(StatusFlag.Negative, _y.IsNegative());
+            UpdateZeroNegativeFlags(_y);
         }
 
         /// <summary>
@@ -883,9 +893,7 @@ namespace MiNES.CPU
         {
             _x++;
 
-            _flags.SetFlag(StatusFlag.Zero, _x == 0);
-            _flags.SetFlag(StatusFlag.Negative, _x.IsNegative());
-
+            UpdateZeroNegativeFlags(_x);
         }
 
         /// <summary>
@@ -895,8 +903,7 @@ namespace MiNES.CPU
         {
             byte val = (byte)(_bus.Read(_operandAddress) + 1);
 
-            _flags.SetFlag(StatusFlag.Zero, val == 0);
-            _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
+            UpdateZeroNegativeFlags(val);
 
             _bus.Write(_operandAddress, val);
         }
@@ -908,8 +915,7 @@ namespace MiNES.CPU
         {
             _y--;
 
-            _flags.SetFlag(StatusFlag.Zero, _y == 0);
-            _flags.SetFlag(StatusFlag.Negative, _y.IsNegative());
+            UpdateZeroNegativeFlags(_y);
         }
 
         /// <summary>
@@ -919,8 +925,7 @@ namespace MiNES.CPU
         {
             _x--;
 
-            _flags.SetFlag(StatusFlag.Zero, _x == 0);
-            _flags.SetFlag(StatusFlag.Negative, _x.IsNegative());
+            UpdateZeroNegativeFlags(_x);
         }
 
         /// <summary>
@@ -930,8 +935,7 @@ namespace MiNES.CPU
         {
             byte val = (byte)(_bus.Read(_operandAddress) - 1);
 
-            _flags.SetFlag(StatusFlag.Zero, val == 0);
-            _flags.SetFlag(StatusFlag.Negative, val.IsNegative());
+            UpdateZeroNegativeFlags(val);
 
             _bus.Write(_operandAddress, val);
         }
@@ -1172,11 +1176,13 @@ namespace MiNES.CPU
             // If result is greater than 255, enable the Carry flag
             _flags.SetFlag(StatusFlag.Carry, temp > 255);
 
-            // If the bit no. 7 is set, then enable the Negative flag
-            _flags.SetFlag(StatusFlag.Negative, result.IsNegative());
+            //// If the bit no. 7 is set, then enable the Negative flag
+            //_flags.SetFlag(StatusFlag.Negative, result.IsNegative());
 
-            // If result equals 0, enable the Zero flag
-            _flags.SetFlag(StatusFlag.Zero, result == 0);
+            //// If result equals 0, enable the Zero flag
+            //_flags.SetFlag(StatusFlag.Zero, result == 0);
+
+            UpdateZeroNegativeFlags(result);
 
             // If two numbers of the same sign produce a number whose sign is different, then there's an overflow
             _flags.SetFlag(StatusFlag.Overflow, ((accValue ^ result) & (val ^ result) & 0x0080) == 0x0080);
@@ -1218,9 +1224,11 @@ namespace MiNES.CPU
             // If carry flag is set, it means a borror did not happen, otherwise it did happen
             _flags.SetFlag(StatusFlag.Carry, temp > 255);
 
-            _flags.SetFlag(StatusFlag.Zero, result == 0);
+            UpdateZeroNegativeFlags(result);
 
-            _flags.SetFlag(StatusFlag.Negative, result.IsNegative());
+            //_flags.SetFlag(StatusFlag.Zero, result == 0);
+
+            //_flags.SetFlag(StatusFlag.Negative, result.IsNegative());
 
             // In the substraction, the sign check is done in the complement
             _flags.SetFlag(StatusFlag.Overflow, ((accValue ^ result) & (complement ^ result) & 0x0080) == 0x0080);
@@ -1235,8 +1243,7 @@ namespace MiNES.CPU
         {
             _a = _bus.Read(_operandAddress);
 
-            _flags.SetFlag(StatusFlag.Zero, _a == 0);
-            _flags.SetFlag(StatusFlag.Negative, _a.IsNegative());
+            UpdateZeroNegativeFlags(_a);
         }
 
         /// <summary>
@@ -1294,8 +1301,7 @@ namespace MiNES.CPU
             byte result = (byte)(val << 1);
 
             _flags.SetFlag(StatusFlag.Carry, (val & 0x0080) == 0x0080);
-            _flags.SetFlag(StatusFlag.Negative, result.IsNegative());
-            _flags.SetFlag(StatusFlag.Zero, result == 0);
+            UpdateZeroNegativeFlags(result);
 
             return result;
         }
@@ -1331,8 +1337,7 @@ namespace MiNES.CPU
             byte result = (byte)(val >> 1);
 
             _flags.SetFlag(StatusFlag.Carry, (val & 0x01) == 0x01);
-            _flags.SetFlag(StatusFlag.Zero, result == 0);
-            _flags.SetFlag(StatusFlag.Negative, result.IsNegative());
+            UpdateZeroNegativeFlags(result);
 
             return result;
         }
@@ -1370,8 +1375,7 @@ namespace MiNES.CPU
             byte result = (byte)r;
 
             _flags.SetFlag(StatusFlag.Carry, (val & 0x0080) == 0x0080);
-            _flags.SetFlag(StatusFlag.Negative, result.IsNegative());
-            _flags.SetFlag(StatusFlag.Zero, result == 0);
+            UpdateZeroNegativeFlags(result);
 
             return result;
         }
@@ -1409,8 +1413,7 @@ namespace MiNES.CPU
             byte result = (byte)r;
 
             _flags.SetFlag(StatusFlag.Carry, (val & 0x01) == 0x01);
-            _flags.SetFlag(StatusFlag.Zero, result == 0);
-            _flags.SetFlag(StatusFlag.Negative, result.IsNegative());
+            UpdateZeroNegativeFlags(result);
 
             return result;
         }
@@ -1423,8 +1426,7 @@ namespace MiNES.CPU
             byte val = _bus.Read(_operandAddress);
             byte result = (byte)(val & _a);
 
-            _flags.SetFlag(StatusFlag.Zero, result == 0);
-            _flags.SetFlag(StatusFlag.Negative, result.IsNegative());
+            UpdateZeroNegativeFlags(result);
 
             _a = result;
         }
@@ -1437,8 +1439,7 @@ namespace MiNES.CPU
             byte val = _bus.Read(_operandAddress);
             byte result = (byte)(val ^ _a);
 
-            _flags.SetFlag(StatusFlag.Zero, result == 0);
-            _flags.SetFlag(StatusFlag.Negative, result.IsNegative());
+            UpdateZeroNegativeFlags(result);
 
             _a = result;
         }
@@ -1451,8 +1452,7 @@ namespace MiNES.CPU
             byte val = _bus.Read(_operandAddress);
             byte result = (byte)(val | _a);
 
-            _flags.SetFlag(StatusFlag.Zero, result == 0);
-            _flags.SetFlag(StatusFlag.Negative, result.IsNegative());
+            UpdateZeroNegativeFlags(result);
 
             _a = result;
         }
@@ -1653,29 +1653,58 @@ namespace MiNES.CPU
         /// <summary>
         /// Executes a NMI interruption.
         /// </summary>
-        public void NMI()
+        private int NMI()
         {
-            Interrupt(InterruptionType.NMI);
+            try
+            {
+                Interrupt(InterruptionType.NMI);
+            }
+            finally
+            {
+                NmiTriggered = false;
+            }
+
+            // TODO: verify that NMI takes 7 cpu cycles
+            return 7;
         }
 
         /// <summary>
         /// Executes the next instruction denoted by the program counter.
         /// </summary>
         /// <returns>The number of cycles spent for execute the instruction.</returns>
-        public byte Step() => ExecuteInstruction();
-
-        public byte[] GetOam(byte cpuPage)
+        public int Step()
         {
-            byte[] oam = new byte[256];
+            if (NmiTriggered)
+                return NMI();
+            else if (_bus.DmaTransferTriggered)
+                return TransferOam();
+            else
+                return ExecuteInstruction();
+        }
 
-            ushort address = (ushort)(0 | (cpuPage << 8));
-            for (int i = 0; i < 256; i++)
+        /// <summary>
+        /// Transfers the OAM dataset into the PPU OAM.
+        /// </summary>
+        /// <returns>The number of cycles spent while transfering the OAM.</returns>
+        private int TransferOam()
+        {
+            int cyclesSpent = CyclesElapsed % 2 != 0 ? 514 : 513;
+            try
             {
-                byte oamEntry = _bus.Read(address++);
-                oam[i] = oamEntry;
+                ushort cpuAddress = (ushort)(_bus.OamMemoryPage << 8);
+                for (int i = 0; i < 256; i++)
+                {
+                    byte oamByte = _bus.Read(cpuAddress++);
+                    _bus.Write(0x2004, oamByte);
+                }
+            }
+            finally
+            {
+                _bus.DmaTransferTriggered = false;
+                CyclesElapsed += cyclesSpent;
             }
 
-            return oam;
+            return cyclesSpent;
         }
     }
 }

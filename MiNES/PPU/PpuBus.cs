@@ -20,7 +20,8 @@ namespace MiNES.PPU
         {
             // Nametables and attribute tables (mirrored in the range [0x3000, 0x3EFF])
             if (address >= 0x2000 && address < 0x3F00)
-                return ReadNametable((ushort)(0x2000 + address % 0x1000));
+                //return ReadNametable((ushort)(0x2000 + address % 0x1000));
+                return ReadNametable((ushort)(0x2000 + (address & 0x0FFF)));
             //if (address >= 0x2000 && address < 0x3000)
             //    return ReadNametable(address);
             //else if (address >= 0x3000 && address < 0x3F00)
@@ -29,7 +30,8 @@ namespace MiNES.PPU
             //}
             // Background palette and sprite palletes (mirrored in the range [0x3F20, 0x3FFF])
             else if (address >= 0x3F00 && address < 0x4000)
-                return ReadPalette((ushort)(0x3F00 + address % 0x0020));
+                return ReadPalette((ushort)(0x3F00 + (address & 0x001F)));
+            //return ReadPalette((ushort)(0x3F00 + address % 0x0020));
             // Mirror of everything allocated from 0x000 until 0x3FFF
             //else if (address >= 0x4000)
             //    return this.Read((ushort)(address % 0x4000));
@@ -93,7 +95,8 @@ namespace MiNES.PPU
             }
             else if (address >= 0x2000 && address < 0x3F00)
             {
-                WriteNametable((ushort)(0x2000 + address % 0x1000), val);
+                //WriteNametable((ushort)(0x2000 + address % 0x1000), val);
+                WriteNametable((ushort)(0x2000 + (address & 0x0FFF)), val);
             }
             //else if (address >= 0x2000 && address < 0x3000)
             //    WriteNametable(address, val);
@@ -106,7 +109,8 @@ namespace MiNES.PPU
             //    WriteNametable((ushort)(0x2000 + address % 0x1000), val);
             // Background palette and sprite palletes (mirrored in the range [0x3F20, 0x3FFF])
             else if (address >= 0x3F00 && address < 0x4000)
-                WritePalette((ushort)(0x3F00 + address % 0x0020), val);
+                WritePalette((ushort)(0x3F00 + (address & 0x001F)), val);
+            //WritePalette((ushort)(0x3F00 + address % 0x0020), val);
             // Mirror of everything allocated from 0x000 until 0x3FFF
             //else if (address >= 0x4000)
             //    this.Write((ushort)(address % 0x4000), val);
@@ -122,8 +126,8 @@ namespace MiNES.PPU
         private void WriteNametable(ushort address, byte val)
         {
             //TODO: This logic can be done much better!
-            ushort baseAddress = address;
-            ushort offset = (ushort)(address % 0x0400);
+            //ushort baseAddress = address;
+            //ushort offset = (ushort)(address % 0x0400);
             if (_mirroring == Mirroring.Vertical)
             {
                 if ((address >= 0x2800 && address < 0x2C00) || (address >= 0x2C00 && address < 0x3000))
@@ -170,8 +174,8 @@ namespace MiNES.PPU
         /// <returns>The value allocated in the given address.</returns>
         private byte ReadNametable(ushort address)
         {
-            ushort baseAddress = address;
-            ushort offset = (ushort)(address % 0x0400);
+            //ushort baseAddress = address;
+            //ushort offset = (ushort)(address % 0x0400);
             if (_mirroring == Mirroring.Vertical)
             {
                 if ((address >= 0x2800 && address < 0x2C00) || (address >= 0x2C00 && address < 0x3000))

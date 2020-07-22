@@ -1,23 +1,27 @@
 ﻿using MiNES.Extensions;
 using MiNES.PPU.Registers;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
-using System.Xml;
 
 namespace MiNES.PPU
 {
     public class Ppu
-    {
+    {        
+        /// <summary>
+        /// Count how many frames has been rendered so far.
+        /// </summary>
+        public int Frames { get; private set; } = 1;
+
         private readonly PpuBus _ppuBus;
 
         private int _fineX;
         private int _cycles = 0;
         private int _scanline = -1;
-        private Bitmap _frame;
+
+        private const int Width = 256;
+        private const int Height = 240;
+        private readonly int[] _frameBuffer = new int[Width * Height];
+        public int[] Frame => _frameBuffer;
 
         /// <summary>
         /// This register is divided into 2 registers: the low byte (right side) correspond the PISO register, which is
@@ -48,14 +52,7 @@ namespace MiNES.PPU
 
         private byte _lowPixelsRow;
         private byte _highPixelsRow;
-        private bool _isRenderingEnabled => Mask.RenderBackground || Mask.RenderSprites;
-
-        /// <summary>
-        /// Count how many frames has been rendered.
-        /// </summary>
-        private byte _framesRendered = 1;
-
-        public Bitmap FrameBuffer { get; private set; }
+        private bool IsRenderingEnabled => Mask.RenderBackground || Mask.RenderSprites;
 
         /// <summary>
         /// Controls the state of the address latch (false = high byte; true = low byte).
@@ -93,53 +90,21 @@ namespace MiNES.PPU
         /// <summary>
         /// The PPU OAM (it's 256 bytes long, capable of store 64 sprites, sprite data is 4 bytes long).
         /// </summary>
-        private byte[] _oam = new byte[256];
+        private readonly byte[] _oam = new byte[256];
 
         private readonly byte[] _oamBuffer = new byte[32];
 
-        public byte OamCpuPage { get; set; }
-        public bool DmaTriggered { get; set; }
-
-        public void SetOam(byte[] oam)
-        {
-            _oam = oam;
-        }
+        private bool _isSpriteZeroInBuffer;
 
         public void SetOamData(byte data)
         {
-            //// Only writes to OAM Data port when rendering is disabled
-            //if (!_isRenderingEnabled)
-            //{
-            //    /*  When Oam Address is divisible by 4, it means we attempting to write the position of the sprite in Y axis, so we must substract 1 from it because
-            //     *  delayed scanline.
-            //     */
-            //    //int val = OamAddress % 4 == 0 ? data - 1 : data;
-            //    //_oam[OamAddress] = (byte)val;
-            //    _oam[OamAddress] = data;
-
-            //    // OAM address gets incremented by one when data is written
-            //    OamAddress++;
-            //}
-
-            // TODO: confirm this: writes to OAM data port occurs when rendering is disabled
-
-            /*  When Oam Address is divisible by 4, it means we attempting to write the position of the sprite in Y axis, so we must substract 1 from it because
-             *  delayed scanline.
-             */
-            //int val = OamAddress % 4 == 0 ? data - 1 : data;
-            //_oam[OamAddress] = (byte)val;
             _oam[OamAddress] = data;
 
             // OAM address gets incremented by one when data is written
             OamAddress++;
         }
 
-        public byte GetOamData()
-        {
-            // TODO: does a read during pre render and render scanlines increment the oam adddress?
-
-            return _oam[OamAddress];
-        }
+        public byte GetOamData() => _oam[OamAddress];
 
         private byte _dataBuffer = 0;
 
@@ -229,7 +194,7 @@ namespace MiNES.PPU
             _ppuBus = ppuBus;
 
             _backgroundTiles = GetPatternTable();
-            ResetFrame();
+            ResetFrameRenderingStatus();
         }
 
         /// <summary>
@@ -250,15 +215,15 @@ namespace MiNES.PPU
             {
                 value = (byte)((value | 0xC0) ^ 0xC0);
 
-                T.Value = (ushort)(((T.Value | 0x3F00) ^ 0x3F00) | (value << 8));
-                T.Value = (ushort)((T.Value | 0x4000) ^ 0x4000); // Sets bit 14 to 0
+                T.RegisterValue = (ushort)(((T.RegisterValue | 0x3F00) ^ 0x3F00) | (value << 8));
+                T.RegisterValue = (ushort)((T.RegisterValue | 0x4000) ^ 0x4000); // Sets bit 14 to 0
 
                 _addressLatch = true; // Flips to the low byte state
             }
             else // w is 1
             {
-                T.Value = (ushort)(((T.Value | 0xFF) ^ 0xFF) | value);
-                V.Value = T.Value;
+                T.RegisterValue = (ushort)(((T.RegisterValue | 0xFF) ^ 0xFF) | value);
+                V.RegisterValue = T.RegisterValue;
 
                 _addressLatch = false; // Flips to the high byte state
             }
@@ -351,7 +316,7 @@ namespace MiNES.PPU
             /* If the compiled address does not overlap the color palette address range, then return
              * the data read from the buffer; otherwise return the data read from the address right away
              */
-            if (V.Value >= 0x3F00)
+            if (V.RegisterValue >= 0x3F00)
                 data = _dataBuffer;
 
             IncrementVRamAddress();
@@ -376,14 +341,10 @@ namespace MiNES.PPU
         {
             // If bit 3 from control register is set, add 32 to VRAM address; otherwise 1
             if (ControlRegister.VRamAddressIncrement)
-                V.Value += 32;
+                V.RegisterValue += 32;
             else
-                V.Value++;
+                V.RegisterValue++;
         }
-
-        private byte _oamLatch;
-        private byte _oamBufferIndex;
-        private byte _spritesInBuffer;
 
         private byte[] _spriteXCounters = new byte[8];
         private byte[] _spriteAttributes = new byte[8];
@@ -395,9 +356,17 @@ namespace MiNES.PPU
         private byte _spriteTileIndex;
         private bool _flipSpriteVertically;
         private bool _flipSpriteHorizontally;
-        private bool _emptySprite;
+        private bool _isEmptySprite;
 
-        public void DrawPixel()
+        /// <summary>
+        /// Denotes whether frame being rendered is odd or not.
+        /// </summary>
+        /// <remarks>
+        /// Initially would be false because frame 1 would be the first frame to render.
+        /// </remarks>
+        private bool _isOddFrame = true;
+
+        public void Step()
         {
             // Cycle 0 does not do anything (it's idle)
             if (_cycles == 0)
@@ -424,14 +393,14 @@ namespace MiNES.PPU
                 // Background rendering process
                 if ((_cycles >= 1 && _cycles <= 256) || (_cycles >= 321 && _cycles <= 336))
                 {
-                    var stage = _cycles % 8;
+                    //var stage = _cycles % 8;
+                    var stage = _cycles & 7;
                     switch (stage)
                     {
                         // Load high background pattern table byte
                         case 0:
                             {
-                                ushort patternTableAddress = (ushort)(ControlRegister.BackgroundPatternTableAddress ? 0x1000 : 0);
-                                ushort pixelsRowAddress = (ushort)(patternTableAddress + (_tileId * 16) + V.FineY + 8);
+                                ushort pixelsRowAddress = (ushort)(ControlRegister.BackgroundPatternTableBaseAddress + (_tileId * 16) + V.FineY + 8);
 
                                 _highPixelsRow = _ppuBus.Read(pixelsRowAddress);
                             }
@@ -443,14 +412,14 @@ namespace MiNES.PPU
                         // Fetch nametable byte
                         case 2:
                             {
-                                ushort tileIdAddress = (ushort)(0x2000 | (V.Value & 0x0FFF));
+                                ushort tileIdAddress = (ushort)(0x2000 | (V.RegisterValue & 0x0FFF));
                                 _tileId = _ppuBus.Read(tileIdAddress);
                             }
                             break;
                         // Fetch attribute table byte
                         case 4:
                             {
-                                ushort attributeEntryAddress = (ushort)(0x23C0 | (V.Value & 0x0C00) | ((V.Value >> 4) & 0x38) | ((V.Value >> 2) & 0x07));
+                                ushort attributeEntryAddress = (ushort)(0x23C0 | (V.RegisterValue & 0x0C00) | ((V.RegisterValue >> 4) & 0x38) | ((V.RegisterValue >> 2) & 0x07));
                                 
                                 _attribute = _ppuBus.Read(attributeEntryAddress);
                                 _blockId = ParseBlock(V.CoarseX, V.CoarseY);
@@ -459,8 +428,7 @@ namespace MiNES.PPU
                         // Fetch low background pattern table byte
                         case 6:
                             {
-                                ushort patternTableAddress = (ushort)(ControlRegister.BackgroundPatternTableAddress ? 0x1000 : 0);
-                                ushort pixelsRowAddress = (ushort)(patternTableAddress + (_tileId * 16) + V.FineY);
+                                ushort pixelsRowAddress = (ushort)(ControlRegister.BackgroundPatternTableBaseAddress + (_tileId * 16) + V.FineY);
 
                                 _lowPixelsRow = _ppuBus.Read(pixelsRowAddress);
                             }
@@ -478,53 +446,48 @@ namespace MiNES.PPU
                     }
                     else if (_cycles > 64 && _cycles <= 256)
                     {
-                        // Read mode (odd cycles)
-                        if (_cycles % 2 != 0)
+                        // Fill the secondary oam buffer at once
+                        if (_cycles == 256)
                         {
-                            _oamLatch = _oam[OamAddress];
-                        }
-                        // Write mode (even cycles)
-                        else
-                        {
-                            var currentSpriteYPos = _oam[(OamAddress / 4) * 4];
-                            bool isSpriteInRange = IsSpriteInRange(currentSpriteYPos);
+                            int bufferIndex = 0;
+                            int spritesBuffered = 0;
+                            _isSpriteZeroInBuffer = false;
 
-                            if (_spritesInBuffer < 8)
+                            for (int n = 0; n < _oam.Length; n += 4)
                             {
-                                _oamBuffer[_oamBufferIndex] = _oamLatch;
-                            }
-                            else if (!StatusRegister.SpriteOverflow)
-                            {
-                                if (isSpriteInRange)
-                                    StatusRegister.SpriteOverflow = true;
-                            }
+                                byte spriteYPos = _oam[n];
+                                if (IsSpriteInRange(spriteYPos))
+                                {
+                                    if (spritesBuffered < 8)
+                                    {
+                                        _oamBuffer[bufferIndex] = spriteYPos;
+                                        _oamBuffer[bufferIndex + 1] = _oam[n + 1];
+                                        _oamBuffer[bufferIndex + 2] = _oam[n + 2];
+                                        _oamBuffer[bufferIndex + 3] = _oam[n + 3];
 
-                            if (isSpriteInRange && !StatusRegister.SpriteOverflow)
-                            {
-                                OamAddress++;
-                                _oamBufferIndex++;
+                                        bufferIndex += 4;
+                                        spritesBuffered++;
 
-                                _spritesInBuffer = (byte)(_oamBufferIndex / 4);
+                                        if (n == 0 && !_isSpriteZeroInBuffer)
+                                            _isSpriteZeroInBuffer = true;
+                                    }
+                                    else if (!StatusRegister.SpriteOverflow) // An overflow has ocurred then!
+                                    {
+                                        StatusRegister.SpriteOverflow = true;
+                                    }
+                                }
                             }
-                            else
-                            {
-                                OamAddress += 4;
-                            }
-
-                            // Workaround for set empty sprite slots to $FF
-                            if (_cycles == 256)
-                                for (int i = _spritesInBuffer * 4; i < _oamBuffer.Length; i++)
-                                    _oamBuffer[i] = 0xFF;
                         }
                     }else if (_cycles >= 257 && _cycles <= 320)
                     {
-                        var stage = (_cycles - 1) % 8;
+                        //var stage = (_cycles - 1) % 8;
+                        var stage = (_cycles - 1) & 7;
                         switch (stage)
                         {
                             // Parse the Y coordinate
                             case 0:
                                 _spriteY = (byte)(_scanline - _oamBuffer[_spriteBufferIndex * 4]);
-                                _emptySprite = _oamBuffer[_spriteBufferIndex * 4] == 0xFF;
+                                _isEmptySprite = _oamBuffer[_spriteBufferIndex * 4] == 0xFF;
                                 break;
                             case 1:
                                 _spriteTileIndex = _oamBuffer[(_spriteBufferIndex * 4) + 1];
@@ -548,7 +511,7 @@ namespace MiNES.PPU
                                     // fetch sprite low tile
                                     byte lowPlane = 0;
 
-                                    if (!_emptySprite)
+                                    if (!_isEmptySprite)
                                     {
                                         // 8 x 16 sprites
                                         if (ControlRegister.SpriteSize)
@@ -572,10 +535,9 @@ namespace MiNES.PPU
                                         } // 8 x 8 sprites
                                         else
                                         {
-                                            ushort patternTableAddress = (ushort)(ControlRegister.SpritesPatternTableAddress ? 0x1000 : 0);
                                             var flipOffset = _flipSpriteVertically ? (7 - _spriteY) : _spriteY;
 
-                                            lowPlane = _ppuBus.Read((ushort)(patternTableAddress + (_spriteTileIndex * 16) + flipOffset));
+                                            lowPlane = _ppuBus.Read((ushort)(ControlRegister.SpritesPatternTableBaseAddress + (_spriteTileIndex * 16) + flipOffset));
                                         }
 
                                         if (_flipSpriteHorizontally)
@@ -594,7 +556,7 @@ namespace MiNES.PPU
                                     // fetch sprite high tile
                                     byte highPlane = 0;
 
-                                    if (!_emptySprite)
+                                    if (!_isEmptySprite)
                                     {
                                         // 8 x 16 sprites
                                         if (ControlRegister.SpriteSize)
@@ -618,10 +580,9 @@ namespace MiNES.PPU
                                         } // 8 x 8 sprites
                                         else
                                         {
-                                            ushort patternTableAddress = (ushort)(ControlRegister.SpritesPatternTableAddress ? 0x1000 : 0);
                                             var flipOffset = _flipSpriteVertically ? (7 - _spriteY) : _spriteY;
 
-                                            highPlane = _ppuBus.Read((ushort)(patternTableAddress + (_spriteTileIndex * 16) + flipOffset + 8));
+                                            highPlane = _ppuBus.Read((ushort)(ControlRegister.SpritesPatternTableBaseAddress + (_spriteTileIndex * 16) + flipOffset + 8));
                                         }
 
                                         if (_flipSpriteHorizontally)
@@ -642,15 +603,15 @@ namespace MiNES.PPU
                 }
 
                 // Increments the horizontal component in the V register
-                if (_isRenderingEnabled && ((_cycles >= 1 && _cycles <= 256) || (_cycles >= 328 && _cycles <= 336)) && _cycles % 8 == 0)
+                if (IsRenderingEnabled && ((_cycles >= 1 && _cycles <= 256) || (_cycles >= 328 && _cycles <= 336)) && _cycles % 8 == 0)
                     IncrementHorizontalPosition();
 
                 // Increments the vertical component in the V register
-                if (_isRenderingEnabled && _cycles == 256)
+                if (IsRenderingEnabled && _cycles == 256)
                     IncrementVerticalPosition();
 
                 // Copy the horizontal component from T register into V register
-                if (_isRenderingEnabled && _cycles == 257)
+                if (IsRenderingEnabled && _cycles == 257)
                     CopyHorizontalPositionToV();
 
                 // During cycles elapesed between 257 and 320 (inclusive), the OAM address is set to 0
@@ -663,12 +624,9 @@ namespace MiNES.PPU
                 VerticalBlankScanlines();
 
             _cycles++;
-            if (_cycles >= 341)
+            if (_cycles >= 341 || (_cycles >= 340 && _scanline == -1 && _isOddFrame && IsRenderingEnabled)) // When is an odd frame and we are in pre render scanline, the scanline is 340 cycles long (only when rendering is enabled)
             {
                 _cycles = 0;
-                
-                _oamBufferIndex = 0;
-                _spritesInBuffer = 0;
                 _spriteBufferIndex = 0;
 
                 if (_scanline < 260)
@@ -678,13 +636,11 @@ namespace MiNES.PPU
                 else
                 {
                     _scanline = -1;
-                    _framesRendered++;
-                    //if (_framesRendered > 60)
-                    //    _framesRendered = 1;
+
+                    Frames++;
+                    _isOddFrame = Frames % 2 != 0;
 
                     IsFrameCompleted = true;
-                    FrameBuffer = _frame;
-                    ResetFrame();
                 }
             }
 
@@ -797,7 +753,7 @@ namespace MiNES.PPU
         private void CopyHorizontalPositionToV()
         {
             V.CoarseX = T.CoarseX;
-            V.Value = (ushort)(((V.Value | 0x0400) ^ 0x0400) | (T.Value & 0x0400)); // copy bit 10 (nametable x) from T register
+            V.RegisterValue = (ushort)(((V.RegisterValue | 0x0400) ^ 0x0400) | (T.RegisterValue & 0x0400)); // copy bit 10 (nametable x) from T register
         }
 
         /// <summary>
@@ -808,7 +764,7 @@ namespace MiNES.PPU
             V.CoarseY = T.CoarseY;
             V.FineY = T.FineY;
 
-            V.Value = (ushort)(((V.Value | 0x0800) ^ 0x0800) | (T.Value & 0x0800)); // copy bit 11 (nametable y) from T register
+            V.RegisterValue = (ushort)(((V.RegisterValue | 0x0800) ^ 0x0800) | (T.RegisterValue & 0x0800)); // copy bit 11 (nametable y) from T register
         }
 
         /// <summary>
@@ -817,7 +773,7 @@ namespace MiNES.PPU
         /// </summary>
         private void IncrementVerticalPosition()
         {
-            byte fineY = (byte)((V.Value & 0x7000) >> 12);
+            byte fineY = (byte)((V.RegisterValue & 0x7000) >> 12);
             if (fineY < 7)
             {
                 fineY++;
@@ -827,15 +783,15 @@ namespace MiNES.PPU
                 fineY = 0;
 
                 // Increments coarse Y then
-                byte coarseY = (byte)((V.Value & 0x03E0) >> 5);
+                byte coarseY = (byte)((V.RegisterValue & 0x03E0) >> 5);
                 if (coarseY == 29)
                 {
                     coarseY = 0;
 
-                    byte yNametable = (byte)((V.Value & 0x0800) >> 11);
+                    byte yNametable = (byte)((V.RegisterValue & 0x0800) >> 11);
                     yNametable = (byte)~yNametable; // by toggling bit 11, we switch vertical nametable
 
-                    V.Value = (ushort)(((V.Value | 0x0800) ^ 0x0800) | ((yNametable & 1) << 11));
+                    V.RegisterValue = (ushort)(((V.RegisterValue | 0x0800) ^ 0x0800) | ((yNametable & 1) << 11));
                 }
                 else if (coarseY == 31)
                 {
@@ -846,30 +802,30 @@ namespace MiNES.PPU
                     coarseY++;
                 }
 
-                V.Value = (ushort)(((V.Value | 0x03E0) ^ 0x03E0) | (coarseY << 5)); // Put coarse Y into the V register
+                V.RegisterValue = (ushort)(((V.RegisterValue | 0x03E0) ^ 0x03E0) | (coarseY << 5)); // Put coarse Y into the V register
             }
 
-            V.Value = (ushort)(((V.Value | 0x7000) ^ 0x7000) | (fineY << 12)); // Put fineY into the V register
+            V.RegisterValue = (ushort)(((V.RegisterValue | 0x7000) ^ 0x7000) | (fineY << 12)); // Put fineY into the V register
         }
 
         private void IncrementHorizontalPosition()
         {
-            byte coarseX = (byte)(V.Value & 0x001F);
+            byte coarseX = (byte)(V.RegisterValue & 0x001F);
             if (coarseX == 31)
             {
                 coarseX = 0;
 
-                byte xNametable = (byte)((V.Value & 0x0400) >> 10);
+                byte xNametable = (byte)((V.RegisterValue & 0x0400) >> 10);
                 xNametable = (byte)~xNametable; // by toggling bit 10, we switch horizontal nametable
 
-                V.Value = (ushort)(((V.Value | 0x0400) ^ 0x0400) | ((xNametable & 1) << 10));
+                V.RegisterValue = (ushort)(((V.RegisterValue | 0x0400) ^ 0x0400) | ((xNametable & 1) << 10));
             }
             else
             {
                 coarseX++;
             }
 
-            V.Value = (ushort)(((V.Value | 0x001F) ^ 0x001F) | coarseX);
+            V.RegisterValue = (ushort)(((V.RegisterValue | 0x001F) ^ 0x001F) | coarseX);
         }
 
         private void PreRenderScanline()
@@ -879,14 +835,8 @@ namespace MiNES.PPU
                 StatusRegister.SpriteOverflow = false;
                 StatusRegister.SpriteZeroHit = false;
                 StatusRegister.VerticalBlank = false;
-
-                for (int i = 0; i < _spriteHighPlaneTiles.Length; i++)
-                {
-                    _spriteHighPlaneTiles[i] = 0;
-                    _spriteLowPlaneTiles[i] = 0;
-                }
             }
-            else if (_isRenderingEnabled && _cycles >= 280 && _cycles <= 304)
+            else if (IsRenderingEnabled && _cycles >= 280 && _cycles <= 304)
             {
                 CopyVerticalPositionToV();
             }
@@ -918,6 +868,7 @@ namespace MiNES.PPU
             byte spritePixel = 0;
             byte spritePalette = 0;
             bool spritePriority = false;
+            bool spriteZeroRendering = false;
 
             if (Mask.RenderSprites)
             {
@@ -936,9 +887,9 @@ namespace MiNES.PPU
                         // Sprite pixel is opaque
                         if (spritePixel != 0)
                         {
-                            //// When the pixel of the sprite 0 is opaque, we must set the flag of sprite zero hit
-                            if (i == 0 && backgroundPixel != 0)
-                                StatusRegister.SpriteZeroHit = true;
+                            // When the pixel of the sprite 0 is opaque, we must set the flag of sprite zero hit
+                            if (_isSpriteZeroInBuffer && i == 0 && backgroundPixel != 0)
+                                spriteZeroRendering = true;
 
                             break;
                         }
@@ -972,22 +923,31 @@ namespace MiNES.PPU
                     palette = spritePalette;
                 }
 
-                // TODO: see how to deal with sprite zero hit flag
+                if (_isSpriteZeroInBuffer && spriteZeroRendering && Mask.RenderBackground && Mask.RenderSprites)
+                {
+                    // If either sprites or background must be hidden (in the first 8 pixels), then don't set the sprite zero hit unless the first 8 pixels has been rendered
+                    if (!Mask.ShowBackgroundLeftSideScreen || !Mask.ShowSpritesLeftSideScreen)
+                    {
+                        if (_cycles > 8)
+                            StatusRegister.SpriteZeroHit = true;
+                    }
+                    else
+                    {
+                        StatusRegister.SpriteZeroHit = true;
+                    }
+                }
             }
 
-            _frame.SetPixel(_cycles - 1, _scanline, GetPaletteColor(palette, pixel));
+            //_frame.SetPixel(_cycles - 1, _scanline, GetPaletteColor(palette, pixel));
+            _frameBuffer[(_cycles - 1) + _scanline * 256] = GetPaletteColor(palette, pixel).ToArgb();
         }
 
-
-        public void DisposeBuffer()
+        /// <summary>
+        /// Resets the frame rendering status.
+        /// </summary>
+        public void ResetFrameRenderingStatus()
         {
-            FrameBuffer = null;
-        }
-
-        public void ResetFrame()
-        {
-            _frame = new Bitmap(256, 240);
-            //IsFrameCompleted = false;
+            IsFrameCompleted = false;
         }
 
         private ushort GetNametableBaseAddress()
@@ -1082,7 +1042,7 @@ namespace MiNES.PPU
             if (_scanline == 241 && _cycles == 1)
             {
                 StatusRegister.VerticalBlank = true;
-                if (ControlRegister.GenerateNMI)
+                if (ControlRegister.GenerateNmi)
                     NmiRequested = true;
             }
         }

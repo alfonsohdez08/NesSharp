@@ -11,6 +11,16 @@ namespace MiNES.CPU
         private readonly Ppu _ppu;
 
         /// <summary>
+        /// Acknowledges the CPU for start transfering the OAM data into the PPU OAM.
+        /// </summary>
+        public bool DmaTransferTriggered { get; set; } = false;
+
+        /// <summary>
+        /// The page within memory RAM where the OAM data resides.
+        /// </summary>
+        public byte OamMemoryPage { get; private set; }
+
+        /// <summary>
         /// Creates an instance of the bus used by the CPU.
         /// </summary>
         /// <param name="memory">The space for allocate RAM and other "stuffs".</param>
@@ -25,9 +35,11 @@ namespace MiNES.CPU
             byte val;
             // 2KB RAM mirrored
             if (address >= 0x0000 && address < 0x2000)
-                val = memory.Fetch((ushort)(address % 0x0800));
+                //val = memory.Fetch((ushort)(address % 0x0800));
+                val = memory.Fetch((ushort)(address & 0x07FF));
             else if (address >= 0x2000 && address < 0x4000) // PPU registers
-                val = ReadPpuRegister((ushort)(0x2000 + address % 8));
+                //val = ReadPpuRegister((ushort)(0x2000 + address % 8));
+                val = ReadPpuRegister((ushort)(0x2000 + (address & 7)));
             else
                 val = memory.Fetch(address);
 
@@ -54,7 +66,7 @@ namespace MiNES.CPU
 
                 // PPU Status register
                 case 0x2002:
-                    value = _ppu.StatusRegister.Value;
+                    value = _ppu.StatusRegister.RegisterValue;
                     
                     // Side effects of reading the status register
                     _ppu.StatusRegister.VerticalBlank = false; // Clears bit 7 (V-BLANK) flag after CPU read the status register
@@ -96,14 +108,14 @@ namespace MiNES.CPU
             if (address >= 0x0000 && address < 0x2000)
                 WriteRam(address, val);
             else if (address >= 0x2000 && address < 0x4000)
-                WritePpuRegister((ushort)(0x2000 + address % 8), val);
+                //WritePpuRegister((ushort)(0x2000 + address % 8), val);
+                WritePpuRegister((ushort)(0x2000 + (address & 7)), val);
             // DMA port
             else if (address == 0x4014) 
             {
                 // The value written to this port is the page within the CPU RAM where a copy of the OAM resides
-                _ppu.OamCpuPage = val;
-                //_ppu.OamAddress = 0;
-                _ppu.DmaTriggered = true;
+                DmaTransferTriggered = true;
+                OamMemoryPage = val;
             }
         }
 
@@ -114,7 +126,9 @@ namespace MiNES.CPU
         /// <param name="val">The value that would be stored in the slot specified by the address within the RAM.</param>
         private void WriteRam(ushort address, byte val)
         {
-            memory.Store((ushort)(address % 0x0800), val);
+            //memory.Store((ushort)(address % 0x0800), val);
+            memory.Store((ushort)(address & 0x07FF), val);
+
         }
 
         /// <summary>
@@ -128,7 +142,7 @@ namespace MiNES.CPU
             {
                 // PPU Control register (write only)
                 case 0x2000:
-                    _ppu.ControlRegister.Value = value;
+                    _ppu.ControlRegister.RegisterValue = value;
 
                     _ppu.T.Nametable = (byte)(value & 3);
 
@@ -136,7 +150,7 @@ namespace MiNES.CPU
 
                 // PPU Mask register (write only)
                 case 0x2001:
-                    _ppu.Mask.Value = value;
+                    _ppu.Mask.RegisterValue = value;
                     break;
 
                 // PPU Status register (read only)
