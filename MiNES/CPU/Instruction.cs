@@ -6,11 +6,6 @@
     class Instruction
     {
         /// <summary>
-        /// The mnemonic code that represents the underlying instruction.
-        /// </summary>
-        public string Mnemonic { get; private set; }
-
-        /// <summary>
         /// The addressing mode of the instruction.
         /// </summary>
         public AddressingMode AddressingMode { get; private set; }
@@ -25,7 +20,9 @@
         /// </summary>
         public bool AdditionalCycleWhenCrossPage { get; private set; }
 
-        public Instruction(string mnemonic, AddressingMode addressingMode, byte machineCycles, bool additionalCycle = false)
+        public Mnemonic Mnemonic { get; private set; }
+
+        public Instruction(Mnemonic mnemonic, AddressingMode addressingMode, byte machineCycles, bool additionalCycle = false)
         {
             Mnemonic = mnemonic;
             AddressingMode = addressingMode;

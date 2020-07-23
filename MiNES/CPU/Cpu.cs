@@ -194,7 +194,7 @@ namespace MiNES.CPU
 #if !CPU_NES_TEST
         private string ParseInstruction(Instruction instruction)
         {
-            var instructionSb = new StringBuilder(instruction.Mnemonic);
+            var instructionSb = new StringBuilder(instruction.Mnemonic.ToString());
 
             if (!(instruction.AddressingMode == AddressingMode.Accumulator || instruction.AddressingMode == AddressingMode.Implied))
             {
@@ -318,213 +318,213 @@ namespace MiNES.CPU
             // Executes the instruction based on its mnemonic code
             switch (instruction.Mnemonic)
             {
-                case ADC_INSTRUCTION:
+                case Mnemonic.ADC:
                     ADC();
                     break;
-                case AND_INSTRUCTION:
+                case Mnemonic.AND:
                     AND();
                     break;
-                case ASL_INSTRUCTION:
+                case Mnemonic.ASL:
                     if (instruction.AddressingMode == AddressingMode.Accumulator)
                         ASL_ACC();
                     else
                         ASL();
                     break;
-                case BCC_INSTRUCTION:
+                case Mnemonic.BCC:
                     BCC();
                     break;
-                case BCS_INSTRUCTION:
+                case Mnemonic.BCS:
                     BCS();
                     break;
-                case BEQ_INSTRUCTION:
+                case Mnemonic.BEQ:
                     BEQ();
                     break;
-                case BIT_INSTRUCTION:
+                case Mnemonic.BIT:
                     BIT();
                     break;
-                case BMI_INSTRUCTION:
+                case Mnemonic.BMI:
                     BMI();
                     break;
-                case BNE_INSTRUCTION:
+                case Mnemonic.BNE:
                     BNE();
                     break;
-                case BPL_INSTRUCTION:
+                case Mnemonic.BPL:
                     BPL();
                     break;
-                case BRK_INSTRUCTION:
+                case Mnemonic.BRK:
                     BRK();
                     break;
-                case BVC_INSTRUCTION:
+                case Mnemonic.BVC:
                     BVC();
                     break;
-                case BVS_INSTRUCTION:
+                case Mnemonic.BVS:
                     BVS();
                     break;
-                case CLC_INSTRUCTION:
+                case Mnemonic.CLC:
                     CLC();
                     break;
-                case CLD_INSTRUCTION:
+                case Mnemonic.CLD:
                     CLD();
                     break;
-                case CLI_INSTRUCTION:
+                case Mnemonic.CLI:
                     CLI();
                     break;
-                case CLV_INSTRUCTION:
+                case Mnemonic.CLV:
                     CLV();
                     break;
-                case CMP_INSTRUCTION:
+                case Mnemonic.CMP:
                     CMP();
                     break;
-                case CPX_INSTRUCTION:
+                case Mnemonic.CPX:
                     CPX();
                     break;
-                case CPY_INSTRUCTION:
+                case Mnemonic.CPY:
                     CPY();
                     break;
-                case DEC_INSTRUCTION:
+                case Mnemonic.DEC:
                     DEC();
                     break;
-                case DEX_INSTRUCTION:
+                case Mnemonic.DEX:
                     DEX();
                     break;
-                case DEY_INSTRUCTION:
+                case Mnemonic.DEY:
                     DEY();
                     break;
-                case EOR_INSTRUCTION:
+                case Mnemonic.EOR:
                     EOR();
                     break;
-                case INC_INSTRUCTION:
+                case Mnemonic.INC:
                     INC();
                     break;
-                case INX_INSTRUCTION:
+                case Mnemonic.INX:
                     INX();
                     break;
-                case INY_INSTRUCTION:
+                case Mnemonic.INY:
                     INY();
                     break;
-                case JMP_INSTRUCTION:
+                case Mnemonic.JMP:
                     JMP();
                     break;
-                case JSR_INSTRUCTION:
+                case Mnemonic.JSR:
                     JSR();
                     break;
-                case LDA_INSTRUCTION:
+                case Mnemonic.LDA:
                     LDA();
                     break;
-                case LDX_INSTRUCTION:
+                case Mnemonic.LDX:
                     LDX();
                     break;
-                case LDY_INSTRUCTION:
+                case Mnemonic.LDY:
                     LDY();
                     break;
-                case LSR_INSTRUCTION:
+                case Mnemonic.LSR:
                     if (instruction.AddressingMode == AddressingMode.Accumulator)
                         LSR_ACC();
                     else
                         LSR();
                     break;
-                case NOP_INSTRUCTION:
+                case Mnemonic.NOP:
                     NOP();
                     break;
-                case ORA_INSTRUCTION:
+                case Mnemonic.ORA:
                     ORA();
                     break;
-                case PHA_INSTRUCTION:
+                case Mnemonic.PHA:
                     PHA();
                     break;
-                case PHP_INSTRUCTION:
+                case Mnemonic.PHP:
                     PHP();
                     break;
-                case PLA_INSTRUCTION:
+                case Mnemonic.PLA:
                     PLA();
                     break;
-                case PLP_INSTRUCTION:
+                case Mnemonic.PLP:
                     PLP();
                     break;
-                case ROL_INSTRUCTION:
+                case Mnemonic.ROL:
                     if (instruction.AddressingMode == AddressingMode.Accumulator)
                         ROL_ACC();
                     else
                         ROL();
                     break;
-                case ROR_INSTRUCTION:
+                case Mnemonic.ROR:
                     if (instruction.AddressingMode == AddressingMode.Accumulator)
                         ROR_ACC();
                     else
                         ROR();
                     break;
-                case RTI_INSTRUCTION:
+                case Mnemonic.RTI:
                     RTI();
                     break;
-                case RTS_INSTRUCTION:
+                case Mnemonic.RTS:
                     RTS();
                     break;
-                case SBC_INSTRUCTION:
+                case Mnemonic.SBC:
                     SBC();
                     break;
-                case SEC_INSTRUCTION:
+                case Mnemonic.SEC:
                     SEC();
                     break;
-                case SED_INSTRUCTION:
+                case Mnemonic.SED:
                     SED();
                     break;
-                case SEI_INSTRUCTION:
+                case Mnemonic.SEI:
                     SEI();
                     break;
-                case STA_INSTRUCTION:
+                case Mnemonic.STA:
                     STA();
                     break;
-                case STX_INSTRUCTION:
+                case Mnemonic.STX:
                     STX();
                     break;
-                case STY_INSTRUCTION:
+                case Mnemonic.STY:
                     STY();
                     break;
-                case TAX_INSTRUCTION:
+                case Mnemonic.TAX:
                     TAX();
                     break;
-                case TAY_INSTRUCTION:
+                case Mnemonic.TAY:
                     TAY();
                     break;
-                case TSX_INSTRUCTION:
+                case Mnemonic.TSX:
                     TSX();
                     break;
-                case TXA_INSTRUCTION:
+                case Mnemonic.TXA:
                     TXA();
                     break;
-                case TXS_INSTRUCTION:
+                case Mnemonic.TXS:
                     TXS();
                     break;
-                case TYA_INSTRUCTION:
+                case Mnemonic.TYA:
                     TYA();
                     break;
-                case LAX_INSTRUCTION:
+                case Mnemonic.LAX:
                     LAX();
                     break;
-                case SAX_INSTRUCTION:
+                case Mnemonic.SAX:
                     SAX();
                     break;
-                case DCP_INSTRUCTION:
+                case Mnemonic.DCP:
                     DCP();
                     break;
-                case ISB_INSTRUCTION:
+                case Mnemonic.ISB:
                     ISB();
                     break;
-                case SLO_INSTRUCTION:
+                case Mnemonic.SLO:
                     SLO();
                     break;
-                case RLA_INSTRUCTION:
+                case Mnemonic.RLA:
                     RLA();
                     break;
-                case SRE_INSTRUCTION:
+                case Mnemonic.SRE:
                     SRE();
                     break;
-                case RRA_INSTRUCTION:
+                case Mnemonic.RRA:
                     RRA();
                     break;
-                default:
-                    throw new NotImplementedException($"The instruction {instruction.Mnemonic} has not been implemented yet; Op Code: {opCode.ToString("X").PadLeft(2, '0')} Addressing Mode: {instruction.AddressingMode}.");
             }
+
+
 
 #if CPU_NES_TEST
             TestLineResult += $" CYC:{_cyclesElapsed}";

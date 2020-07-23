@@ -616,6 +616,7 @@ namespace MiNES.PPU
                     CopyHorizontalPositionToV();
 
                 // During cycles elapesed between 257 and 320 (inclusive), the OAM address is set to 0
+                //if (_cycles == 257)
                 if (_cycles >= 257 && _cycles <= 320)
                     OamAddress = 0;
             }
@@ -838,6 +839,7 @@ namespace MiNES.PPU
                 StatusRegister.VerticalBlank = false;
             }
             else if (IsRenderingEnabled && _cycles >= 280 && _cycles <= 304)
+            //else if (IsRenderingEnabled && _cycles == 280)
             {
                 CopyVerticalPositionToV();
             }
