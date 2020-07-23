@@ -161,14 +161,14 @@ namespace MiNES.Emu.Debugger
         {
             switch(index)
             {
-                case 0:
-                    return Color.Black;
-                case 1:
-                    return Ppu.SystemColorPalette[0x2c];
-                case 2:
-                    return Ppu.SystemColorPalette[0x38];
-                case 3:
-                    return Ppu.SystemColorPalette[0x12];
+                //case 0:
+                //    return Color.Black;
+                //case 1:
+                //    return Ppu.SystemColorPalette[0x2c];
+                //case 2:
+                //    return Ppu.SystemColorPalette[0x38];
+                //case 3:
+                //    return Ppu.SystemColorPalette[0x12];
                 default:
                     throw new InvalidOperationException($"The given color index {index} is not mapped to a color.");
             }

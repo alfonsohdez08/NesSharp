@@ -2,6 +2,7 @@
 using MiNES.PPU.Registers;
 using System;
 using System.Drawing;
+using System.Linq;
 
 namespace MiNES.PPU
 {
@@ -109,72 +110,72 @@ namespace MiNES.PPU
         private byte _dataBuffer = 0;
 
         #region NES color palette
-        public static readonly Color[] SystemColorPalette = new Color[]
+        public static readonly int[] SystemColorPalette = new int[]
         {
-            Color.FromArgb(0x75, 0x75, 0x75),
-            Color.FromArgb(0x27, 0x1B, 0x8F),
-            Color.FromArgb(0x00, 0x00, 0xAB),
-            Color.FromArgb(0x47, 0x00, 0x9F),
-            Color.FromArgb(0x8F, 0x00, 0x77),
-            Color.FromArgb(0xAB, 0x00, 0x13),
-            Color.FromArgb(0xA7, 0x00, 0x00),
-            Color.FromArgb(0x7F, 0x0B, 0x00),
-            Color.FromArgb(0x43, 0x2F, 0x00),
-            Color.FromArgb(0x00, 0x47, 0x00),
-            Color.FromArgb(0x00, 0x51, 0x00),
-            Color.FromArgb(0x00, 0x3F, 0x17),
-            Color.FromArgb(0x1B, 0x3F, 0x5F),
-            Color.FromArgb(0x00, 0x00, 0x00),
-            Color.FromArgb(0x00, 0x00, 0x00),
-            Color.FromArgb(0x00, 0x00, 0x00),
-            Color.FromArgb(0xBC, 0xBC, 0xBC),
-            Color.FromArgb(0x00, 0x73, 0xEF),
-            Color.FromArgb(0x23, 0x3B, 0xEF),
-            Color.FromArgb(0x83, 0x00, 0xF3),
-            Color.FromArgb(0xBF, 0x00, 0xBF),
-            Color.FromArgb(0xE7, 0x00, 0x5B),
-            Color.FromArgb(0xDB, 0x2B, 0x00),
-            Color.FromArgb(0xCB, 0x4F, 0x0F),
-            Color.FromArgb(0x8B, 0x73, 0x00),
-            Color.FromArgb(0x00, 0x97, 0x00),
-            Color.FromArgb(0x00, 0xAB, 0x00),
-            Color.FromArgb(0x00, 0x93, 0x3B),
-            Color.FromArgb(0x00, 0x83, 0x8B),
-            Color.FromArgb(0x00, 0x00, 0x00),
-            Color.FromArgb(0x00, 0x00, 0x00),
-            Color.FromArgb(0x00, 0x00, 0x00),
-            Color.FromArgb(0xFF, 0xFF, 0xFF),
-            Color.FromArgb(0x3F, 0xBF, 0xFF),
-            Color.FromArgb(0x5F, 0x97, 0xFF),
-            Color.FromArgb(0xA7, 0x8B, 0xFD),
-            Color.FromArgb(0xF7, 0x7B, 0xFF),
-            Color.FromArgb(0xFF, 0x77, 0xB7),
-            Color.FromArgb(0xFF, 0x77, 0x63),
-            Color.FromArgb(0xFF, 0x9B, 0x3B),
-            Color.FromArgb(0xF3, 0xBF, 0x3F),
-            Color.FromArgb(0x83, 0xD3, 0x13),
-            Color.FromArgb(0x4F, 0xDF, 0x4B),
-            Color.FromArgb(0x58, 0xF8, 0x98),
-            Color.FromArgb(0x00, 0xEB, 0xDB),
-            Color.FromArgb(0x00, 0x00, 0x00),
-            Color.FromArgb(0x00, 0x00, 0x00),
-            Color.FromArgb(0x00, 0x00, 0x00),
-            Color.FromArgb(0xFF, 0xFF, 0xFF),
-            Color.FromArgb(0xAB, 0xE7, 0xFF),
-            Color.FromArgb(0xC7, 0xD7, 0xFF),
-            Color.FromArgb(0xD7, 0xCB, 0xFF),
-            Color.FromArgb(0xFF, 0xC7, 0xFF),
-            Color.FromArgb(0xFF, 0xC7, 0xDB),
-            Color.FromArgb(0xFF, 0xBF, 0xB3),
-            Color.FromArgb(0xFF, 0xDB, 0xAB),
-            Color.FromArgb(0xFF, 0xE7, 0xA3),
-            Color.FromArgb(0xE3, 0xFF, 0xA3),
-            Color.FromArgb(0xAB, 0xF3, 0xBF),
-            Color.FromArgb(0xB3, 0xFF, 0xCF),
-            Color.FromArgb(0x9F, 0xFF, 0xF3),
-            Color.FromArgb(0x00, 0x00, 0x00),
-            Color.FromArgb(0x00, 0x00, 0x00),
-            Color.FromArgb(0x00, 0x00, 0x00)
+            -9079435,
+            -14214257,
+            -16777045,
+            -12124001,
+            -7405449,
+            -5570541,
+            -5832704,
+            -8451328,
+            -12374272,
+            -16759040,
+            -16756480,
+            -16761065,
+            -14991521,
+            -16777216,
+            -16777216,
+            -16777216,
+            -4408132,
+            -16747537,
+            -14468113,
+            -8191757,
+            -4259649,
+            -1638309,
+            -2413824,
+            -3453169,
+            -7638272,
+            -16738560,
+            -16733440,
+            -16739525,
+            -16743541,
+            -16777216,
+            -16777216,
+            -16777216,
+            -1,
+            -12599297,
+            -10512385,
+            -5796867,
+            -558081,
+            -34889,
+            -34973,
+            -25797,
+            -803009,
+            -8137965,
+            -11542709,
+            -10946408,
+            -16716837,
+            -16777216,
+            -16777216,
+            -16777216,
+            -1,
+            -5511169,
+            -3680257,
+            -2634753,
+            -14337,
+            -14373,
+            -16461,
+            -9301,
+            -6237,
+            -1835101,
+            -5508161,
+            -4980785,
+            -6291469,
+            -16777216,
+            -16777216,
+            -16777216
         };
         #endregion
 
@@ -938,8 +939,7 @@ namespace MiNES.PPU
                 }
             }
 
-            //_frame.SetPixel(_cycles - 1, _scanline, GetPaletteColor(palette, pixel));
-            _frameBuffer[(_cycles - 1) + _scanline * 256] = GetPaletteColor(palette, pixel).ToArgb();
+            _frameBuffer[(_cycles - 1) + _scanline * 256] = GetPaletteColor(palette, pixel);
         }
 
         /// <summary>
@@ -1019,7 +1019,7 @@ namespace MiNES.PPU
         /// <param name="palette">The color palette (0-7).</param>
         /// <param name="colorIndex">The color index (0-4, where 0 means transparent color: background color).</param>
         /// <returns></returns>
-        private Color GetPaletteColor(byte palette, byte colorIndex)
+        private int GetPaletteColor(byte palette, byte colorIndex)
         {
             //byte paletteColor = _ppuBus.Read((ushort)(0x3F00 + (palette << 2) + colorIndex));
             ushort paletteColorAddress = ParseBackgroundPaletteAddress(palette, colorIndex);
@@ -1090,12 +1090,12 @@ namespace MiNES.PPU
 
         public Color[] GetPalettes()
         {
-            var palettes = new Color[32];
+            //var palettes = new Color[32];
 
-            for (ushort addr = 0x3F00, idx = 0; addr < 0x3F20; addr++, idx++)
-                palettes[idx] = SystemColorPalette[_ppuBus.Read(addr)];
+            //for (ushort addr = 0x3F00, idx = 0; addr < 0x3F20; addr++, idx++)
+            //    //palettes[idx] = SystemColorPalette[_ppuBus.Read(addr)];
 
-            return palettes;
+            throw new NotImplementedException();
         }
     }
 }
