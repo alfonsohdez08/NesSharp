@@ -276,10 +276,11 @@ namespace MiNES.CPU
         private byte ExecuteInstruction()
         {
             // Fetches the op code from the memory
-            ushort instructionAddress = _programCounter;
             byte opCode = _bus.Read(_programCounter);
 
 #if CPU_NES_TEST
+            ushort instructionAddress = _programCounter;
+
             if (_programCounter == 1)
             {
                 CpuTestDone = true;
@@ -529,8 +530,6 @@ namespace MiNES.CPU
             TestLineResult += $" CYC:{_cyclesElapsed}";
             _cyclesElapsed += _cycles;
 #endif
-
-            CyclesElapsed += _cycles;
 
             return _cycles;
         }
@@ -1674,12 +1673,23 @@ namespace MiNES.CPU
         /// <returns>The number of cycles spent for execute the instruction.</returns>
         public int Step()
         {
-            if (NmiTriggered)
-                return NMI();
-            else if (_bus.DmaTransferTriggered)
-                return TransferOam();
-            else
-                return ExecuteInstruction();
+            int cycles = 0;
+
+            try
+            {
+                if (NmiTriggered)
+                    cycles = NMI();
+                else if (_bus.DmaTransferTriggered)
+                    cycles = TransferOam();
+                else
+                    cycles = ExecuteInstruction();
+            }
+            finally
+            {
+                CyclesElapsed += cycles;
+            }
+
+            return cycles;
         }
 
         /// <summary>
@@ -1701,7 +1711,6 @@ namespace MiNES.CPU
             finally
             {
                 _bus.DmaTransferTriggered = false;
-                CyclesElapsed += cyclesSpent;
             }
 
             return cyclesSpent;
