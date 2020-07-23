@@ -28,8 +28,12 @@ namespace MiNES
             _cpu = new Cpu(cpuBus);
         }
 
+        private const int CpuCyclesInVbl = 2273;
+
         public int[] Frame()
         {
+            int cpuCyclesInVbl = 0;
+
             do
             {
                 if (_ppu.NmiRequested)
@@ -39,32 +43,49 @@ namespace MiNES
                 }
 
                 int totalPpuCycles;
+                int cpuCyclesSpent;
                 try
                 {
-                    int cpuCyclesSpent = _cpu.Step() + _cpuCyclesLeftOver;
-                    totalPpuCycles = (cpuCyclesSpent * 3) + _ppuCyclesLeftOver;
+                    //cpuCyclesSpent = _cpu.Step() + _cpuCyclesLeftOver;
+                    cpuCyclesSpent = _cpu.Step();
+                    totalPpuCycles = cpuCyclesSpent * 3;
+                    //totalPpuCycles = (cpuCyclesSpent * 3) + _ppuCyclesLeftOver;
                 }
                 finally
                 {
-                    _cpuCyclesLeftOver = 0;
-                    _ppuCyclesLeftOver = 0;
+                    //_cpuCyclesLeftOver = 0;
+                    //_ppuCyclesLeftOver = 0;
                 }
 
-                for (int ppuCycles = 0; ppuCycles < totalPpuCycles; ppuCycles++)
+                if (!_ppu.IsIdle)
                 {
-                    _ppu.Step();
-                    if (_ppu.IsFrameCompleted) // circuit breaker
+                    for (int ppuCycles = 0; ppuCycles < totalPpuCycles; ppuCycles++)
                     {
-                        ppuCycles++;
-                        _ppuCyclesLeftOver = (totalPpuCycles - ppuCycles) % 3;
-                        _cpuCyclesLeftOver = (totalPpuCycles - ppuCycles) / 3;
+                        _ppu.Step();
+                        if (_ppu.IsIdle)
+                        {
+                            ppuCycles++;
+                            cpuCyclesInVbl = (totalPpuCycles - ppuCycles) / 3;
+                            break;
+                        }
 
-                        break;
+                        //if (_ppu.IsFrameCompleted) // circuit breaker
+                        //{
+                        //    ppuCycles++;
+                        //    _ppuCyclesLeftOver = (totalPpuCycles - ppuCycles) % 3;
+                        //    _cpuCyclesLeftOver = (totalPpuCycles - ppuCycles) / 3;
+
+                        //    break;
+                        //}
+
                     }
-
+                }
+                else
+                {
+                    cpuCyclesInVbl += cpuCyclesSpent;
                 }
 
-            } while (!_ppu.IsFrameCompleted);
+            } while (cpuCyclesInVbl < CpuCyclesInVbl);
 
             _ppu.ResetFrameRenderingStatus();
 

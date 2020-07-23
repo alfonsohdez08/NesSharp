@@ -110,10 +110,13 @@ namespace MiNES.Emu
 
         private void StartEmulation()
         {
-            Task.Factory.StartNew(() =>
-            {
-                RunGame();
-            }, TaskCreationOptions.LongRunning);
+            //Task.Factory.StartNew(() =>
+            //{
+            //    RunGame();
+            //}, TaskCreationOptions.LongRunning);
+
+            var thread = new Thread(new ThreadStart(RunGame));
+            thread.Start();
         }
 
         private void RunGame()
@@ -123,22 +126,19 @@ namespace MiNES.Emu
 
             while (true)
             {
-                if (!stopWatch.IsRunning)
-                    stopWatch.Start();
-
                 if (RunEmulation)
                 {
-                    int[] frame = nes.Frame();
-                    GameScreen.Invoke(updateScreen, new object[] { frame });
+                    if (!stopWatch.IsRunning)
+                        stopWatch.Restart();
 
-                    if (nes.Ppu.Frames % 60 == 0)
+                    for (int i = 0; i < 60; i++)
                     {
-                        stopWatch.Stop();
-                        var ms = stopWatch.ElapsedMilliseconds;
-                        var seconds = stopWatch.ElapsedMilliseconds / 1000;
-                        
-                        stopWatch.Reset();
+                        int[] frame = nes.Frame();
+                        GameScreen.Invoke(updateScreen, new object[] { frame });
                     }
+                    
+                    stopWatch.Stop();
+                    var ms = stopWatch.ElapsedMilliseconds;
                 }
 
             }

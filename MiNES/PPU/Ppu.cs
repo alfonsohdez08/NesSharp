@@ -635,15 +635,15 @@ namespace MiNES.PPU
                 {
                     _scanline++;
                 }
-                else
-                {
-                    _scanline = -1;
+                //else
+                //{
+                //    //_scanline = -1;
 
-                    Frames++;
-                    _isOddFrame = Frames % 2 != 0;
+                //    //Frames++;
+                //    //_isOddFrame = Frames % 2 != 0;
 
-                    IsFrameCompleted = true;
-                }
+                //    //IsFrameCompleted = true;
+                //}
             }
 
         }
@@ -949,7 +949,15 @@ namespace MiNES.PPU
         /// </summary>
         public void ResetFrameRenderingStatus()
         {
-            IsFrameCompleted = false;
+            //IsFrameCompleted = false;
+
+            _cycles = 0;
+            _scanline = -1;
+            Frames++;
+            _isOddFrame = Frames % 2 != 0;
+            IsIdle = false;
+
+            //IsFrameCompleted = true;
         }
 
         private ushort GetNametableBaseAddress()
@@ -1039,6 +1047,8 @@ namespace MiNES.PPU
             // Do nothing
         }
 
+        public bool IsIdle { get; private set; }
+
         private void VerticalBlankScanlines()
         {
             if (_scanline == 241 && _cycles == 1)
@@ -1046,6 +1056,8 @@ namespace MiNES.PPU
                 StatusRegister.VerticalBlank = true;
                 if (ControlRegister.GenerateNmi)
                     NmiRequested = true;
+
+                IsIdle = true;
             }
         }
 
