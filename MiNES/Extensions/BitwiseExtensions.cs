@@ -98,7 +98,7 @@ namespace MiNES.Extensions
         /// <param name="val">The value that will be set in the high byte area.</param>
         public static void SetHighByte(this ref ushort value, byte val)
         {
-            value = (ushort)(((value | 0xFF00) ^ 0xFF00) | val << 8);
+            value = (ushort)((value & 0x00FF) | (val << 8));
         }
 
         /// <summary>
@@ -108,29 +108,7 @@ namespace MiNES.Extensions
         /// <param name="val">The value that will be set in the low byte area.</param>
         public static void SetLowByte(this ref ushort value, byte val)
         {
-            value = (ushort)(((value | 0x00FF) ^ 0x00FF) | val);
+            value = (ushort)((value & 0xFF00) | val);
         }
-
-
-        ///// <summary>
-        ///// "Mirrors" the bits within a byte (bit 0 would be allocated in bit 7, bit 1 would be in bit 6, and so on).
-        ///// </summary>
-        ///// <param name="value">The byte that will get mirrored.</param>
-        //public static void MirrorBits(this ref byte value)
-        //{
-        //    //FIXME/TODO: THIS IS WRONG! RESEARCH ABOUT THIS! IT WAS CAUSING WEIRD GLITCHES IN SPRITES (DONT' USE ME)
-        //    byte flipped = 1;
-
-        //    // There should be a formula for flip bits within a byte
-        //    for (int i = 0; i < 8; i++)
-        //    {
-        //        int mask = 1 << i;
-        //        int bit = value & mask;
-
-        //        flipped = (byte)(flipped | (bit << (7 - i)));
-        //    }
-
-        //    value = flipped;
-        //}
     }
 }

@@ -194,7 +194,7 @@ namespace MiNES.PPU
         {
             _ppuBus = ppuBus;
 
-            _backgroundTiles = GetPatternTable();
+            //_backgroundTiles = GetPatternTable();
             ResetFrameRenderingStatus();
         }
 
@@ -214,16 +214,18 @@ namespace MiNES.PPU
         {
             if (!_addressLatch) // w is 0
             {
-                value = (byte)((value | 0xC0) ^ 0xC0);
+                value = (byte)(value & 0x3F);
 
-                T.RegisterValue = (ushort)(((T.RegisterValue | 0x3F00) ^ 0x3F00) | (value << 8));
-                T.RegisterValue = (ushort)((T.RegisterValue | 0x4000) ^ 0x4000); // Sets bit 14 to 0
+                //T.RegisterValue = (ushort)(((T.RegisterValue | 0x3F00) ^ 0x3F00) | (value << 8));
+                T.RegisterValue = (ushort)((T.RegisterValue & 0x00FF) | (value << 8));
+                //T.RegisterValue = (ushort)((T.RegisterValue | 0x4000) ^ 0x4000); // Sets bit 14 to 0
 
                 _addressLatch = true; // Flips to the low byte state
             }
             else // w is 1
             {
-                T.RegisterValue = (ushort)(((T.RegisterValue | 0xFF) ^ 0xFF) | value);
+                //T.RegisterValue = (ushort)(((T.RegisterValue | 0xFF) ^ 0xFF) | value);
+                T.RegisterValue = (ushort)((T.RegisterValue & 0x7F00) | value);
                 V.RegisterValue = T.RegisterValue;
 
                 _addressLatch = false; // Flips to the high byte state
@@ -709,8 +711,8 @@ namespace MiNES.PPU
              */
 
             // Load background shift registers
-            _lowBackgroundShiftRegister = (ushort)(((_lowBackgroundShiftRegister | 0x00FF) ^ 0x00FF) | _lowPixelsRow);
-            _highBackgroundShiftRegister = (ushort)(((_highBackgroundShiftRegister | 0x00FF) ^ 0x00FF) | _highPixelsRow);
+            _lowBackgroundShiftRegister = (ushort)((_lowBackgroundShiftRegister & 0xFF00) | _lowPixelsRow);
+            _highBackgroundShiftRegister = (ushort)((_highBackgroundShiftRegister & 0xFF00) | _highPixelsRow);
 
             // Load attribute shift registers
             byte palette = ParsePalette(_attribute, _blockId); // 2 bit value
@@ -718,15 +720,15 @@ namespace MiNES.PPU
             // The same bit is propagated to all bits in the attribute shift register
             bool lowBit = palette.GetBit(0);
             if (lowBit)
-                _lowAttributeShiftRegister = (ushort)(((_lowAttributeShiftRegister | 0x00FF) ^ 0x00FF) | 0xFF);
+                _lowAttributeShiftRegister = (ushort)((_lowAttributeShiftRegister & 0xFF00) | 0xFF);
             else
-                _lowAttributeShiftRegister = (ushort)(((_lowAttributeShiftRegister | 0x00FF) ^ 0x00FF));
+                _lowAttributeShiftRegister = (ushort)(_lowAttributeShiftRegister & 0xFF00);
 
             bool highBit = palette.GetBit(1);
             if (highBit)
-                _highAttributeShiftRegister = (ushort)(((_highAttributeShiftRegister | 0x00FF) ^ 0x00FF) | 0xFF);
+                _highAttributeShiftRegister = (ushort)((_highAttributeShiftRegister & 0xFF00) | 0xFF);
             else
-                _highAttributeShiftRegister = (ushort)(((_highAttributeShiftRegister | 0x00FF) ^ 0x00FF));
+                _highAttributeShiftRegister = (ushort)(_highAttributeShiftRegister & 0xFF00);
         }
 
         private static byte ParseBlock(int coarseX, int coarseY)
@@ -755,7 +757,8 @@ namespace MiNES.PPU
         private void CopyHorizontalPositionToV()
         {
             V.CoarseX = T.CoarseX;
-            V.RegisterValue = (ushort)(((V.RegisterValue | 0x0400) ^ 0x0400) | (T.RegisterValue & 0x0400)); // copy bit 10 (nametable x) from T register
+            V.RegisterValue = (ushort)((V.RegisterValue & 0x7BFF) | (T.RegisterValue & 0x0400)); // copy bit 10 (nametable x) from T register
+            //V.RegisterValue = (ushort)(((V.RegisterValue | 0x0400) ^ 0x0400) | (T.RegisterValue & 0x0400)); // copy bit 10 (nametable x) from T register
         }
 
         /// <summary>
@@ -766,7 +769,8 @@ namespace MiNES.PPU
             V.CoarseY = T.CoarseY;
             V.FineY = T.FineY;
 
-            V.RegisterValue = (ushort)(((V.RegisterValue | 0x0800) ^ 0x0800) | (T.RegisterValue & 0x0800)); // copy bit 11 (nametable y) from T register
+            V.RegisterValue = (ushort)((V.RegisterValue & 0x77FF) | (T.RegisterValue & 0x0800)); // copy bit 11 (nametable y) from T register
+            //V.RegisterValue = (ushort)(((V.RegisterValue | 0x0800) ^ 0x0800) | (T.RegisterValue & 0x0800)); // copy bit 11 (nametable y) from T register
         }
 
         /// <summary>

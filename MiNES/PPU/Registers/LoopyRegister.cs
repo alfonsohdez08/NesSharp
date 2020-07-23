@@ -38,8 +38,7 @@ namespace MiNES.PPU.Registers
             {
                 _fineY = value;
 
-                InternalValue = (ushort)(((InternalValue | 0x7000) ^ 0x7000) | (value << 12));
-                //Value = (ushort)(((Value | 0x7000) ^ 0x7000) | (value << 12));
+                InternalValue = (ushort)((InternalValue & 0x0FFF) | (value << 12));
             }
         }
 
@@ -57,8 +56,7 @@ namespace MiNES.PPU.Registers
             {
                 _coarseX = value;
 
-                InternalValue = (ushort)(((InternalValue | 0x001F) ^ 0x001F) | value);
-                //Value = (ushort)(((Value | 0x001F) ^ 0x001F) | value);
+                InternalValue = (ushort)((InternalValue & 0xFFE0) | value);
             }
         }
 
@@ -75,9 +73,7 @@ namespace MiNES.PPU.Registers
             set
             {
                 _coarseY = value;
-                InternalValue = (ushort)(((InternalValue | 0x03E0) ^ 0x03E0) | (value << 5));
-
-                //Value = (ushort)(((Value | 0x03E0) ^ 0x03E0) | (value << 5));
+                InternalValue = (ushort)((InternalValue & 0xFC1F) | (value << 5));
             }
         }
 
@@ -93,7 +89,8 @@ namespace MiNES.PPU.Registers
             set
             {
                 _nametable = value;
-                InternalValue = (ushort)(((InternalValue | 0x0C00) ^ 0x0C00) | (value << 10));
+                InternalValue = (ushort)((InternalValue & 0x73FF) | (value << 10));
+                //InternalValue = (ushort)(((InternalValue | 0x0C00) ^ 0x0C00) | (value << 10));
                 //Value = (ushort)(((Value | 0x0C00) ^ 0x0C00) | (value << 10));
             }
         }
