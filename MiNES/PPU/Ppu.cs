@@ -254,55 +254,55 @@ namespace MiNES.PPU
             }
         }
 
-        private Tile[] GetPatternTable(bool isBackgroundTile = true)
-        {
-            var patternTable = new Tile[256];
+        //private Tile[] GetPatternTable(bool isBackgroundTile = true)
+        //{
+        //    var patternTable = new Tile[256];
 
-            ushort address = 0x0000;
-            ushort lastAddress = 0x1000;
-            if (isBackgroundTile)
-            {
-                address = 0x1000;
-                lastAddress = 0x2000;
-            }
+        //    ushort address = 0x0000;
+        //    ushort lastAddress = 0x1000;
+        //    if (isBackgroundTile)
+        //    {
+        //        address = 0x1000;
+        //        lastAddress = 0x2000;
+        //    }
 
-            int tiles = 0;
-            for (; address < lastAddress; address += 16)
-            {
-                ushort tileAddress = address;
+        //    int tiles = 0;
+        //    for (; address < lastAddress; address += 16)
+        //    {
+        //        ushort tileAddress = address;
 
-                //Bitmap tileBitmap = new Bitmap(8, 8);
-                var tile = new Tile();
+        //        //Bitmap tileBitmap = new Bitmap(8, 8);
+        //        var tile = new Tile();
 
-                // Process an entire tile (row by row, where each row represents a string of pixels)
-                for (int i = 0; i < 8; i++)
-                {
-                    byte lowBitsRow = _ppuBus.Read(tileAddress);
-                    byte highBitsRow = _ppuBus.Read((ushort)(tileAddress + 8)); // high bit plane offset is 8 positions away
+        //        // Process an entire tile (row by row, where each row represents a string of pixels)
+        //        for (int i = 0; i < 8; i++)
+        //        {
+        //            byte lowBitsRow = _ppuBus.Read(tileAddress);
+        //            byte highBitsRow = _ppuBus.Read((ushort)(tileAddress + 8)); // high bit plane offset is 8 positions away
 
-                    // Iterate over each bit within both set of bits (bytes) for draw the tile bitmap
-                    for (int j = 0; j < 8; j++)
-                    {
-                        int mask = 1 << j;
-                        int lowBit = (lowBitsRow & mask) == mask ? 1 : 0;
-                        int highBit = (highBitsRow & mask) == mask ? 1 : 0;
+        //            // Iterate over each bit within both set of bits (bytes) for draw the tile bitmap
+        //            for (int j = 0; j < 8; j++)
+        //            {
+        //                int mask = 1 << j;
+        //                int lowBit = (lowBitsRow & mask) == mask ? 1 : 0;
+        //                int highBit = (highBitsRow & mask) == mask ? 1 : 0;
 
-                        // A 2 bit value
-                        byte paletteColorIdx = (byte)(lowBit | highBit << 1);
+        //                // A 2 bit value
+        //                byte paletteColorIdx = (byte)(lowBit | highBit << 1);
 
-                        //tile.SetPixel(i, j, paletteColorIdx);
-                        tile.SetPixel(7 - j, i, paletteColorIdx);
-                    }
+        //                //tile.SetPixel(i, j, paletteColorIdx);
+        //                tile.SetPixel(7 - j, i, paletteColorIdx);
+        //            }
 
-                    tileAddress++;
-                }
+        //            tileAddress++;
+        //        }
 
-                patternTable[tiles] = tile;
-                tiles++;
-            }
+        //        patternTable[tiles] = tile;
+        //        tiles++;
+        //    }
 
-            return patternTable;
-        }
+        //    return patternTable;
+        //}
 
         /// <summary>
         /// Retrieves the data from the address set through the PPU address register.
@@ -415,14 +415,14 @@ namespace MiNES.PPU
                         // Fetch nametable byte
                         case 2:
                             {
-                                ushort tileIdAddress = (ushort)(0x2000 | (V.RegisterValue & 0x0FFF));
+                                uint tileIdAddress = 0x2000 | (uint)(V.RegisterValue & 0x0FFF);
                                 _tileId = _ppuBus.Read(tileIdAddress);
                             }
                             break;
                         // Fetch attribute table byte
                         case 4:
                             {
-                                ushort attributeEntryAddress = (ushort)(0x23C0 | (V.RegisterValue & 0x0C00) | ((V.RegisterValue >> 4) & 0x38) | ((V.RegisterValue >> 2) & 0x07));
+                                uint attributeEntryAddress = (uint)(0x23C0 | (V.RegisterValue & 0x0C00) | ((V.RegisterValue >> 4) & 0x38) | ((V.RegisterValue >> 2) & 0x07));
                                 
                                 _attribute = _ppuBus.Read(attributeEntryAddress);
                                 _blockId = ParseBlock(V.CoarseX, V.CoarseY);
@@ -431,7 +431,7 @@ namespace MiNES.PPU
                         // Fetch low background pattern table byte
                         case 6:
                             {
-                                ushort pixelsRowAddress = (ushort)(ControlRegister.BackgroundPatternTableBaseAddress + (_tileId * 16) + V.FineY);
+                                uint pixelsRowAddress = (uint)(ControlRegister.BackgroundPatternTableBaseAddress + (_tileId * 16) + V.FineY);
 
                                 _lowPixelsRow = _ppuBus.Read(pixelsRowAddress);
                             }
@@ -519,20 +519,20 @@ namespace MiNES.PPU
                                         // 8 x 16 sprites
                                         if (ControlRegister.SpriteSize)
                                         {
-                                            ushort patternTableAddress = (ushort)(_spriteTileIndex.GetBit(0) ? 0x1000 : 0);
+                                            var patternTableAddress = _spriteTileIndex.GetBit(0) ? 0x1000 : 0;
                                             byte spriteId = (byte)(_spriteTileIndex & 0xFE);
                                             var y = _flipSpriteVertically ? (15 - _spriteY) : _spriteY;
 
                                             // top half
                                             if (y < 8)
                                             {
-                                                lowPlane = _ppuBus.Read((ushort)(patternTableAddress + (spriteId * 16) + y));
+                                                lowPlane = _ppuBus.Read((uint)(patternTableAddress + (spriteId * 16) + y));
 
                                             } // bottom half
                                             else
                                             {
                                                 //spriteId++; // bottom half tile is next to the top half tile in the pattern table
-                                                lowPlane = _ppuBus.Read((ushort)(patternTableAddress + ((spriteId + 1) * 16) + (y - 8)));
+                                                lowPlane = _ppuBus.Read((uint)(patternTableAddress + ((spriteId + 1) * 16) + (y - 8)));
                                             }
 
                                         } // 8 x 8 sprites
@@ -540,7 +540,7 @@ namespace MiNES.PPU
                                         {
                                             var flipOffset = _flipSpriteVertically ? (7 - _spriteY) : _spriteY;
 
-                                            lowPlane = _ppuBus.Read((ushort)(ControlRegister.SpritesPatternTableBaseAddress + (_spriteTileIndex * 16) + flipOffset));
+                                            lowPlane = _ppuBus.Read((uint)(ControlRegister.SpritesPatternTableBaseAddress + (_spriteTileIndex * 16) + flipOffset));
                                         }
 
                                         if (_flipSpriteHorizontally)
@@ -564,20 +564,20 @@ namespace MiNES.PPU
                                         // 8 x 16 sprites
                                         if (ControlRegister.SpriteSize)
                                         {
-                                            ushort patternTableAddress = (ushort)(_spriteTileIndex.GetBit(0) ? 0x1000 : 0);
+                                            var patternTableAddress = _spriteTileIndex.GetBit(0) ? 0x1000 : 0;
                                             byte spriteId = (byte)(_spriteTileIndex & 0xFE);
                                             var y = _flipSpriteVertically ? (15 - _spriteY) : _spriteY;
 
                                             // top half
                                             if (y < 8)
                                             {
-                                                highPlane = _ppuBus.Read((ushort)(patternTableAddress + (spriteId * 16) + y + 8));
+                                                highPlane = _ppuBus.Read((uint)(patternTableAddress + (spriteId * 16) + y + 8));
 
                                             } // bottom half
                                             else
                                             {
                                                 //spriteId++; // bottom half tile is next to the top half tile in the pattern table
-                                                highPlane = _ppuBus.Read((ushort)(patternTableAddress + ((spriteId + 1) * 16) + (y - 8) + 8));
+                                                highPlane = _ppuBus.Read((uint)(patternTableAddress + ((spriteId + 1) * 16) + (y - 8) + 8));
                                             }
 
                                         } // 8 x 8 sprites
@@ -585,7 +585,7 @@ namespace MiNES.PPU
                                         {
                                             var flipOffset = _flipSpriteVertically ? (7 - _spriteY) : _spriteY;
 
-                                            highPlane = _ppuBus.Read((ushort)(ControlRegister.SpritesPatternTableBaseAddress + (_spriteTileIndex * 16) + flipOffset + 8));
+                                            highPlane = _ppuBus.Read((uint)(ControlRegister.SpritesPatternTableBaseAddress + (_spriteTileIndex * 16) + flipOffset + 8));
                                         }
 
                                         if (_flipSpriteHorizontally)

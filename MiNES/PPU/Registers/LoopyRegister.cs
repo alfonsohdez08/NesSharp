@@ -19,10 +19,9 @@ namespace MiNES.PPU.Registers
                 CoarseX = (byte)(value & 0x001F);
                 CoarseY = (byte)((value & 0x03E0) >> 5);
                 Nametable = (byte)((value & 0x0C00) >> 10);
-                Address = (ushort)(value & 0x3FFF); // PPU address memory space is 14 bits
+                Address = (uint)(value & 0x3FFF); // PPU address memory space is 14 bits
             }
         }
-
 
         private byte _fineY;
 
@@ -96,7 +95,7 @@ namespace MiNES.PPU.Registers
         }
 
         // Todo: change this... it seems i need only the first 14 bits
-        public ushort Address { get; private set; }
+        public uint Address { get; private set; }
         //private ushort _address;
         //public ushort Address
         //{

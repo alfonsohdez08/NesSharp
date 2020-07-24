@@ -49,6 +49,8 @@ namespace MiNES.Emu
 
         private readonly SKBitmap _gameScreen = new SKBitmap(256, 240);
 
+        private Thread _emulatorThread;
+
         public bool RunEmulation
         {
             get
@@ -110,13 +112,13 @@ namespace MiNES.Emu
 
         private void StartEmulation()
         {
-            //Task.Factory.StartNew(() =>
-            //{
-            //    RunGame();
-            //}, TaskCreationOptions.LongRunning);
+            Task.Factory.StartNew(() =>
+            {
+                RunGame();
+            }, TaskCreationOptions.LongRunning);
 
-            var thread = new Thread(new ThreadStart(RunGame));
-            thread.Start();
+            //_emulatorThread = new Thread(new ThreadStart(RunGame));
+            //_emulatorThread.Start();
         }
 
         private void RunGame()
@@ -295,6 +297,11 @@ using (MemoryStream mStream = new MemoryStream(data.ToArray()))
                 backgroundDebugger.DrawPalettes(palettes);
                 backgroundDebugger.Show();
             }
+        }
+
+        private void Form1_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            //_emulatorThread?.Join(0);
         }
     }
 }

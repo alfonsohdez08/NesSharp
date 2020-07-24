@@ -19,12 +19,12 @@ namespace MiNES
 
         public NES(byte[] gameCartridge)
         {
-            iNESParser.ParseNesCartridge(gameCartridge, out Memory cpuMemory, out Memory ppuMemory, out Mirroring mirroring);
+            iNESParser.ParseNesCartridge(gameCartridge, out byte[] programRom, out byte[] characterRom, out Mirroring mirroring);
 
-            var ppuBus = new PpuBus(ppuMemory, mirroring);
+            var ppuBus = new PpuBus(characterRom, mirroring);
             _ppu = new Ppu(ppuBus);
 
-            var cpuBus  = new CpuBus(cpuMemory, _ppu);
+            var cpuBus  = new CpuBus(programRom, _ppu);
             _cpu = new Cpu(cpuBus);
         }
 
