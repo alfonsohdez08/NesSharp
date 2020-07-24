@@ -855,25 +855,25 @@ namespace MiNES.PPU
                 return;
             
             // When a pixel equals 0, it means the pixel is transparent. When pixel is different than 0, then pixel is opaque
-            byte backgroundPixel = 0;
-            byte backgroundPalette = 0;
+            int backgroundPixel = 0;
+            int backgroundPalette = 0;
 
             if (Mask.RenderBackground)
             {
-                ushort pixelMux = (ushort)(0x8000 >> _fineX);
+                int pixelMux = 0x8000 >> _fineX;
                 var lsbPixelColorIdx = (_lowBackgroundShiftRegister & pixelMux) == pixelMux ? 1 : 0;
                 var msbPixelColorIdx = (_highBackgroundShiftRegister & pixelMux) == pixelMux ? 1 : 0;
 
-                backgroundPixel = (byte)(lsbPixelColorIdx | (msbPixelColorIdx << 1));
+                backgroundPixel = lsbPixelColorIdx | (msbPixelColorIdx << 1);
 
                 var lsbPaletteIdx = (_lowAttributeShiftRegister & pixelMux) == pixelMux ? 1 : 0;
                 var msbPaletteIdx = (_highAttributeShiftRegister & pixelMux) == pixelMux ? 1 : 0;
 
-                backgroundPalette = (byte)((lsbPaletteIdx) | (msbPaletteIdx << 1));
+                backgroundPalette = lsbPaletteIdx | (msbPaletteIdx << 1);
             }
 
-            byte spritePixel = 0;
-            byte spritePalette = 0;
+            int spritePixel = 0;
+            int spritePalette = 0;
             bool spritePriority = false;
             bool spriteZeroRendering = false;
 
@@ -887,8 +887,8 @@ namespace MiNES.PPU
                         var pixelLowBit = (_spriteLowPlaneTiles[i] & 0x80) == 0x80 ? 1 : 0;
                         var pixelHighBit = (_spriteHighPlaneTiles[i] & 0x80) == 0x80 ? 1 : 0;
 
-                        spritePixel = (byte)((pixelLowBit) | (pixelHighBit << 1));
-                        spritePalette = (byte)((_spriteAttributes[i] & 3) + 4); // Add 4 because the sprite palettes are from 4-7
+                        spritePixel = pixelLowBit | (pixelHighBit << 1);
+                        spritePalette = (_spriteAttributes[i] & 3) + 4; // Add 4 because the sprite palettes are from 4-7
                         spritePriority = (_spriteAttributes[i] & 0x20) == 0x20;
 
                         // Sprite pixel is opaque
@@ -904,8 +904,8 @@ namespace MiNES.PPU
                 }
             }
 
-            byte pixel = 0;
-            byte palette = 0;
+            int pixel = 0;
+            int palette = 0;
 
             if (backgroundPixel == 0 && spritePixel != 0)
             {
@@ -945,7 +945,7 @@ namespace MiNES.PPU
                 }
             }
 
-            _frameBuffer[(_cycles - 1) + _scanline * 256] = GetPaletteColor(palette, pixel);
+            _frameBuffer[(_cycles - 1) + _scanline * 256] = GetPaletteColor((byte)palette, (byte)pixel);
         }
 
         /// <summary>
@@ -1038,8 +1038,8 @@ namespace MiNES.PPU
             //byte paletteColor = _ppuBus.Read((ushort)(0x3F00 + (palette << 2) + colorIndex));
             ushort paletteColorAddress = ParseBackgroundPaletteAddress(palette, colorIndex);
             byte paletteColor = _ppuBus.Read(paletteColorAddress);
-            if (paletteColor < 0 || paletteColor > SystemColorPalette.Length)
-                throw new InvalidOperationException($"The given palette color does not exist: {paletteColor}.");
+            //if (paletteColor < 0 || paletteColor > SystemColorPalette.Length)
+            //    throw new InvalidOperationException($"The given palette color does not exist: {paletteColor}.");
 
             return SystemColorPalette[paletteColor];
         }
