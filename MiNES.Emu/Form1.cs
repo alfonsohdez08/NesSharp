@@ -112,13 +112,13 @@ namespace MiNES.Emu
 
         private void StartEmulation()
         {
-            Task.Factory.StartNew(() =>
-            {
-                RunGame();
-            }, TaskCreationOptions.LongRunning);
+            //Task.Factory.StartNew(() =>
+            //{
+            //    RunGame();
+            //}, TaskCreationOptions.LongRunning);
 
-            //_emulatorThread = new Thread(new ThreadStart(RunGame));
-            //_emulatorThread.Start();
+            _emulatorThread = new Thread(new ThreadStart(RunGame));
+            _emulatorThread.Start();
         }
 
         private void RunGame()

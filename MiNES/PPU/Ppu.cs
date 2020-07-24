@@ -1035,8 +1035,7 @@ namespace MiNES.PPU
         /// <returns></returns>
         private int GetPaletteColor(byte palette, byte colorIndex)
         {
-            //byte paletteColor = _ppuBus.Read((ushort)(0x3F00 + (palette << 2) + colorIndex));
-            ushort paletteColorAddress = ParseBackgroundPaletteAddress(palette, colorIndex);
+            var paletteColorAddress = ParseBackgroundPaletteAddress(palette, colorIndex);
             byte paletteColor = _ppuBus.Read(paletteColorAddress);
             //if (paletteColor < 0 || paletteColor > SystemColorPalette.Length)
             //    throw new InvalidOperationException($"The given palette color does not exist: {paletteColor}.");
@@ -1044,7 +1043,7 @@ namespace MiNES.PPU
             return SystemColorPalette[paletteColor];
         }
 
-        private static ushort ParseBackgroundPaletteAddress(byte paletteId, byte colorIndex) => (ushort)(0x3F00 + paletteId * 4 + colorIndex);
+        private static uint ParseBackgroundPaletteAddress(byte paletteId, byte colorIndex) => (uint)(0x3F00 + paletteId * 4 + colorIndex);
 
         private void PostRenderScanlines()
         {

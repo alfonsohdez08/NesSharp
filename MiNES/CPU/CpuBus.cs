@@ -35,7 +35,7 @@ namespace MiNES.CPU
             _ppu = ppu;
         }
 
-        public byte Read(ushort address)
+        public byte Read(uint address)
         {
             byte val = 0;
             // 2KB RAM mirrored
@@ -54,7 +54,7 @@ namespace MiNES.CPU
         /// </summary>
         /// <param name="address">The PPU register address.</param>
         /// <returns>The value allocated in the register identified by the given address.</returns>
-        private byte ReadPpuRegister(ushort address)
+        private byte ReadPpuRegister(uint address)
         {
             byte value = 0;
             switch(address)
@@ -105,7 +105,7 @@ namespace MiNES.CPU
             return value;
         }
 
-        public void Write(ushort address, byte val)
+        public void Write(uint address, byte val)
         {
             // Hardware RAM (NES)
             if (address >= 0x0000 && address < 0x2000)
