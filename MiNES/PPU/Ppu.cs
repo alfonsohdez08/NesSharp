@@ -390,8 +390,8 @@ namespace MiNES.PPU
                 else
                     RenderScanlines();
 
-                if (_cycles >= 1 && _cycles <= 257)
-                    ShiftSpriteRegisters();
+                //if (_cycles >= 1 && _cycles <= 257)
+                //    ShiftSpriteRegisters();
 
                 // Background rendering process
                 if ((_cycles >= 1 && _cycles <= 256) || (_cycles >= 321 && _cycles <= 336))
@@ -477,6 +477,7 @@ namespace MiNES.PPU
                                     else if (!StatusRegister.SpriteOverflow) // An overflow has ocurred then!
                                     {
                                         StatusRegister.SpriteOverflow = true;
+                                        break;
                                     }
                                 }
                             }
@@ -879,13 +880,15 @@ namespace MiNES.PPU
 
             if (Mask.RenderSprites)
             {
-                for (int i = 0; i < _spriteXCounters.Length; i++)
+                for (int i = 0; i < 8; i++)
                 {
                     // If counter equals to 0, then the sprite became active
-                    if (_spriteXCounters[i] == 0)
+                    int diff = _cycles - _spriteXCounters[i];
+                    if (diff >= 0 && diff < 8)
                     {
-                        var pixelLowBit = (_spriteLowPlaneTiles[i] & 0x80) == 0x80 ? 1 : 0;
-                        var pixelHighBit = (_spriteHighPlaneTiles[i] & 0x80) == 0x80 ? 1 : 0;
+                        int mask = 0x80 >> diff;
+                        var pixelLowBit = (_spriteLowPlaneTiles[i] & mask) == mask ? 1 : 0;
+                        var pixelHighBit = (_spriteHighPlaneTiles[i] & mask) == mask ? 1 : 0;
 
                         spritePixel = pixelLowBit | (pixelHighBit << 1);
                         spritePalette = (_spriteAttributes[i] & 3) + 4; // Add 4 because the sprite palettes are from 4-7
