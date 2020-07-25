@@ -87,8 +87,8 @@ namespace MiNES.Emu
         {
             InitializeComponent();
 
-            //nes = new NES(donkeyKongRom);
-            nes = new NES(superMarioBrosRom);
+            nes = new NES(donkeyKongRom);
+            //nes = new NES(superMarioBrosRom);
             //nes = new NES(nesTestRom);
             //nes = new NES(iceClimbersRom);
             //nes = new NES(scanlineTestRom);
@@ -112,13 +112,13 @@ namespace MiNES.Emu
 
         private void StartEmulation()
         {
-            //Task.Factory.StartNew(() =>
-            //{
-            //    RunGame();
-            //}, TaskCreationOptions.LongRunning);
+            Task.Factory.StartNew(() =>
+            {
+                RunGame();
+            }, TaskCreationOptions.LongRunning);
 
-            _emulatorThread = new Thread(new ThreadStart(RunGame));
-            _emulatorThread.Start();
+            //_emulatorThread = new Thread(new ThreadStart(RunGame));
+            //_emulatorThread.Start();
         }
 
         private void RunGame()
