@@ -403,9 +403,10 @@ namespace MiNES.PPU
                         // Load high background pattern table byte
                         case 0:
                             {
-                                ushort pixelsRowAddress = (ushort)(ControlRegister.BackgroundPatternTableBaseAddress + (_tileId * 16) + V.FineY + 8);
+                                uint pixelsRowAddress = (uint)(ControlRegister.BackgroundPatternTableBaseAddress + (_tileId * 16) + V.FineY + 8);
 
-                                _highPixelsRow = _ppuBus.Read(pixelsRowAddress);
+                                _highPixelsRow = _ppuBus.ReadCharacterRom(pixelsRowAddress);
+                                //_highPixelsRow = _ppuBus.Read(pixelsRowAddress);
                             }
                             break;
                         case 1:
@@ -416,15 +417,17 @@ namespace MiNES.PPU
                         case 2:
                             {
                                 uint tileIdAddress = 0x2000 | (uint)(V.RegisterValue & 0x0FFF);
-                                _tileId = _ppuBus.Read(tileIdAddress);
+                                _tileId = _ppuBus.ReadNametable(tileIdAddress);
+                                //_tileId = _ppuBus.Read(tileIdAddress);
                             }
                             break;
                         // Fetch attribute table byte
                         case 4:
                             {
                                 uint attributeEntryAddress = (uint)(0x23C0 | (V.RegisterValue & 0x0C00) | ((V.RegisterValue >> 4) & 0x38) | ((V.RegisterValue >> 2) & 0x07));
-                                
-                                _attribute = _ppuBus.Read(attributeEntryAddress);
+
+                                //_attribute = _ppuBus.Read(attributeEntryAddress);
+                                _attribute = _ppuBus.ReadNametable(attributeEntryAddress);
                                 _blockId = ParseBlock(V.CoarseX, V.CoarseY);
                             }
                             break;
@@ -433,7 +436,8 @@ namespace MiNES.PPU
                             {
                                 uint pixelsRowAddress = (uint)(ControlRegister.BackgroundPatternTableBaseAddress + (_tileId * 16) + V.FineY);
 
-                                _lowPixelsRow = _ppuBus.Read(pixelsRowAddress);
+                                //_lowPixelsRow = _ppuBus.Read(pixelsRowAddress);
+                                _lowPixelsRow = _ppuBus.ReadCharacterRom(pixelsRowAddress);
                             }
                             break;
                     }
@@ -527,13 +531,13 @@ namespace MiNES.PPU
                                             // top half
                                             if (y < 8)
                                             {
-                                                lowPlane = _ppuBus.Read((uint)(patternTableAddress + (spriteId * 16) + y));
+                                                lowPlane = _ppuBus.ReadCharacterRom((uint)(patternTableAddress + (spriteId * 16) + y));
 
                                             } // bottom half
                                             else
                                             {
                                                 //spriteId++; // bottom half tile is next to the top half tile in the pattern table
-                                                lowPlane = _ppuBus.Read((uint)(patternTableAddress + ((spriteId + 1) * 16) + (y - 8)));
+                                                lowPlane = _ppuBus.ReadCharacterRom((uint)(patternTableAddress + ((spriteId + 1) * 16) + (y - 8)));
                                             }
 
                                         } // 8 x 8 sprites
@@ -541,7 +545,7 @@ namespace MiNES.PPU
                                         {
                                             var flipOffset = _flipSpriteVertically ? (7 - _spriteY) : _spriteY;
 
-                                            lowPlane = _ppuBus.Read((uint)(ControlRegister.SpritesPatternTableBaseAddress + (_spriteTileIndex * 16) + flipOffset));
+                                            lowPlane = _ppuBus.ReadCharacterRom((uint)(ControlRegister.SpritesPatternTableBaseAddress + (_spriteTileIndex * 16) + flipOffset));
                                         }
 
                                         if (_flipSpriteHorizontally)
@@ -572,13 +576,13 @@ namespace MiNES.PPU
                                             // top half
                                             if (y < 8)
                                             {
-                                                highPlane = _ppuBus.Read((uint)(patternTableAddress + (spriteId * 16) + y + 8));
+                                                highPlane = _ppuBus.ReadCharacterRom((uint)(patternTableAddress + (spriteId * 16) + y + 8));
 
                                             } // bottom half
                                             else
                                             {
                                                 //spriteId++; // bottom half tile is next to the top half tile in the pattern table
-                                                highPlane = _ppuBus.Read((uint)(patternTableAddress + ((spriteId + 1) * 16) + (y - 8) + 8));
+                                                highPlane = _ppuBus.ReadCharacterRom((uint)(patternTableAddress + ((spriteId + 1) * 16) + (y - 8) + 8));
                                             }
 
                                         } // 8 x 8 sprites
@@ -586,7 +590,7 @@ namespace MiNES.PPU
                                         {
                                             var flipOffset = _flipSpriteVertically ? (7 - _spriteY) : _spriteY;
 
-                                            highPlane = _ppuBus.Read((uint)(ControlRegister.SpritesPatternTableBaseAddress + (_spriteTileIndex * 16) + flipOffset + 8));
+                                            highPlane = _ppuBus.ReadCharacterRom((uint)(ControlRegister.SpritesPatternTableBaseAddress + (_spriteTileIndex * 16) + flipOffset + 8));
                                         }
 
                                         if (_flipSpriteHorizontally)
@@ -1039,7 +1043,8 @@ namespace MiNES.PPU
         private int GetPaletteColor(byte palette, byte colorIndex)
         {
             var paletteColorAddress = ParseBackgroundPaletteAddress(palette, colorIndex);
-            byte paletteColor = _ppuBus.Read(paletteColorAddress);
+            byte paletteColor = _ppuBus.ReadPalette(paletteColorAddress);
+            //byte paletteColor = _ppuBus.Read(paletteColorAddress);
             //if (paletteColor < 0 || paletteColor > SystemColorPalette.Length)
             //    throw new InvalidOperationException($"The given palette color does not exist: {paletteColor}.");
 

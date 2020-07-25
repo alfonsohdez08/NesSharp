@@ -8,17 +8,17 @@ namespace MiNES.PPU
     /// PPU's bus.
     /// </summary>
     public class PpuBus
-    {
-        private readonly Mirroring _mirroring;
-        
+    {        
         private readonly byte[] _vram = new byte[2 * 1024];
         private readonly byte[] _paletteRam = new byte[32];
         private readonly byte[] _chrRom;
 
+        private readonly INametableAddressParser _ntAddressParser;
+
         public PpuBus(byte[] chrRom, Mirroring mirroring)
         {
-            _mirroring = mirroring;
             _chrRom = chrRom;
+            _ntAddressParser = NametableMirroringResolver.GetAddressParser(mirroring);
         }
 
         public byte Read(uint address)
@@ -33,7 +33,12 @@ namespace MiNES.PPU
             return _chrRom[address & 0x3FFF];
         }
 
-        private byte ReadPalette(uint address)
+        public byte ReadCharacterRom(uint address)
+        {
+            return _chrRom[address & 0x3FFF];
+        }
+
+        public byte ReadPalette(uint address)
         {
             switch (address)
             {
@@ -90,20 +95,9 @@ namespace MiNES.PPU
         /// <param name="val">The value that will be stored.</param>
         private void WriteNametable(uint address, byte val)
         {
-            if (_mirroring == Mirroring.Vertical)
-            {
-                if ((address >= 0x2800 && address < 0x2C00) || (address >= 0x2C00 && address < 0x3000))
-                    address -= 0x0400;
-            }
-            else // Horizontal
-            {
-                // NT 1 mirrors NT 0 and NT 3 mirrors NT 2
-                if ((address >= 0x2400 && address < 0x2800) || (address >= 0x2C00 && address < 0x3000))
-                    address -= 0x0400;
+            var addressParsed = _ntAddressParser.Parse(address);
 
-            }
-
-            _vram[address & 0x07FF] = val;
+            _vram[addressParsed & 0x07FF] = val;
         }
 
         /// <summary>
@@ -111,21 +105,11 @@ namespace MiNES.PPU
         /// </summary>
         /// <param name="address">The address where the entry is allocated.</param>
         /// <returns>The value allocated in the given address.</returns>
-        private byte ReadNametable(uint address)
+        public byte ReadNametable(uint address)
         {
-            if (_mirroring == Mirroring.Vertical)
-            {
-                if ((address >= 0x2800 && address < 0x2C00) || (address >= 0x2C00 && address < 0x3000))
-                    address -= 0x0400;
-            }
-            else // Horizontal
-            {
-                // NT 1 mirrors NT 0 and NT 3 mirrors NT 2
-                if ((address >= 0x2400 && address < 0x2800) || (address >= 0x2C00 && address < 0x3000))
-                    address -= 0x0400;
-            }
+            var addressParsed = _ntAddressParser.Parse(address);
 
-            return _vram[address & 0x07FF];
+            return _vram[addressParsed & 0x07FF];
         }
     }
 }
