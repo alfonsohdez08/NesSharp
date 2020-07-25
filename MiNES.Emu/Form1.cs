@@ -87,8 +87,8 @@ namespace MiNES.Emu
         {
             InitializeComponent();
 
-            nes = new NES(donkeyKongRom);
-            //nes = new NES(superMarioBrosRom);
+            //nes = new NES(donkeyKongRom);
+            nes = new NES(superMarioBrosRom);
             //nes = new NES(nesTestRom);
             //nes = new NES(iceClimbersRom);
             //nes = new NES(scanlineTestRom);
