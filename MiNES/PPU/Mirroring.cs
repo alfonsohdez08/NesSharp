@@ -37,11 +37,12 @@ namespace MiNES.PPU
 
     class HorizontalMirroringParser : INametableAddressParser
     {
+        // Bits 11 and 13 controls the base address for Horizontal mirroring
+        private const uint Mask = 0x2800;
+
         public uint Parse(uint address)
         {
-            // Bits 11 and 13 controls the base address for Horizontal mirroring
-            uint mask = 0x2800;
-            uint baseAddress = address & mask;
+            uint baseAddress = address & Mask;
             uint offset = address & 0x03FF;
 
             return baseAddress + offset;
@@ -50,11 +51,12 @@ namespace MiNES.PPU
 
     class VerticalMirroringParser : INametableAddressParser
     {
+        // Bits 10 and 13 controls the base address for Vertical mirroring
+        private const uint Mask = 0x2400;
+
         public uint Parse(uint address)
         {
-            // Bits 10 and 13 controls the base address for Vertical mirroring
-            uint mask = 0x2400;
-            uint baseAddress = address & mask;
+            uint baseAddress = address & Mask;
             uint offset = address & 0x03FF;
 
             return baseAddress + offset;
