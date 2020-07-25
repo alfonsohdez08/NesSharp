@@ -7,7 +7,77 @@ using System.Linq;
 namespace MiNES.PPU
 {
     public class Ppu
-    {        
+    {
+        #region NES color palette
+        private static readonly int[] SystemColorPalette = new int[]
+        {
+            -9079435,
+            -14214257,
+            -16777045,
+            -12124001,
+            -7405449,
+            -5570541,
+            -5832704,
+            -8451328,
+            -12374272,
+            -16759040,
+            -16756480,
+            -16761065,
+            -14991521,
+            -16777216,
+            -16777216,
+            -16777216,
+            -4408132,
+            -16747537,
+            -14468113,
+            -8191757,
+            -4259649,
+            -1638309,
+            -2413824,
+            -3453169,
+            -7638272,
+            -16738560,
+            -16733440,
+            -16739525,
+            -16743541,
+            -16777216,
+            -16777216,
+            -16777216,
+            -1,
+            -12599297,
+            -10512385,
+            -5796867,
+            -558081,
+            -34889,
+            -34973,
+            -25797,
+            -803009,
+            -8137965,
+            -11542709,
+            -10946408,
+            -16716837,
+            -16777216,
+            -16777216,
+            -16777216,
+            -1,
+            -5511169,
+            -3680257,
+            -2634753,
+            -14337,
+            -14373,
+            -16461,
+            -9301,
+            -6237,
+            -1835101,
+            -5508161,
+            -4980785,
+            -6291469,
+            -16777216,
+            -16777216,
+            -16777216
+        };
+        #endregion
+
         /// <summary>
         /// Count how many frames has been rendered so far.
         /// </summary>
@@ -97,6 +167,25 @@ namespace MiNES.PPU
 
         private bool _isSpriteZeroInBuffer;
 
+        private byte _dataBuffer = 0;        
+
+        public bool IsFrameCompleted { get; private set; }
+
+        public bool NmiRequested { get; set; }
+
+        private readonly Tile[] _backgroundTiles;
+
+        public Tile[] BackgroundTiles => _backgroundTiles;
+
+        internal readonly PpuLoopy V = new PpuLoopy();
+        internal readonly PpuLoopy T = new PpuLoopy();
+
+        public Ppu(PpuBus ppuBus)
+        {
+            _ppuBus = ppuBus;
+            ResetFrameRenderingStatus();
+        }
+
         public void SetOamData(byte data)
         {
             _oam[OamAddress] = data;
@@ -107,96 +196,6 @@ namespace MiNES.PPU
 
         public byte GetOamData() => _oam[OamAddress];
 
-        private byte _dataBuffer = 0;
-
-        #region NES color palette
-        public static readonly int[] SystemColorPalette = new int[]
-        {
-            -9079435,
-            -14214257,
-            -16777045,
-            -12124001,
-            -7405449,
-            -5570541,
-            -5832704,
-            -8451328,
-            -12374272,
-            -16759040,
-            -16756480,
-            -16761065,
-            -14991521,
-            -16777216,
-            -16777216,
-            -16777216,
-            -4408132,
-            -16747537,
-            -14468113,
-            -8191757,
-            -4259649,
-            -1638309,
-            -2413824,
-            -3453169,
-            -7638272,
-            -16738560,
-            -16733440,
-            -16739525,
-            -16743541,
-            -16777216,
-            -16777216,
-            -16777216,
-            -1,
-            -12599297,
-            -10512385,
-            -5796867,
-            -558081,
-            -34889,
-            -34973,
-            -25797,
-            -803009,
-            -8137965,
-            -11542709,
-            -10946408,
-            -16716837,
-            -16777216,
-            -16777216,
-            -16777216,
-            -1,
-            -5511169,
-            -3680257,
-            -2634753,
-            -14337,
-            -14373,
-            -16461,
-            -9301,
-            -6237,
-            -1835101,
-            -5508161,
-            -4980785,
-            -6291469,
-            -16777216,
-            -16777216,
-            -16777216
-        };
-        #endregion
-
-        public bool IsFrameCompleted { get; private set; }
-
-        public bool NmiRequested { get; set; }
-
-        private readonly Tile[] _backgroundTiles;
-
-        public Tile[] BackgroundTiles => _backgroundTiles;
-
-        internal readonly Loopy V = new Loopy();
-        internal readonly Loopy T = new Loopy();
-
-        public Ppu(PpuBus ppuBus)
-        {
-            _ppuBus = ppuBus;
-
-            //_backgroundTiles = GetPatternTable();
-            ResetFrameRenderingStatus();
-        }
 
         /// <summary>
         /// Resets the address latch used by the PPU address register and PPU scroll register.
@@ -217,15 +216,15 @@ namespace MiNES.PPU
                 value = (byte)(value & 0x3F);
 
                 //T.RegisterValue = (ushort)(((T.RegisterValue | 0x3F00) ^ 0x3F00) | (value << 8));
-                T.LoopyRegister = (T.LoopyRegister & 0x00FF) | (value << 8);
+                T.Loopy = (T.Loopy & 0x00FF) | (value << 8);
                 //T.RegisterValue = (ushort)((T.RegisterValue | 0x4000) ^ 0x4000); // Sets bit 14 to 0
 
                 _addressLatch = true; // Flips to the low byte state
             }
             else // w is 1
             {
-                T.LoopyRegister = (T.LoopyRegister & 0x7F00) | value;
-                V.LoopyRegister = T.LoopyRegister;
+                T.Loopy = (T.Loopy & 0x7F00) | value;
+                V.Loopy = T.Loopy;
 
                 _addressLatch = false; // Flips to the high byte state
             }
@@ -318,7 +317,7 @@ namespace MiNES.PPU
             /* If the compiled address does not overlap the color palette address range, then return
              * the data read from the buffer; otherwise return the data read from the address right away
              */
-            if (V.LoopyRegister >= 0x3F00)
+            if (V.Loopy >= 0x3F00)
                 data = _dataBuffer;
 
             IncrementVRamAddress();
@@ -343,9 +342,9 @@ namespace MiNES.PPU
         {
             // If bit 3 from control register is set, add 32 to VRAM address; otherwise 1
             if (Control.VRamAddressIncrement)
-                V.LoopyRegister += 32;
+                V.Loopy += 32;
             else
-                V.LoopyRegister++;
+                V.Loopy++;
         }
 
         private byte[] _spriteXCounters = new byte[8];
@@ -415,7 +414,7 @@ namespace MiNES.PPU
                         // Fetch nametable byte
                         case 2:
                             {
-                                uint tileIdAddress = 0x2000 | (uint)(V.LoopyRegister & 0x0FFF);
+                                uint tileIdAddress = 0x2000 | (uint)(V.Loopy & 0x0FFF);
                                 _tileId = _ppuBus.ReadNametable(tileIdAddress);
                                 //_tileId = _ppuBus.Read(tileIdAddress);
                             }
@@ -423,7 +422,7 @@ namespace MiNES.PPU
                         // Fetch attribute table byte
                         case 4:
                             {
-                                uint attributeEntryAddress = (uint)(0x23C0 | (V.LoopyRegister & 0x0C00) | ((V.LoopyRegister >> 4) & 0x38) | ((V.LoopyRegister >> 2) & 0x07));
+                                uint attributeEntryAddress = (uint)(0x23C0 | (V.Loopy & 0x0C00) | ((V.Loopy >> 4) & 0x38) | ((V.Loopy >> 2) & 0x07));
 
                                 //_attribute = _ppuBus.Read(attributeEntryAddress);
                                 _attribute = _ppuBus.ReadNametable(attributeEntryAddress);
