@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="0.9.11" />
+    <PackageReference Include="Avalonia.Desktop" Version="0.9.11" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MiNES\MiNES.csproj" />
+  </ItemGroup>
+</Project>
