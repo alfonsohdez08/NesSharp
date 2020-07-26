@@ -87,8 +87,8 @@ namespace MiNES.Emu
         {
             InitializeComponent();
 
-            //nes = new NES(donkeyKongRom);
-            nes = new NES(superMarioBrosRom);
+            nes = new NES(donkeyKongRom);
+            //nes = new NES(superMarioBrosRom);
             //nes = new NES(nesTestRom);
             //nes = new NES(iceClimbersRom);
             //nes = new NES(scanlineTestRom);
@@ -204,32 +204,32 @@ using (MemoryStream mStream = new MemoryStream(data.ToArray()))
 
         private void DrawNametable()
         {
-            byte[][] nametable = nes.GetNametable0();
+            //byte[][] nametable = nes.GetNametable0();
 
-            //tableLayoutPanel1.Visible = true;
-            //tableLayoutPanel1.Enabled = true;
+            ////tableLayoutPanel1.Visible = true;
+            ////tableLayoutPanel1.Enabled = true;
 
-            //tableLayoutPanel1.Controls.Clear();
-            for (int row = 0; row < nametable.Length; row++)
-            {
-                for (int column = 0; column < nametable[row].Length; column++)
-                {
-                    //Control control = tableLayoutPanel1.GetControlFromPosition(row, column);
-                    //Control control = new Control();
-                    Label label = new Label();
-                    //label.Text = nametable[row][column].ToString("X");
-                    label.Height = 20;
-                    label.Width = 20;
-                    label.Text = ParseHex(nametable[row][column]);
-                    label.Visible = true;
-                    label.ForeColor = Color.Black;
-                    //control.Text = ParseHex(nametable[row][column]);
+            ////tableLayoutPanel1.Controls.Clear();
+            //for (int row = 0; row < nametable.Length; row++)
+            //{
+            //    for (int column = 0; column < nametable[row].Length; column++)
+            //    {
+            //        //Control control = tableLayoutPanel1.GetControlFromPosition(row, column);
+            //        //Control control = new Control();
+            //        Label label = new Label();
+            //        //label.Text = nametable[row][column].ToString("X");
+            //        label.Height = 20;
+            //        label.Width = 20;
+            //        label.Text = ParseHex(nametable[row][column]);
+            //        label.Visible = true;
+            //        label.ForeColor = Color.Black;
+            //        //control.Text = ParseHex(nametable[row][column]);
 
-                    //tableLayoutPanel1.SetCellPosition(control, new TableLayoutPanelCellPosition(row, column));
-                    //tableLayoutPanel1.SetCellPosition(label, new TableLayoutPanelCellPosition(row, column));
-                    //tableLayoutPanel1.Controls.Add(label, column, row);
-                }
-            }
+            //        //tableLayoutPanel1.SetCellPosition(control, new TableLayoutPanelCellPosition(row, column));
+            //        //tableLayoutPanel1.SetCellPosition(label, new TableLayoutPanelCellPosition(row, column));
+            //        //tableLayoutPanel1.Controls.Add(label, column, row);
+            //    }
+            //}
         }
 
         private static string ParseHex(byte b) => $"{b.ToString("X").PadLeft(2, '0')}";
@@ -255,48 +255,48 @@ using (MemoryStream mStream = new MemoryStream(data.ToArray()))
 
         private void button1_Click_1(object sender, EventArgs e)
         {
-            // Only draw the nametable when the emulation is stopped
-            if (!RunEmulation)
-            {
-                var nametableDebugger = new NametableDebugger();
+            //// Only draw the nametable when the emulation is stopped
+            //if (!RunEmulation)
+            //{
+            //    var nametableDebugger = new NametableDebugger();
 
-                //nametableDebugger.DrawNametable(nes.GetNametable0(), nes.GetBackgroundTiles());
-                nametableDebugger.DrawNametable(nes.GetNametable2(), nes.GetBackgroundTiles());
-                nametableDebugger.Show();
+            //    //nametableDebugger.DrawNametable(nes.GetNametable0(), nes.GetBackgroundTiles());
+            //    nametableDebugger.DrawNametable(nes.GetNametable2(), nes.GetBackgroundTiles());
+            //    nametableDebugger.Show();
 
-                //var nametableDebugger = new NametableDebugger();
-                //nametableDebugger.DrawNametable(nes.GetNametable());
-                //nametableDebugger.Show();
+            //    //var nametableDebugger = new NametableDebugger();
+            //    //nametableDebugger.DrawNametable(nes.GetNametable());
+            //    //nametableDebugger.Show();
 
-                //if (_nametableDebugger == null)
-                //    _nametableDebugger = new NametableDebugger();
+            //    //if (_nametableDebugger == null)
+            //    //    _nametableDebugger = new NametableDebugger();
 
-                //_nametableDebugger.DrawNametable(nes.GetNametable());
-                //_nametableDebugger.Show();
-            }
+            //    //_nametableDebugger.DrawNametable(nes.GetNametable());
+            //    //_nametableDebugger.Show();
+            //}
         }
 
         private void button2_Click(object sender, EventArgs e)
         {
-            if (!RunEmulation)
-            {
-                var backgroundDebugger = new NametableDebugger();
+            //if (!RunEmulation)
+            //{
+            //    var backgroundDebugger = new NametableDebugger();
 
-                backgroundDebugger.DrawPatternTable(nes.GetBackgroundTiles());
-                backgroundDebugger.Show();
-            }
+            //    backgroundDebugger.DrawPatternTable(nes.GetBackgroundTiles());
+            //    backgroundDebugger.Show();
+            //}
         }
 
         private void button3_Click(object sender, EventArgs e)
         {
-            if (!RunEmulation)
-            {
-                var backgroundDebugger = new NametableDebugger();
-                Color[] palettes = nes.GetPalettes();
+            //if (!RunEmulation)
+            //{
+            //    var backgroundDebugger = new NametableDebugger();
+            //    Color[] palettes = nes.GetPalettes();
 
-                backgroundDebugger.DrawPalettes(palettes);
-                backgroundDebugger.Show();
-            }
+            //    backgroundDebugger.DrawPalettes(palettes);
+            //    backgroundDebugger.Show();
+            //}
         }
 
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)

@@ -7,7 +7,7 @@ namespace MiNES.PPU.Registers
     class PpuControl
     {
         public int BaseNametableAddress;
-        public bool VRamAddressIncrement;
+        public int VRamAddressIncrement;
         public int SpritePatternTableAddress;
         public int BackgroundPatternTableAddress;
         public bool SpriteSize;
@@ -19,12 +19,12 @@ namespace MiNES.PPU.Registers
                     | ((SpriteSize ? 1 : 0) << 5)
                     | ((BackgroundPatternTableAddress & 0x1000) >> 8)
                     | ((SpritePatternTableAddress & 0x1000) >> 9)
-                    | ((VRamAddressIncrement ? 1 : 0) << 2)
+                    | ((VRamAddressIncrement == 32 ? 1 : 0) << 2)
                     | ((BaseNametableAddress & 0x0C00) >> 10);
             set
             {
                 BaseNametableAddress = 0x2000 | ((value & 3) << 10);
-                VRamAddressIncrement = (value & 4) == 4;
+                VRamAddressIncrement = (value & 4) == 4 ? 32 : 1;
                 SpritePatternTableAddress = (value & 8) << 9;
                 BackgroundPatternTableAddress = (value & 0x10) << 8;
                 SpriteSize = (value & 0x20) == 0x20;

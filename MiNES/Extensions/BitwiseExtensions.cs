@@ -91,6 +91,14 @@ namespace MiNES.Extensions
             return result == mask;
         }
 
+        public static bool GetBit(this int value, int position)
+        {
+            int mask = 1 << position;
+            int result = value & mask;
+
+            return result == mask;
+        }
+
         /// <summary>
         /// Sets a specified value into the high byte area of a 16-bit value.
         /// </summary>
@@ -109,6 +117,21 @@ namespace MiNES.Extensions
         public static void SetLowByte(this ref ushort value, byte val)
         {
             value = (ushort)((value & 0xFF00) | val);
+        }
+
+        public static int Byte(this int value) => value & 0xFF;
+
+        public static int Word(this int value) => value & 0xFFFF;
+
+        public static int MirrorBits(this int v)
+        {
+            int m = v;
+
+            m = (m & 0xF0) >> 4 | (m & 0x0F) << 4;
+            m = (m & 0xCC) >> 2 | (m & 0x33) << 2;
+            m = (m & 0xAA) >> 1 | (m & 0x55) << 1;
+
+            return m;
         }
     }
 }

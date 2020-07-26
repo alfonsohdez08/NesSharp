@@ -83,7 +83,7 @@ namespace MiNES.CPU
                 // PPU OAM data register
                 case 0x2004:
                     //value = _ppu.OamData;
-                    value = _ppu.GetOamData();
+                    value = (byte)_ppu.GetOamData();
                     break;
 
                 // PPU Scroll register (write only)
@@ -96,7 +96,7 @@ namespace MiNES.CPU
 
                 // PPU Data register
                 case 0x2007:
-                    value = _ppu.GetPpuData();
+                    value = (byte)_ppu.GetPpuData();
                     break;
                 //default:
                 //    throw new InvalidOperationException($"The address {address.ToString("X")} is not mapped to any PPU register.");
