@@ -42,20 +42,8 @@ namespace MiNES
                     _ppu.NmiRequested = false;
                 }
 
-                int totalPpuCycles;
-                int cpuCyclesSpent;
-                try
-                {
-                    //cpuCyclesSpent = _cpu.Step() + _cpuCyclesLeftOver;
-                    cpuCyclesSpent = _cpu.Step();
-                    totalPpuCycles = cpuCyclesSpent * 3;
-                    //totalPpuCycles = (cpuCyclesSpent * 3) + _ppuCyclesLeftOver;
-                }
-                finally
-                {
-                    //_cpuCyclesLeftOver = 0;
-                    //_ppuCyclesLeftOver = 0;
-                }
+                int cpuCyclesSpent = _cpu.Step();
+                int totalPpuCycles = cpuCyclesSpent * 3;
 
                 if (!_ppu.IsIdle)
                 {
@@ -68,16 +56,6 @@ namespace MiNES
                             cpuCyclesInVbl = (totalPpuCycles - ppuCycles) / 3;
                             break;
                         }
-
-                        //if (_ppu.IsFrameCompleted) // circuit breaker
-                        //{
-                        //    ppuCycles++;
-                        //    _ppuCyclesLeftOver = (totalPpuCycles - ppuCycles) % 3;
-                        //    _cpuCyclesLeftOver = (totalPpuCycles - ppuCycles) / 3;
-
-                        //    break;
-                        //}
-
                     }
                 }
                 else

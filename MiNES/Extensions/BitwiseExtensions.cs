@@ -60,9 +60,6 @@ namespace MiNES.Extensions
         /// <param name="bitValue">The value that will be set to position of the source value: true = 1 , false = 0.</param>
         public static void SetBit(this ref byte value, byte bitPosition, bool bitValue)
         {
-            if (bitPosition > 7)
-                throw new ArgumentException("The given position exceeds the number of bits stored in a single byte.");
-
             int mask = 1 << bitPosition;
 
             int result;
@@ -82,9 +79,6 @@ namespace MiNES.Extensions
         /// <returns>True if bit is set to "1"; false if bit is set to "0".</returns>
         public static bool GetBit(this byte value, byte bitPosition)
         {
-            if (bitPosition > 7)
-                throw new ArgumentException("The given position exceeds the number of bits stored in a single byte.");
-
             int mask = 1 << bitPosition;
             int result = value & mask;
 
@@ -119,9 +113,9 @@ namespace MiNES.Extensions
             value = (ushort)((value & 0xFF00) | val);
         }
 
-        public static int Byte(this int value) => value & 0xFF;
+        public static int Byte(this int value) => (byte)value;
 
-        public static int Word(this int value) => value & 0xFFFF;
+        public static int Word(this int value) => (ushort)value;
 
         public static int MirrorBits(this int v)
         {

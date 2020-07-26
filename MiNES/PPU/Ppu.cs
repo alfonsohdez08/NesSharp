@@ -336,10 +336,6 @@ namespace MiNES.PPU
                 if (_cycles >= 257 && _cycles <= 320)
                     OamAddress = 0;
             }
-            else if (_scanline == 240)
-            {
-
-            }
             else if (_scanline >= 241 && _scanline < 261)
                 VerticalBlankScanlines();
 
