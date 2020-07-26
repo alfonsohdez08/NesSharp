@@ -38,7 +38,7 @@ namespace MiNES.UI
 
         private void InitializeEmulation()
         {
-            var game = File.ReadAllBytes(@"C:\Users\ward\nes\scanline.nes");
+            var game = File.ReadAllBytes(@"C:\Users\ward\nes\super_mario_bros.nes");
             _nes = new NES(game);
 
             _emulationTask = new TaskFactory().StartNew(RunGame, TaskCreationOptions.LongRunning);
