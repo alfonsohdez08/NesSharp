@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
@@ -16,6 +17,19 @@ namespace MiNES.Windows.Client
         private PictureBox _screen;
 
         private delegate void PaintScreen();
+
+        private readonly Joypad _joypad = new Joypad();
+        private readonly Dictionary<Keys, Button> _joypadMapping = new Dictionary<Keys, Button>()
+        {
+            {Keys.Z, Button.A },
+            {Keys.X, Button.B },
+            {Keys.Up, Button.Up },
+            {Keys.Down, Button.Down },
+            {Keys.Left, Button.Left },
+            {Keys.Right, Button.Right },
+            {Keys.Enter, Button.Start },
+            {Keys.Space, Button.Select }
+        };
 
         public EmulatorUI()
         {
@@ -44,7 +58,7 @@ namespace MiNES.Windows.Client
         {
             using (var openFileDialog = new OpenFileDialog())
             {
-                openFileDialog.InitialDirectory = "C:\\";
+                openFileDialog.InitialDirectory = @"C:\Users\ward\nes";
                 openFileDialog.Filter = "nes files (*.nes)|*.nes|All files (*.*)|*.*";
 
                 if (openFileDialog.ShowDialog() == DialogResult.OK)
@@ -62,7 +76,7 @@ namespace MiNES.Windows.Client
 
         private void StartEmulation()
         {
-            _nes = new NES(_cartridgeRom);
+            _nes = new NES(_cartridgeRom, _joypad);
             new TaskFactory().StartNew(RunGame, TaskCreationOptions.LongRunning);
         }
 
@@ -100,6 +114,12 @@ namespace MiNES.Windows.Client
         private void EmulatorUI_Load(object sender, EventArgs e)
         {
 
+        }
+
+        private void EmulatorUI_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (_joypadMapping.TryGetValue(e.KeyCode, out Button buttonPressed))
+                _joypad.PressButton(buttonPressed);
         }
     }
 }

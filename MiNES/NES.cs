@@ -15,16 +15,14 @@ namespace MiNES
 
         private int _cpuCyclesLeftOver;
 
-        public Ppu Ppu => _ppu;
-
-        public NES(byte[] gameCartridge)
+        public NES(byte[] gameCartridge, Joypad joypad)
         {
             iNESParser.ParseNesCartridge(gameCartridge, out byte[] programRom, out byte[] characterRom, out Mirroring mirroring);
 
             var ppuBus = new PpuBus(characterRom, mirroring);
             _ppu = new Ppu(ppuBus);
 
-            var cpuBus  = new CpuBus(programRom, _ppu);
+            var cpuBus  = new CpuBus(programRom, _ppu, joypad);
             _cpu = new Cpu(cpuBus);
         }
 

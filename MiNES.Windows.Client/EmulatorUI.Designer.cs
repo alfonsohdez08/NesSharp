@@ -38,6 +38,7 @@
             this.Name = "EmulatorUI";
             this.Text = "Form1";
             this.Load += new System.EventHandler(this.EmulatorUI_Load);
+            this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.EmulatorUI_KeyDown);
             this.ResumeLayout(false);
 
         }

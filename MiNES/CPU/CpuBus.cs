@@ -22,17 +22,18 @@ namespace MiNES.CPU
 
         private readonly byte[] _ram = new byte[2 * 1024];
         private readonly byte[] _programRom;
-
+        private readonly Joypad _joypad;
 
         /// <summary>
         /// Creates an instance of the bus used by the CPU.
         /// </summary>
         /// <param name="memory">The space for allocate RAM and other "stuffs".</param>
         /// <param name="ppu">The PPU (the CPU reads/writes to the PPU registers by using any of the addresses in this range $2000-$2007).</param>
-        public CpuBus(byte[] programRom, Ppu ppu)
+        public CpuBus(byte[] programRom, Ppu ppu, Joypad joypad)
         {
             _programRom = programRom;
             _ppu = ppu;
+            _joypad = joypad;
         }
 
         public byte Read(uint address)
@@ -43,6 +44,17 @@ namespace MiNES.CPU
                 val = _ram[address & 0x07FF];
             else if (address >= 0x2000 && address < 0x4000) // PPU registers
                 val = ReadPpuRegister((ushort)(0x2000 + (address & 7)));
+            else if (address == 0x4016)
+            {
+                int bit = (_joypad.Register & 0x80) == 0x80 ? 1 : 0;
+                val = (byte)bit;
+
+                if (!_joypad.Poll)
+                {
+                    _joypad.Register <<= 1;
+                    _joypad.Register &= 0xFF;
+                }
+            }
             else if (address >= 0x8000 & address <= 0xFFFF)
                 val = _programRom[address & 0x7FFF];
 
@@ -119,6 +131,10 @@ namespace MiNES.CPU
                 // The value written to this port is the page within the CPU RAM where a copy of the OAM resides
                 DmaTransferTriggered = true;
                 OamMemoryPage = val;
+            }
+            else if (address == 0x4016)
+            {
+                _joypad.Poll = val == 1;
             }
         }
 
