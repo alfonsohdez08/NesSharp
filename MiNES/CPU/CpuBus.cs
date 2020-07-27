@@ -46,14 +46,16 @@ namespace MiNES.CPU
                 val = ReadPpuRegister((ushort)(0x2000 + (address & 7)));
             else if (address == 0x4016)
             {
-                int bit = (_joypad.Register & 0x80) == 0x80 ? 1 : 0;
-                val = (byte)bit;
+                val = (byte)_joypad.ReadState();
 
-                if (!_joypad.Poll)
-                {
-                    _joypad.Register <<= 1;
-                    _joypad.Register &= 0xFF;
-                }
+                //int bit = (_joypad._incomingData & 0x80) == 0x80 ? 1 : 0;
+                //val = (byte)bit;
+
+                //if (!_joypad.Strobe)
+                //{
+                //    _joypad._incomingData <<= 1;
+                //    _joypad._incomingData &= 0xFF;
+                //}
             }
             else if (address >= 0x8000 & address <= 0xFFFF)
                 val = _programRom[address & 0x7FFF];
@@ -134,7 +136,8 @@ namespace MiNES.CPU
             }
             else if (address == 0x4016)
             {
-                _joypad.Poll = val == 1;
+                _joypad.Strobe(val == 1);
+                //_joypad.Strobe = val == 1;
             }
         }
 

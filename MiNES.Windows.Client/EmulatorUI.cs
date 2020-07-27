@@ -130,15 +130,16 @@ namespace MiNES.Windows.Client
             }
         }
 
-        private void EmulatorUI_Load(object sender, EventArgs e)
-        {
-
-        }
-
         private void EmulatorUI_KeyDown(object sender, KeyEventArgs e)
         {
             if (_joypadMapping.TryGetValue(e.KeyCode, out Button buttonPressed))
                 _joypad.PressButton(buttonPressed);
+        }
+
+        private void EmulatorUI_KeyUp(object sender, KeyEventArgs e)
+        {
+            if (_joypadMapping.TryGetValue(e.KeyCode, out Button buttonPressed))
+                _joypad.ReleaseButton(buttonPressed);
         }
     }
 }

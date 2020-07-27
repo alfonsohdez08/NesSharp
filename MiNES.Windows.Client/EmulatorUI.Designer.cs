@@ -37,8 +37,8 @@
             this.ClientSize = new System.Drawing.Size(800, 450);
             this.Name = "EmulatorUI";
             this.Text = "Form1";
-            this.Load += new System.EventHandler(this.EmulatorUI_Load);
             this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.EmulatorUI_KeyDown);
+            this.KeyUp += new System.Windows.Forms.KeyEventHandler(this.EmulatorUI_KeyUp);
             this.ResumeLayout(false);
 
         }
