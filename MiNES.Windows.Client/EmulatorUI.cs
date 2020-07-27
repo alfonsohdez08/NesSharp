@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -49,9 +50,27 @@ namespace MiNES.Windows.Client
             Controls.Add(menuStrip);
 
             _screen = new PictureBox();
+            
             _screen.Width = 256;
             _screen.Height = 240;
+            _screen.Location = new Point(0, menuStrip.Location.Y + 25);
+            _screen.Image = GetBlackScreen();
+
             Controls.Add(_screen);
+        }
+
+        private static Image GetBlackScreen()
+        {
+            var bitmap = new Bitmap(256, 240);
+            for (int x = 0; x < 256; x++)
+            {
+                for (int y = 0; y < 240; y++)
+                {
+                    bitmap.SetPixel(x, y, Color.Black);
+                }
+            }
+
+            return bitmap;
         }
 
         private void OpenRomSelectionDialog(object o, EventArgs e)
