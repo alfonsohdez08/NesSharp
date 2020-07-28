@@ -1470,7 +1470,7 @@ namespace MiNES.CPU
 #if CPU_NES_TEST
             _instructionHex.Add(_bus.Read(_programCounter));
 #endif
-            ushort operandAddress;
+            ushort operandAddress = 0;
             switch (mode)
             {
                 case AddressingMode.ZeroPage:
@@ -1503,44 +1503,45 @@ namespace MiNES.CPU
 
                         addressParsed = ParseBytes(lowByte, highByte);
                     }
-                    if (mode == AddressingMode.Indirect)
+                    switch(mode)
                     {
-                        // The content located in the address parsed is the LSB (Least Significant Byte) of the target address
-                        byte lowByte = _bus.Read(addressParsed);
+                        case AddressingMode.Indirect:
+                            {
+                                // The content located in the address parsed is the LSB (Least Significant Byte) of the target address
+                                byte lowByte = _bus.Read(addressParsed);
 
-                        /*
-                         * There's a bug in the hardware when parsing the effective address in the Indirect
-                         * addressing mode: if the LSB (least significant byte) of the absolute address is 0xFF, then incrementing
-                         * by one the absolute address (incrementing by one is required for get the MSB of the effective address) 
-                         * would produce a wrap around the page; example below:
-                         * 
-                         * Absolute address: 0x02FF.
-                         * LSB from the effetive address is at 0x02FF.
-                         * MSB from the effective address should be at 0x02FF + 0x0001 = 0x0300; but because the bug explained above, it's
-                         * at 0x0200 (we stayed in the same page 0x02)
-                         */
-                        if (addressParsed.GetLowByte() == 0xFF)
-                            addressParsed ^= (0x00FF);
-                        else
-                            addressParsed++;
+                                /*
+                                 * There's a bug in the hardware when parsing the effective address in the Indirect
+                                 * addressing mode: if the LSB (least significant byte) of the absolute address is 0xFF, then incrementing
+                                 * by one the absolute address (incrementing by one is required for get the MSB of the effective address) 
+                                 * would produce a wrap around the page; example below:
+                                 * 
+                                 * Absolute address: 0x02FF.
+                                 * LSB from the effetive address is at 0x02FF.
+                                 * MSB from the effective address should be at 0x02FF + 0x0001 = 0x0300; but because the bug explained above, it's
+                                 * at 0x0200 (we stayed in the same page 0x02)
+                                 */
+                                if (addressParsed.GetLowByte() == 0xFF)
+                                    addressParsed ^= (0x00FF);
+                                else
+                                    addressParsed++;
 
-                        byte highByte = _bus.Read(addressParsed);
+                                byte highByte = _bus.Read(addressParsed);
 
-                        operandAddress = ParseBytes(lowByte, highByte);
-                    }
-                    else if (mode == AddressingMode.Absolute)
-                    {
-                        operandAddress = addressParsed;
-                    }
-                    else if (mode == AddressingMode.AbsoluteX)
-                    {
-                        operandAddress = (ushort)(addressParsed + _x);
-                        CheckIfCrossedPageBoundary(addressParsed, operandAddress);
-                    }
-                    else
-                    {
-                        operandAddress = (ushort)(addressParsed + _y);
-                        CheckIfCrossedPageBoundary(addressParsed, operandAddress);
+                                operandAddress = ParseBytes(lowByte, highByte);
+                            }
+                            break;
+                        case AddressingMode.Absolute:
+                            operandAddress = addressParsed;
+                            break;
+                        case AddressingMode.AbsoluteX:
+                            operandAddress = (ushort)(addressParsed + _x);
+                            CheckIfCrossedPageBoundary(addressParsed, operandAddress);
+                            break;
+                        case AddressingMode.AbsoluteY:
+                            operandAddress = (ushort)(addressParsed + _y);
+                            CheckIfCrossedPageBoundary(addressParsed, operandAddress);
+                            break;
                     }
                     break;
                 case AddressingMode.IndirectX:
