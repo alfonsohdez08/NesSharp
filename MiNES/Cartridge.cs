@@ -21,7 +21,7 @@ namespace MiNES
         /// <summary>
         /// Gets the character rom.
         /// </summary>
-        public byte[] CharacterRom { get; private set; }
+        public byte[] CharacterRom { get; private set; } = new byte[0x2000];
 
         private int _prgBanks;
         private int _chrBanks;

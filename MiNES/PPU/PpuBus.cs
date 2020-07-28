@@ -11,13 +11,13 @@ namespace MiNES.PPU
     {        
         private readonly byte[] _vram = new byte[2 * 1024];
         private readonly byte[] _paletteRam = new byte[32];
-        private readonly byte[] _chrRom;
+        private readonly byte[] _chr;
 
         private readonly INametableAddressParser _ntAddressParser;
 
-        public PpuBus(byte[] chrRom, Mirroring mirroring)
+        public PpuBus(byte[] chrData, Mirroring mirroring)
         {
-            _chrRom = chrRom;
+            _chr = chrData;
             _ntAddressParser = NametableMirroringResolver.GetAddressParser(mirroring);
         }
 
@@ -30,12 +30,12 @@ namespace MiNES.PPU
             else if (address >= 0x3F00 && address < 0x4000)
                 return ReadPalette(0x3F00 + (address & 0x001F));
 
-            return _chrRom[address & 0x3FFF];
+            return _chr[address & 0x3FFF];
         }
 
         public byte ReadCharacterRom(uint address)
         {
-            return _chrRom[address & 0x3FFF];
+            return _chr[address & 0x3FFF];
         }
 
         public byte ReadPalette(uint address)
@@ -82,7 +82,10 @@ namespace MiNES.PPU
 
         public void Write(uint address, byte val)
         {
-            if (address >= 0x2000 && address < 0x3F00)
+            // For CHR-RAM
+            if (address >= 0x0000 & address < 0x2000)
+                _chr[address] = val;
+            else if (address >= 0x2000 && address < 0x3F00)
                 WriteNametable(0x2000 + (address & 0x0FFF), val);
             else if (address >= 0x3F00 && address < 0x4000)
                 WritePalette(0x3F00 + (address & 0x001F), val);
