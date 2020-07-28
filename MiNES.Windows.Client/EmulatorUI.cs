@@ -12,7 +12,8 @@ namespace MiNES.Windows.Client
 {
     public partial class EmulatorUI : Form
     {
-        private byte[] _cartridgeRom;
+        //private byte[] _cartridgeRom;
+        private string _gamePath;
         private NES _nes;
         private int[] _currentFrame;
         private PictureBox _screen;
@@ -82,11 +83,12 @@ namespace MiNES.Windows.Client
 
                 if (openFileDialog.ShowDialog() == DialogResult.OK)
                 {
-                    using (var fileStream = new FileStream(openFileDialog.FileName, FileMode.Open))
-                    {
-                        _cartridgeRom = new byte[fileStream.Length];
-                        fileStream.Read(_cartridgeRom, 0, (int)fileStream.Length);
-                    }
+                    _gamePath = openFileDialog.FileName;
+                    //using (var fileStream = new FileStream(openFileDialog.FileName, FileMode.Open))
+                    //{
+                    //    _cartridgeRom = new byte[fileStream.Length];
+                    //    fileStream.Read(_cartridgeRom, 0, (int)fileStream.Length);
+                    //}
 
                     StartEmulation();
                 }
@@ -95,7 +97,8 @@ namespace MiNES.Windows.Client
 
         private void StartEmulation()
         {
-            _nes = new NES(_cartridgeRom, _joypad);
+            var cartridge = Cartridge.LoadCartridge(_gamePath);
+            _nes = new NES(cartridge, _joypad);
             new TaskFactory().StartNew(RunGame, TaskCreationOptions.LongRunning);
         }
 

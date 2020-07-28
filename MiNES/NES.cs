@@ -1,8 +1,5 @@
 ﻿using MiNES.CPU;
 using MiNES.PPU;
-using MiNES.Rom;
-using System;
-using System.Drawing;
 
 namespace MiNES
 {
@@ -15,14 +12,12 @@ namespace MiNES
 
         private int _cpuCyclesLeftOver;
 
-        public NES(byte[] gameCartridge, Joypad joypad)
+        public NES(Cartridge gameCartridge, Joypad joypad)
         {
-            iNESParser.ParseNesCartridge(gameCartridge, out byte[] programRom, out byte[] characterRom, out Mirroring mirroring);
-
-            var ppuBus = new PpuBus(characterRom, mirroring);
+            var ppuBus = new PpuBus(gameCartridge.CharacterRom, gameCartridge.GameMirroring);
             _ppu = new Ppu(ppuBus);
 
-            var cpuBus  = new CpuBus(programRom, _ppu, joypad);
+            var cpuBus  = new CpuBus(gameCartridge.ProgramRom, _ppu, joypad);
             _cpu = new Cpu(cpuBus);
         }
 
