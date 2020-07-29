@@ -1567,8 +1567,8 @@ namespace MiNES.CPU
                 ushort cpuAddress = (ushort)(_bus.OamMemoryPage << 8);
                 for (int i = 0; i < 256; i++)
                 {
-                    byte oamByte = _bus.Read(cpuAddress++);
-                    _bus.Write(0x2004, oamByte);
+                    byte oamEntry = _bus.Read(cpuAddress++);
+                    _bus.WriteToOamBuffer(oamEntry);
                 }
             }
             finally

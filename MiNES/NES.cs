@@ -29,6 +29,7 @@ namespace MiNES
 
             do
             {
+                // TODO: get rid of this and see how i can actually invoke the interruption from the PPU
                 if (_ppu.NmiRequested)
                 {
                     _cpu.NmiTriggered = true;
@@ -62,13 +63,5 @@ namespace MiNES
 
             return _ppu.Frame;
         }
-
-        //public byte[][] GetNametable0() => _ppu.GetNametable0();
-
-        //public byte[][] GetNametable2() => _ppu.GetNametable2();
-
-        //public Tile[] GetBackgroundTiles() => _ppu.BackgroundTiles;
-
-        //public Color[] GetPalettes() => _ppu.GetPalettes();
     }
 }
