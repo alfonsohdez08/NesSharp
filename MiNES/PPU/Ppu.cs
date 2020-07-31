@@ -306,13 +306,6 @@ namespace MiNES.PPU
 
         public void Step()
         {
-            // Cycle 0 does not do anything (it's idle)
-            if (_cycles == 0)
-            {
-                _cycles = 1;
-                return;
-            }
-
             // Pre-render scanline (in the NTSC frame diagram it's labeled as scanline 261)
             if (_scanline >= -1 && _scanline < 240)
             {
