@@ -1,4 +1,5 @@
-﻿using MiNES.Extensions;
+﻿using MiNES.CPU;
+using MiNES.Extensions;
 using MiNES.PPU.Registers;
 using System;
 using System.Drawing;
@@ -7,7 +8,7 @@ using System.Runtime.CompilerServices;
 
 namespace MiNES.PPU
 {
-    public class Ppu
+    class Ppu
     {
         private const int Width = 256;
         private const int Height = 240;
@@ -83,9 +84,20 @@ namespace MiNES.PPU
         #endregion
 
         /// <summary>
+        /// The number of the master clock ticks required in order to reach the tick 2 of the first vertical blank scanline.
+        /// </summary>
+        /// <remarks>
+        /// It's used for determine up to which moment the PPU should be emulated.
+        /// </remarks>
+        public const int MasterClockTicks = 412625;
+
+        /// <summary>
         /// Count how many frames has been rendered so far.
         /// </summary>
         public bool IsIdle;
+        //public bool IsIdle { get; private set; }
+
+        public int Cycles => _cycles;
 
         /// <summary>
         /// Object Attribute Memory (OAM) address register.
@@ -130,7 +142,7 @@ namespace MiNES.PPU
         /// <summary>
         /// The PPU OAM (it's 256 bytes long, capable of store 64 sprites, sprite data is 4 bytes long).
         /// </summary>
-        private readonly int[] _oam = new int[256];
+        public byte[] OamBuffer { get; set; } = new byte[256];
 
         private readonly int[] _scanlineOamBuffer = new int[32];
 
@@ -184,23 +196,28 @@ namespace MiNES.PPU
         /// Initially would be false because frame 1 would be the first frame to render.
         /// </remarks>
         private bool _isOddFrame = true;
+        public bool SkipIdleTick => _isOddFrame && IsRenderingEnabled;
 
-        public Ppu(PpuBus ppuBus)
+
+
+        private readonly NES _nes;
+
+        public Ppu(PpuBus ppuBus, NES nes)
         {
             _ppuBus = ppuBus;
-            ResetFrameRenderingStatus();
+            _nes = nes;
+            //ResetFrameRenderingStatus();
         }
-
 
         public void SetOamData(byte data)
         {
-            _oam[OamAddress] = data;
+            OamBuffer[OamAddress] = data;
 
             // OAM address gets incremented by one when data is written
             OamAddress++;
         }
 
-        public int GetOamData() => _oam[OamAddress];
+        public byte GetOamData() => OamBuffer[OamAddress];
 
         /// <summary>
         /// Resets the address latch used by the PPU address register and PPU scroll register.
@@ -344,11 +361,12 @@ namespace MiNES.PPU
             {
                 _cycles = 0;
                 _spriteBufferIndex = 0;
+                _scanline++;
 
-                if (_scanline < 260)
-                {
-                    _scanline++;
-                }
+                //if (_scanline < 260)
+                //{
+                //    _scanline++;
+                //}
                 //else
                 //{
                 //    //_scanline = -1;
@@ -367,15 +385,11 @@ namespace MiNES.PPU
         /// </summary>
         public void ResetFrameRenderingStatus()
         {
-            //IsFrameCompleted = false;
-
             _cycles = 0;
             _scanline = -1;
             _framesRendered++;
             _isOddFrame = _framesRendered % 2 != 0;
             IsIdle = false;
-
-            //IsFrameCompleted = true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -649,17 +663,17 @@ namespace MiNES.PPU
             int spritesBuffered = 0;
             _isSpriteZeroInBuffer = false;
 
-            for (int n = 0; n < _oam.Length; n += 4)
+            for (int n = 0; n < OamBuffer.Length; n += 4)
             {
-                int spriteYPos = _oam[n];
+                int spriteYPos = OamBuffer[n];
                 if (IsSpriteInRange(spriteYPos))
                 {
                     if (spritesBuffered < 8)
                     {
                         _scanlineOamBuffer[bufferIndex] = spriteYPos;
-                        _scanlineOamBuffer[bufferIndex + 1] = _oam[n + 1];
-                        _scanlineOamBuffer[bufferIndex + 2] = _oam[n + 2];
-                        _scanlineOamBuffer[bufferIndex + 3] = _oam[n + 3];
+                        _scanlineOamBuffer[bufferIndex + 1] = OamBuffer[n + 1];
+                        _scanlineOamBuffer[bufferIndex + 2] = OamBuffer[n + 2];
+                        _scanlineOamBuffer[bufferIndex + 3] = OamBuffer[n + 3];
 
                         bufferIndex += 4;
                         spritesBuffered++;
@@ -865,7 +879,7 @@ namespace MiNES.PPU
             {
                 Status.VerticalBlank = true;
                 if (Control.TriggerNmi)
-                    NmiRequested = true;
+                    _nes.TriggerNmi();
 
                 IsIdle = true;
             }

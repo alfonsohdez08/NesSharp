@@ -8,32 +8,14 @@ namespace MiNES.CPU
     /// </summary>
     public class CpuBus
     {
-
-        /// <summary>
-        /// Acknowledges the CPU for start transfering the OAM data into the PPU OAM.
-        /// </summary>
-        public bool DmaTransferTriggered { get; set; } = false;
-
-        /// <summary>
-        /// The page within memory RAM where the OAM data resides.
-        /// </summary>
-        public byte OamMemoryPage { get; private set; }
-        
-        private readonly Ppu _ppu;
-        private readonly Joypad _joypad;
+        private readonly NES _nes;
         private readonly byte[] _ram = new byte[2 * 1024];
         private readonly byte[] _programRom;
 
-        /// <summary>
-        /// Creates an instance of the bus used by the CPU.
-        /// </summary>
-        /// <param name="memory">The space for allocate RAM and other "stuffs".</param>
-        /// <param name="ppu">The PPU (the CPU reads/writes to the PPU registers by using any of the addresses in this range $2000-$2007).</param>
-        public CpuBus(byte[] programRom, Ppu ppu, Joypad joypad)
+        public CpuBus(byte[] programRom, NES nes)
         {
             _programRom = programRom;
-            _ppu = ppu;
-            _joypad = joypad;
+            _nes = nes;
         }
 
         public byte Read(uint address)
@@ -46,7 +28,7 @@ namespace MiNES.CPU
                 val = ReadPpuRegister((ushort)(0x2000 + (address & 7)));
             else if (address == 0x4016)
             {
-                val = (byte)_joypad.ReadState();
+                val = (byte)_nes.Joypad.ReadState();
 
                 //int bit = (_joypad._incomingData & 0x80) == 0x80 ? 1 : 0;
                 //val = (byte)bit;
@@ -83,11 +65,11 @@ namespace MiNES.CPU
 
                 // PPU Status register
                 case 0x2002:
-                    value = (byte)_ppu.Status.Status;
+                    value = (byte)_nes.Ppu.Status.Status;
                     
                     // Side effects of reading the status register
-                    _ppu.Status.VerticalBlank = false; // Clears bit 7 (V-BLANK) flag after CPU read the status register
-                    _ppu.ResetAddressLatch();
+                    _nes.Ppu.Status.VerticalBlank = false; // Clears bit 7 (V-BLANK) flag after CPU read the status register
+                    _nes.Ppu.ResetAddressLatch();
                     break;
                 // PPU OAM address register (write only)
                 case 0x2003:
@@ -95,7 +77,7 @@ namespace MiNES.CPU
                 // PPU OAM data register
                 case 0x2004:
                     //value = _ppu.OamData;
-                    value = (byte)_ppu.GetOamData();
+                    value = _nes.Ppu.GetOamData();
                     break;
                 // PPU Scroll register (write only)
                 case 0x2005:
@@ -105,7 +87,7 @@ namespace MiNES.CPU
                     break;
                 // PPU Data register
                 case 0x2007:
-                    value = (byte)_ppu.GetPpuData();
+                    value = (byte)_nes.Ppu.GetPpuData();
                     break;
             }
 
@@ -123,13 +105,11 @@ namespace MiNES.CPU
             // DMA port
             else if (address == 0x4014)
             {
-                // The value written to this port is the page within the CPU RAM where a copy of the OAM resides
-                DmaTransferTriggered = true;
-                OamMemoryPage = val;
+                WriteToOamBuffer(val);
             }
             else if (address == 0x4016)
             {
-                _joypad.Strobe(val == 1);
+                _nes.Joypad.Strobe(val == 1);
                 //_joypad.Strobe = val == 1;
             }
         }
@@ -145,39 +125,50 @@ namespace MiNES.CPU
             {
                 // PPU Control register (write only)
                 case 0x2000:
-                    _ppu.Control.Control = value;
-                    _ppu.T.Nametable = value & 3;
+                    _nes.Ppu.Control.Control = value;
+                    _nes.Ppu.T.Nametable = value & 3;
                     break;
                 // PPU Mask register (write only)
                 case 0x2001:
-                    _ppu.Mask.Mask = value;
+                    _nes.Ppu.Mask.Mask = value;
                     break;
                 // PPU Status register (read only)
                 case 0x2002:
                     break;
                 // PPU OAM address register (write only)
                 case 0x2003:
-                    _ppu.OamAddress = value;
+                    _nes.Ppu.OamAddress = value;
                     break;
                 // PPU OAM data register
                 case 0x2004:
-                    WriteToOamBuffer(value);
+                    _nes.Ppu.SetOamData(value);
                     break;
                 // PPU Scroll register (write only)
                 case 0x2005:
-                    _ppu.SetScroll(value); // First write: sets fine X and coarse X; Second write: sets fine Y and coarse Y
+                    _nes.Ppu.SetScroll(value); // First write: sets fine X and coarse X; Second write: sets fine Y and coarse Y
                     break;
                 // PPU Address register (write only)
                 case 0x2006:
-                    _ppu.SetAddress(value); // First write: high byte of the address; Second write: low byte of the address
+                    _nes.Ppu.SetAddress(value); // First write: high byte of the address; Second write: low byte of the address
                     break;
                 // PPU Data register
                 case 0x2007:
-                    _ppu.SetPpuData(value); // The value that will be stored in the address set by the PPU address register
+                    _nes.Ppu.SetPpuData(value); // The value that will be stored in the address set by the PPU address register
                     break;
             }
         }
 
-        public void WriteToOamBuffer(byte value) => _ppu.SetOamData(value);
+        public void WriteToOamBuffer(byte page)
+        {
+            byte[] buffer = new ArraySegment<byte>(_ram, page << 8, 256).ToArray();
+            _nes.Ppu.OamBuffer = buffer;
+            
+            int oamAddress = _nes.Ppu.OamAddress;
+            oamAddress += 0x100;
+            _nes.Ppu.OamAddress = (byte)oamAddress;
+
+            _nes.Cpu.TicksAccumulated = _nes.Cpu.TicksElapsed % 2 != 0 ? 514 : 513;
+        }
+
     }
 }

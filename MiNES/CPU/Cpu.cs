@@ -69,9 +69,7 @@ namespace MiNES.CPU
         /// <summary>
         /// Counter of how many cycles has been elapsed along instructions executed.
         /// </summary>
-        public int CyclesElapsed { get; private set; }
-
-        public bool NmiTriggered { get; set; }
+        public uint TicksElapsed { get; private set; }
 
 #if CPU_NES_TEST
         private readonly List<byte> _instructionHex = new List<byte>();
@@ -162,6 +160,8 @@ namespace MiNES.CPU
 
         private static string FormatByte(byte b) => $"{b.ToString("X").PadLeft(2, '0')}";
 #endif
+
+        public int TicksAccumulated { get; set; }
 
         /// <summary>
         /// Creates an instance of the 6502 CPU.
@@ -1517,16 +1517,8 @@ namespace MiNES.CPU
         /// </summary>
         private int NMI()
         {
-            try
-            {
-                Interrupt(InterruptionType.NMI);
-            }
-            finally
-            {
-                NmiTriggered = false;
-            }
+            Interrupt(InterruptionType.NMI);
 
-            // TODO: verify that NMI takes 7 cpu cycles
             return 7;
         }
 
@@ -1540,43 +1532,20 @@ namespace MiNES.CPU
 
             try
             {
-                if (NmiTriggered)
-                    cycles = NMI();
-                else if (_bus.DmaTransferTriggered)
-                    cycles = TransferOam();
-                else
-                    cycles = ExecuteInstruction();
+                cycles = ExecuteInstruction();
             }
             finally
             {
-                CyclesElapsed += cycles;
+                cycles += TicksAccumulated; // pick up the ticks accumulated
+                TicksAccumulated = 0;
+
+                TicksElapsed += (uint)cycles;
             }
 
             return cycles;
         }
 
-        /// <summary>
-        /// Transfers the OAM dataset into the PPU OAM.
-        /// </summary>
-        /// <returns>The number of cycles spent while transfering the OAM.</returns>
-        private int TransferOam()
-        {
-            int cyclesSpent = CyclesElapsed % 2 != 0 ? 514 : 513;
-            try
-            {
-                ushort cpuAddress = (ushort)(_bus.OamMemoryPage << 8);
-                for (int i = 0; i < 256; i++)
-                {
-                    byte oamEntry = _bus.Read(cpuAddress++);
-                    _bus.WriteToOamBuffer(oamEntry);
-                }
-            }
-            finally
-            {
-                _bus.DmaTransferTriggered = false;
-            }
+        internal void ExecuteNMI() => TicksAccumulated = NMI();
 
-            return cyclesSpent;
-        }
     }
 }
