@@ -1514,6 +1514,7 @@ namespace NesSharp.CPU
             Interrupt(InterruptionType.NMI);
 
             _cycles += 7;
+            CyclesElapsed += 7;
         }
 
         /// <summary>
@@ -1533,6 +1534,10 @@ namespace NesSharp.CPU
             }
         }
 
-        public void AddDmaCycles(int cycles) => _cycles += cycles;
+        public void AddDmaCycles(int cycles)
+        {
+            _cycles += cycles;
+            CyclesElapsed += (uint)cycles;
+        }
     }
 }
