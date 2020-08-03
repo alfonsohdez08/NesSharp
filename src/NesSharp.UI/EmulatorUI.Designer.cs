@@ -1,4 +1,4 @@
-﻿namespace MiNES.Windows.Client
+﻿namespace NesSharp.UI
 {
     partial class EmulatorUI
     {

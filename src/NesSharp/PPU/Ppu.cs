@@ -1,14 +1,15 @@
-﻿using MiNES.Extensions;
-using MiNES.PPU.Registers;
+﻿using NesSharp.CPU;
+using NesSharp.Extensions;
+using NesSharp.PPU.Registers;
 using System;
 using System.Drawing;
 using System.Linq;
 using System.Runtime.CompilerServices;
 
-namespace MiNES.PPU
+namespace NesSharp.PPU
 {
-    public class Ppu
-    {
+    class Ppu
+    { 
         private const int Width = 256;
         private const int Height = 240;
 
@@ -86,6 +87,7 @@ namespace MiNES.PPU
         /// Count how many frames has been rendered so far.
         /// </summary>
         public bool IsIdle;
+        //public bool IsIdle { get; private set; }
 
         /// <summary>
         /// Object Attribute Memory (OAM) address register.
@@ -130,13 +132,13 @@ namespace MiNES.PPU
         /// <summary>
         /// The PPU OAM (it's 256 bytes long, capable of store 64 sprites, sprite data is 4 bytes long).
         /// </summary>
-        private readonly int[] _oam = new int[256];
+        public byte[] OamBuffer { get; set; } = new byte[256];
 
         private readonly int[] _scanlineOamBuffer = new int[32];
 
         private bool _isSpriteZeroInBuffer;
 
-        private int _dataBuffer = 0;
+        private byte _dataBuffer = 0;
 
         private uint _framesRendered = 1;
         
@@ -184,23 +186,27 @@ namespace MiNES.PPU
         /// Initially would be false because frame 1 would be the first frame to render.
         /// </remarks>
         private bool _isOddFrame = true;
+        //public bool SkipIdleTick => _isOddFrame && IsRenderingEnabled;
 
-        public Ppu(PpuBus ppuBus)
+        private readonly NmiTrigger _nmi;
+
+        public Ppu(PpuBus ppuBus, NmiTrigger nmiTrigger)
         {
             _ppuBus = ppuBus;
-            ResetFrameRenderingStatus();
+            _nmi = nmiTrigger;
         }
 
-
-        public void SetOamData(byte data)
+        public byte OamData
         {
-            _oam[OamAddress] = data;
+            get => OamBuffer[OamAddress];
+            set
+            {
+                OamBuffer[OamAddress] = value;
 
-            // OAM address gets incremented by one when data is written
-            OamAddress++;
+                // OAM address gets incremented by one when data is written
+                OamAddress++;
+            }
         }
-
-        public int GetOamData() => _oam[OamAddress];
 
         /// <summary>
         /// Resets the address latch used by the PPU address register and PPU scroll register.
@@ -254,48 +260,34 @@ namespace MiNES.PPU
             }
         }
 
-        /// <summary>
-        /// Retrieves the data from the address set through the PPU address register.
-        /// </summary>
-        /// <returns>The data allocated in the address set through the PPU address register.</returns>
-        public int GetPpuData()
-        {
-            // Reads the data buffered (from previous read request)
-            int data = _dataBuffer;
+        public byte PpuData {
+            get
+            {
+                // Reads the data buffered (from previous read request)
+                byte data = _dataBuffer;
 
-            // Updates the buffer with the data allocated in the compiled address
-            _dataBuffer = _ppuBus.Read(V.Address);
+                // Updates the buffer with the data allocated in the compiled address
+                _dataBuffer = _ppuBus.Read(V.Address);
 
-            /* If the compiled address does not overlap the color palette address range, then return
-             * the data read from the buffer; otherwise return the data read from the address right away
-             */
-            if (V.Loopy >= 0x3F00)
-                data = _dataBuffer;
+                /* If the compiled address does not overlap the color palette address range, then return
+                 * the data read from the buffer; otherwise return the data read from the address right away
+                 */
+                if (V.Loopy >= 0x3F00)
+                    data = _dataBuffer;
 
-            IncrementVRamAddress();
+                IncrementVRamAddress();
 
-            return data;
-        }
-
-        /// <summary>
-        /// Stores a value in the address set through the PPU address register.
-        /// </summary>
-        /// <param name="val">The value that will be stored.</param>
-        public void SetPpuData(byte val)
-        {
-            _ppuBus.Write(V.Address, val);
-            IncrementVRamAddress();
+                return data;
+            }
+            set
+            {
+                _ppuBus.Write(V.Address, value);
+                IncrementVRamAddress();
+            }
         }
 
         public void Step()
         {
-            // Cycle 0 does not do anything (it's idle)
-            if (_cycles == 0)
-            {
-                _cycles = 1;
-                return;
-            }
-
             // Pre-render scanline (in the NTSC frame diagram it's labeled as scanline 261)
             if (_scanline >= -1 && _scanline < 240)
             {
@@ -344,11 +336,12 @@ namespace MiNES.PPU
             {
                 _cycles = 0;
                 _spriteBufferIndex = 0;
+                _scanline++;
 
-                if (_scanline < 260)
-                {
-                    _scanline++;
-                }
+                //if (_scanline < 260)
+                //{
+                //    _scanline++;
+                //}
                 //else
                 //{
                 //    //_scanline = -1;
@@ -367,15 +360,11 @@ namespace MiNES.PPU
         /// </summary>
         public void ResetFrameRenderingStatus()
         {
-            //IsFrameCompleted = false;
-
             _cycles = 0;
             _scanline = -1;
             _framesRendered++;
             _isOddFrame = _framesRendered % 2 != 0;
             IsIdle = false;
-
-            //IsFrameCompleted = true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -649,17 +638,17 @@ namespace MiNES.PPU
             int spritesBuffered = 0;
             _isSpriteZeroInBuffer = false;
 
-            for (int n = 0; n < _oam.Length; n += 4)
+            for (int n = 0; n < OamBuffer.Length; n += 4)
             {
-                int spriteYPos = _oam[n];
+                int spriteYPos = OamBuffer[n];
                 if (IsSpriteInRange(spriteYPos))
                 {
                     if (spritesBuffered < 8)
                     {
                         _scanlineOamBuffer[bufferIndex] = spriteYPos;
-                        _scanlineOamBuffer[bufferIndex + 1] = _oam[n + 1];
-                        _scanlineOamBuffer[bufferIndex + 2] = _oam[n + 2];
-                        _scanlineOamBuffer[bufferIndex + 3] = _oam[n + 3];
+                        _scanlineOamBuffer[bufferIndex + 1] = OamBuffer[n + 1];
+                        _scanlineOamBuffer[bufferIndex + 2] = OamBuffer[n + 2];
+                        _scanlineOamBuffer[bufferIndex + 3] = OamBuffer[n + 3];
 
                         bufferIndex += 4;
                         spritesBuffered++;
@@ -865,7 +854,7 @@ namespace MiNES.PPU
             {
                 Status.VerticalBlank = true;
                 if (Control.TriggerNmi)
-                    NmiRequested = true;
+                    _nmi.Invoke();
 
                 IsIdle = true;
             }

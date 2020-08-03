@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace MiNES.PPU.Registers
+namespace NesSharp.PPU.Registers
 {
     class PpuControl
     {

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace MiNES.PPU
+namespace NesSharp.PPU
 {
     public enum Mirroring
     {

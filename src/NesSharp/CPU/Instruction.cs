@@ -1,4 +1,4 @@
-﻿namespace MiNES.CPU
+﻿namespace NesSharp.CPU
 {
     /// <summary>
     /// Represents a CPU instruction (including its mnemonic, addressing mode and machine cycles).

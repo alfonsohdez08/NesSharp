@@ -3,16 +3,21 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using static MiNES.Extensions.BitwiseExtensions;
+using static NesSharp.Extensions.BitwiseExtensions;
 
-namespace MiNES.CPU
+namespace NesSharp.CPU
 {
 
     /// <summary>
     /// The 6502 CPU.
     /// </summary>
-    public partial class Cpu
+    partial class Cpu
     {
+        /// <summary>
+        /// The CPU bus (interacts with other components within the NES).
+        /// </summary>
+        private readonly CpuBus _bus;
+
         /// <summary>
         /// Accumulator.
         /// </summary>
@@ -54,7 +59,7 @@ namespace MiNES.CPU
         /// <summary>
         /// The number of cycles spent for execute an instruction (for execute the fetch decode execute cycle).
         /// </summary>
-        private byte _cycles;
+        private int _cycles;
 
         /// <summary>
         /// A flag for denote whether the underlying instruction requires an additional cycle e.g. crosses a page bounday.
@@ -62,16 +67,9 @@ namespace MiNES.CPU
         private bool _additionalCycle = false;
 
         /// <summary>
-        /// The CPU bus (interacts with other components within the NES).
-        /// </summary>
-        private readonly CpuBus _bus;
-
-        /// <summary>
         /// Counter of how many cycles has been elapsed along instructions executed.
         /// </summary>
-        public int CyclesElapsed { get; private set; }
-
-        public bool NmiTriggered { get; set; }
+        public uint CyclesElapsed { get; private set; }
 
 #if CPU_NES_TEST
         private readonly List<byte> _instructionHex = new List<byte>();
@@ -273,7 +271,7 @@ namespace MiNES.CPU
         /// Executes a CPU instruction (droven by the fetch decode execute cycle).
         /// </summary>
         /// <returns>The number of cycle spent in order to execute the instruction.</returns>
-        private byte ExecuteInstruction()
+        private void ExecuteInstruction()
         {
             // Fetches the op code from the memory
             byte opCode = _bus.Read(_programCounter);
@@ -524,14 +522,10 @@ namespace MiNES.CPU
                     break;
             }
 
-
-
 #if CPU_NES_TEST
             TestLineResult += $" CYC:{_cyclesElapsed}";
             _cyclesElapsed += _cycles;
 #endif
-
-            return _cycles;
         }
 
         /// <summary>
@@ -653,31 +647,24 @@ namespace MiNES.CPU
         /// </summary>
         private void TYA()
         {
-            byte val = _y;
+            _a = _y;
 
-            UpdateZeroNegativeFlags(val);
-
-            _a = val;
+            UpdateZeroNegativeFlags(_a);
         }
 
         /// <summary>
         /// Transfers the content of the register X to Stack Pointer register.
         /// </summary>
-        private void TXS()
-        {
-            _stackPointer = _x;
-        }
+        private void TXS() => _stackPointer = _x;
 
         /// <summary>
         /// Transfers the content of the register X to the Accumulator.
         /// </summary>
         private void TXA()
         {
-            byte val = _x;
-
-            UpdateZeroNegativeFlags(val);
-
             _a = _x;
+
+            UpdateZeroNegativeFlags(_a);
         }
 
         /// <summary>
@@ -685,11 +672,9 @@ namespace MiNES.CPU
         /// </summary>
         private void TSX()
         {
-            byte val = _stackPointer;
+            _x = _stackPointer;
 
-            UpdateZeroNegativeFlags(val);
-
-            _x = val;
+            UpdateZeroNegativeFlags(_x);
         }
 
         /// <summary>
@@ -697,11 +682,9 @@ namespace MiNES.CPU
         /// </summary>
         private void TAY()
         {
-            byte val = _a;
+            _y = _a;
 
-            UpdateZeroNegativeFlags(val);
-
-            _y = val;
+            UpdateZeroNegativeFlags(_y);
         }
 
         /// <summary>
@@ -709,44 +692,31 @@ namespace MiNES.CPU
         /// </summary>
         private void TAX()
         {
-            byte val = _a;
+            _x = _a;
 
-            UpdateZeroNegativeFlags(val);
-
-            _x = val;
+            UpdateZeroNegativeFlags(_x);
         }
 
         /// <summary>
         /// Stores the content of the register Y to a memory slot.
         /// </summary>
-        private void STY()
-        {
-            _bus.Write(_operandAddress, _y);
-        }
+        private void STY() => _bus.Write(_operandAddress, _y);
+
 
         /// <summary>
         /// Stores the content of the register Y to a memory slot.
         /// </summary>
-        private void STX()
-        {
-            _bus.Write(_operandAddress, _x);
-        }
+        private void STX() => _bus.Write(_operandAddress, _x);
 
         /// <summary>
         /// Sets the disable interrupt flag.
         /// </summary>
-        private void SEI()
-        {
-            _flags.SetFlag(StatusFlag.DisableInterrupt, true);
-        }
+        private void SEI() => _flags.SetFlag(StatusFlag.DisableInterrupt, true);
 
         /// <summary>
         /// Sets the decimal flag.
         /// </summary>
-        private void SED()
-        {
-            _flags.SetFlag(StatusFlag.Decimal, true);
-        }
+        private void SED() => _flags.SetFlag(StatusFlag.Decimal, true);
 
         /// <summary>
         /// Pops/pulls the processor flags and the program counter from the stack (first pop is the processor flags, then the next 2 pops operations 
@@ -777,21 +747,16 @@ namespace MiNES.CPU
         /// <summary>
         /// Pops/pulls the processor status flags from the stack.
         /// </summary>
-        private void PLP()
-        {
-            _flags.SetFlags(Pop());
-        }
+        private void PLP() => _flags.SetFlags(Pop());
 
         /// <summary>
         /// Pops/pulls a byte from the stack and store into the Accumulator.
         /// </summary>
         private void PLA()
         {
-            byte val = Pop();
+            _a = Pop();
 
-            UpdateZeroNegativeFlags(val);
-
-            _a = val;
+            UpdateZeroNegativeFlags(_a);
         }
 
         /// <summary>
@@ -813,10 +778,7 @@ namespace MiNES.CPU
         /// <summary>
         /// Pushes a copy of the accumulator into the stack.
         /// </summary>
-        private void PHA()
-        {
-            Push(_a);
-        }
+        private void PHA() => Push(_a);
 
         /// <summary>
         /// Doesn't do anything.
@@ -830,11 +792,9 @@ namespace MiNES.CPU
         /// </summary>
         private void LDY()
         {
-            byte val = _bus.Read(_operandAddress);
+            _y = _bus.Read(_operandAddress);
 
-            UpdateZeroNegativeFlags(val);
-
-            _y = val;
+            UpdateZeroNegativeFlags(_y);
         }
 
         /// <summary>
@@ -842,11 +802,9 @@ namespace MiNES.CPU
         /// </summary>
         private void LDX()
         {
-            byte val = _bus.Read(_operandAddress);
+            _x = _bus.Read(_operandAddress);
 
-            UpdateZeroNegativeFlags(val);
-
-            _x = val;
+            UpdateZeroNegativeFlags(_x);
         }
 
         /// <summary>
@@ -870,30 +828,17 @@ namespace MiNES.CPU
         /// <summary>
         /// Sets the program counter to the address specified in the JMP instruction.
         /// </summary>
-        private void JMP()
-        {
-            _programCounter = _operandAddress;
-        }
+        private void JMP() => _programCounter = _operandAddress;
 
         /// <summary>
         /// Increments the register Y by one.
         /// </summary>
-        private void INY()
-        {
-            _y++;
-
-            UpdateZeroNegativeFlags(_y);
-        }
+        private void INY() => UpdateZeroNegativeFlags(++_y);
 
         /// <summary>
         /// Increments the register X by one.
         /// </summary>
-        private void INX()
-        {
-            _x++;
-
-            UpdateZeroNegativeFlags(_x);
-        }
+        private void INX() => UpdateZeroNegativeFlags(++_x);
 
         /// <summary>
         /// Increments by one the value allocated in the memory adddress specified.
@@ -910,22 +855,14 @@ namespace MiNES.CPU
         /// <summary>
         /// Decrements the register Y by one.
         /// </summary>
-        private void DEY()
-        {
-            _y--;
+        private void DEY() => UpdateZeroNegativeFlags(--_y);
 
-            UpdateZeroNegativeFlags(_y);
-        }
 
         /// <summary>
         /// Decrements the register X by one.
         /// </summary>
-        private void DEX()
-        {
-            _x--;
+        private void DEX() => UpdateZeroNegativeFlags(--_x);
 
-            UpdateZeroNegativeFlags(_x);
-        }
 
         /// <summary>
         /// Decrements by one the value allocated in the memory address specified.
@@ -942,26 +879,17 @@ namespace MiNES.CPU
         /// <summary>
         /// Compares the content of the register Y against a value held in memory.
         /// </summary>
-        private void CPY()
-        {
-            Compare(_y, _bus.Read(_operandAddress));
-        }
+        private void CPY() => Compare(_y, _bus.Read(_operandAddress));
 
         /// <summary>
         /// Compares the content of the register X against a value held in memory.
         /// </summary>
-        private void CPX()
-        {
-            Compare(_x, _bus.Read(_operandAddress));
-        }
+        private void CPX() => Compare(_x, _bus.Read(_operandAddress));
 
         /// <summary>
         /// Compares the content of the accumulator against a value held in memory.
         /// </summary>
-        private void CMP()
-        {
-            Compare(_a, _bus.Read(_operandAddress));
-        }
+        private void CMP() => Compare(_a, _bus.Read(_operandAddress));
 
         /// <summary>
         /// Compares two bytes and updates the CPU flags based on the result.
@@ -978,61 +906,361 @@ namespace MiNES.CPU
         /// <summary>
         /// Clears the overflow flag (by setting to false).
         /// </summary>
-        private void CLV()
-        {
-            _flags.SetFlag(StatusFlag.Overflow, false);
-        }
+        private void CLV() => _flags.SetFlag(StatusFlag.Overflow, false);
 
         /// <summary>
         /// Clears the interrupt flag (by setting to false).
         /// </summary>
-        private void CLI()
-        {
-            _flags.SetFlag(StatusFlag.DisableInterrupt, false);
-        }
+        private void CLI() => _flags.SetFlag(StatusFlag.DisableInterrupt, false);
 
         /// <summary>
         /// Clears the decimal flag.
         /// </summary>
-        private void CLD()
-        {
-            _flags.SetFlag(StatusFlag.Decimal, false);
-        }
+        private void CLD() => _flags.SetFlag(StatusFlag.Decimal, false);
 
         /// <summary>
         /// Adds the address (a signed number) in scope to the program counter if overflow flag is set.
         /// </summary>
-        private void BVS()
-        {
-            if (_flags.GetFlag(StatusFlag.Overflow))
-                AddOffsetToPC();
-        }
+        private void BVS() => GotoBranchIf(_flags.GetFlag(StatusFlag.Overflow));
 
         /// <summary>
         /// Adds the address (a signed number) in scope to the program counter if overflow flag is not set.
         /// </summary>
-        private void BVC()
-        {
-            if (!_flags.GetFlag(StatusFlag.Overflow))
-                AddOffsetToPC();
-        }
+        private void BVC() => GotoBranchIf(!_flags.GetFlag(StatusFlag.Overflow));
 
         /// <summary>
         /// Adds the address (a signed number) in scope to the program counter if negative flag is not set.
         /// </summary>
-        private void BPL()
+        private void BPL() => GotoBranchIf(!_flags.GetFlag(StatusFlag.Negative));
+
+        /// <summary>
+        /// Adds the address (a signed number) in scope to the program counter if zero flag is not set.
+        /// </summary>
+        private void BNE() => GotoBranchIf(!_flags.GetFlag(StatusFlag.Zero));
+
+        /// <summary>
+        /// Adds the address (a signed number) in scope to the program counter if negative flag is set.
+        /// </summary>
+        private void BMI() => GotoBranchIf(_flags.GetFlag(StatusFlag.Negative));
+
+        /// <summary>
+        /// Adds the address (a signed number) in scope to the program counter if zero flag is set.
+        /// </summary>
+        private void BEQ() => GotoBranchIf(_flags.GetFlag(StatusFlag.Zero));
+
+        /// <summary>
+        /// Adds the address (a signed number) in scope to the program counter if carry flag is set.
+        /// </summary>
+        private void BCS() => GotoBranchIf(_flags.GetFlag(StatusFlag.Carry));
+
+        /// <summary>
+        /// Adds the address (a signed number) in scope to the program counter if carry flag is not set.
+        /// </summary>
+        private void BCC() => GotoBranchIf(!_flags.GetFlag(StatusFlag.Carry));
+
+        /// <summary>
+        /// Go to a branch if condition is true.
+        /// </summary>
+        /// <param name="conditionResult">The result of the condition evaluated.</param>
+        private void GotoBranchIf(bool conditionResult)
         {
-            if (!_flags.GetFlag(StatusFlag.Negative))
+            if (conditionResult)
                 AddOffsetToPC();
+        }
+
+        /// <summary>
+        /// Adds an offset to the current program counter.
+        /// </summary>
+        private void AddOffsetToPC()
+        {
+            // Add additional cycle when branch condition is true
+            _cycles++;
+
+            ushort targetAddress = (ushort)(_programCounter + (sbyte)_bus.Read(_operandAddress));
+            CheckIfCrossedPageBoundary(_programCounter, targetAddress); // Add another cycle if new branch is in another page
+
+            _programCounter = targetAddress;
+        }
+
+        /// <summary>
+        /// This instructions is used to test if one or more bits are set in a target memory location. The mask pattern in A is ANDed with the value 
+        /// in memory to set or clear the zero flag, but the result is not kept. Bits 7 and 6 of the value from memory are copied into the N and V flags.
+        /// (source: http://www.obelisk.me.uk/6502/reference.html#BIT)
+        /// </summary>
+        private void BIT()
+        {
+            byte memory = _bus.Read(_operandAddress);
+
+            _flags.SetFlag(StatusFlag.Zero, (_a & memory) == 0);
+            _flags.SetFlag(StatusFlag.Overflow, (memory & 0x0040) == 0x0040); // bit no. 6 from the memory value
+            _flags.SetFlag(StatusFlag.Negative, memory.IsNegative());
+        }
+
+        /// <summary>
+        /// Adds a value to the accumulator's value.
+        /// </summary>
+        private void ADC()
+        {
+            /*
+             * Overflow happens when the result can't fit into a signed byte: RESULT < -128 OR RESULT > 127
+             * In order to this happen, both operands should hava the same sign: same sign operands
+             * produces a bigger magnitude (the magnitude of a signed number is the actual number next to the sign: +5 magnitude equals to 5).
+             */
+
+            byte accValue = _a;
+            byte val = _bus.Read(_operandAddress);
+
+            int temp = accValue + val + (_flags.GetFlag(StatusFlag.Carry) ? 1 : 0);
+
+            byte result = (byte)temp;
+
+            // If result is greater than 255, enable the Carry flag
+            _flags.SetFlag(StatusFlag.Carry, temp > 255);
+
+            UpdateZeroNegativeFlags(result);
+
+            // If two numbers of the same sign produce a number whose sign is different, then there's an overflow
+            _flags.SetFlag(StatusFlag.Overflow, ((accValue ^ result) & (val ^ result) & 0x0080) == 0x0080);
+
+            _a = result;
+        }
+
+        /// <summary>
+        /// Substracts a value from the accumulator's value.
+        /// </summary>
+        private void SBC()
+        {
+            /* The one complement of a number N is defined as N - 255. In binary, this is achieved by
+             * flipping each bit of the binary representation of N. The two complement is just the one complement
+             * plus one: 2 complement = 1 complement + 1 = (255 - N) + 1 = 256 - N. The two complement is used
+             * for represent negative numbers.
+             * 
+             * The substraction M - N can be represented as: M + (-N) = M + (256 - N) = M + (2 complement of N)
+             * due to there's not a borrow flag, we use the carry flag as our borrow flag by using its complement: B = 1 - C
+             * The substraction of N from M is expressed as:
+             *  M - N - B = M + (-N) - (1 - C) = M + (2 complement of N) - 1 + C
+             *  M + (256 - N) - 1 + C = M + (255 - N) + C = M + (1 complement of N) + C
+             */
+
+            /* Same story as ADC: overflow happens when the result can't fit into a signed byte: RESULT < -128 OR RESULT > 127
+             * However, in substraction, the overflow would happen when both operands initially have different signs. The sign of substracting number
+             * will change when taking its one complement (from (-) to (+), and (+) to (-)). For example, M = (+), N = (-), so when making the
+             * substraction, we end with M + (-N) = M + (+N); it gets converted to (+) because the one complement of N. Another example would be, M = (-),
+             * N = (+), so the substraction is -M + (+N) = -M + (-N); it gets converted to (-) because the one complement of N.
+             */
+
+            byte accValue = _a;
+            byte val = _bus.Read(_operandAddress);
+            byte complement = (byte)(~val);
+
+            int temp = accValue + complement + (_flags.GetFlag(StatusFlag.Carry) ? 1 : 0);
+            byte result = (byte)temp;
+
+            // If carry flag is set, it means a borror did not happen, otherwise it did happen
+            _flags.SetFlag(StatusFlag.Carry, temp > 255);
+
+            UpdateZeroNegativeFlags(result);
+
+            // In the substraction, the sign check is done in the complement
+            _flags.SetFlag(StatusFlag.Overflow, ((accValue ^ result) & (complement ^ result) & 0x0080) == 0x0080);
+
+            _a = result;
+        }
+
+        /// <summary>                                                                                    
+        /// Loads a value located in an address into the accumulator.
+        /// </summary>
+        private void LDA()
+        {
+            _a = _bus.Read(_operandAddress);
+
+            UpdateZeroNegativeFlags(_a);
+        }
+
+        /// <summary>
+        /// Stores the accumulator value into memory.
+        /// </summary>
+        private void STA() => _bus.Write(_operandAddress, _a);
+
+        /// <summary>
+        /// Turn on the Carry Flag by setting 1.
+        /// </summary>
+        private void SEC() => _flags.SetFlag(StatusFlag.Carry, true);
+
+        /// <summary>
+        /// Clears the Carry Flag by setting 0.
+        /// </summary>
+        private void CLC() => _flags.SetFlag(StatusFlag.Carry, false);
+
+        /// <summary>
+        /// Shifts each bit of a memory content one place to the left.
+        /// </summary>
+        private void ASL()
+        {
+            byte val = _bus.Read(_operandAddress);
+            
+            byte result = ShiftLeft(val);
+
+            _bus.Write(_operandAddress, result);
+        }
+
+        /// <summary>
+        /// Shifts each bit of current accumulator value one place to the left.
+        /// </summary>
+        private void ASL_ACC() => _a = ShiftLeft(_a);
+
+        /// <summary>
+        /// Performs a shift operation (left direction) in the given value (updates the CPU flags).
+        /// </summary>
+        /// <param name="val">The value.</param>
+        /// <returns>The value after performing the left shift.</returns>
+        private byte ShiftLeft(byte val)
+        {
+            byte result = (byte)(val << 1);
+
+            _flags.SetFlag(StatusFlag.Carry, (val & 0x0080) == 0x0080);
+            UpdateZeroNegativeFlags(result);
+
+            return result;
+        }
+
+        /// <summary>
+        /// Shifts each bit of the memory content one place to the right.
+        /// </summary>
+        private void LSR()
+        {
+            byte val = _bus.Read(_operandAddress);
+            
+            byte result = ShiftRight(val);
+
+            _bus.Write(_operandAddress, result);
+        }
+
+        /// <summary>
+        /// Shifts each bit of current accumulator value one place to the right.
+        /// </summary>
+        private void LSR_ACC() => _a = ShiftRight(_a);
+
+
+        /// <summary>
+        /// Performs a shift operation (right direction) in the given value (updates the CPU flags).
+        /// </summary>
+        /// <param name="val">The value.</param>
+        /// <returns>The value after performing the right shift.</returns>
+        private byte ShiftRight(byte val)
+        {
+            byte result = (byte)(val >> 1);
+
+            _flags.SetFlag(StatusFlag.Carry, (val & 0x01) == 0x01);
+            UpdateZeroNegativeFlags(result);
+
+            return result;
+        }
+
+        /// <summary>
+        /// Moves each of the bits of an memory content one place to the left.
+        /// </summary>
+        private void ROL()
+        {
+            byte val = _bus.Read(_operandAddress);
+            
+            byte result = RotateLeft(val);
+
+            _bus.Write(_operandAddress, result);
+        }
+
+        /// <summary>
+        /// Moves each of the bits of the accumulator value one place to the left.
+        /// </summary>
+        private void ROL_ACC() => _a = RotateLeft(_a);
+
+
+        /// <summary>
+        /// "Rotates" (shift) to the left side the given value (updates the CPU flags).
+        /// </summary>
+        /// <param name="val">The value.</param>
+        /// <returns>The value after performing the left side rotation (shift).</returns>
+        private byte RotateLeft(byte val)
+        {
+            int r = val << 1;
+            r |= (_flags.GetFlag(StatusFlag.Carry) ? 0x01 : 0); // places the carry flag into the bit 0
+            byte result = (byte)r;
+
+            _flags.SetFlag(StatusFlag.Carry, (val & 0x0080) == 0x0080);
+            UpdateZeroNegativeFlags(result);
+
+            return result;
+        }
+
+        /// <summary>
+        /// Moves each of the bits of an memory content one place to the right.
+        /// </summary>
+        private void ROR()
+        {
+            byte val = _bus.Read(_operandAddress);
+            
+            byte result = RotateRight(val);
+
+            _bus.Write(_operandAddress, result);
+        }
+
+        /// <summary>
+        /// Moves each of the bits of the accumulator value one place to the right.
+        /// </summary>
+        private void ROR_ACC() => _a = RotateRight(_a);
+
+
+        /// <summary>
+        /// "Rotates" (shift) to the right side the given value (updates the CPU flags).
+        /// </summary>
+        /// <param name="val">The value.</param>
+        /// <returns>The value after performing the right side rotation (shift).</returns>
+        private byte RotateRight(byte val)
+        {
+            int r = val >> 1;
+            r |= (_flags.GetFlag(StatusFlag.Carry) ? 0x0080 : 0); // places the carry flag into bit no.7
+            byte result = (byte)r;
+
+            _flags.SetFlag(StatusFlag.Carry, (val & 0x01) == 0x01);
+            UpdateZeroNegativeFlags(result);
+
+            return result;
+        }
+
+        /// <summary>
+        /// Performs a logical AND operation between the accumulator value and a value fetched from memory.
+        /// </summary>
+        private void AND()
+        {
+            _a = (byte)(_bus.Read(_operandAddress) & _a);
+
+            UpdateZeroNegativeFlags(_a);
+        }
+
+        /// <summary>
+        /// Performs a logical Exclusive OR (NOR) operation between the accumulator value and a value fetched from memory.
+        /// </summary>
+        private void EOR()
+        {
+            _a = (byte)(_bus.Read(_operandAddress) ^ _a);
+
+            UpdateZeroNegativeFlags(_a);
+        }
+
+        /// <summary>
+        /// Performs a logical Inclusive OR operation between the accumulator value and a value fetched from memory.
+        /// </summary>
+        private void ORA()
+        {
+            _a = (byte)(_bus.Read(_operandAddress) | _a);
+
+            UpdateZeroNegativeFlags(_a);
         }
 
         /// <summary>
         /// Forces CPU interruption.
         /// </summary>
-        private void BRK()
-        {
-            Interrupt(InterruptionType.BRK);
-        }
+        private void BRK() => Interrupt(InterruptionType.BRK);
 
         /// <summary>
         /// Interrupts the CPU.
@@ -1084,379 +1312,7 @@ namespace MiNES.CPU
             _programCounter = address;
         }
 
-        /// <summary>
-        /// Adds the address (a signed number) in scope to the program counter if zero flag is not set.
-        /// </summary>
-        private void BNE()
-        {
-            if (!_flags.GetFlag(StatusFlag.Zero))
-                AddOffsetToPC();
-        }
-
-        /// <summary>
-        /// Adds the address (a signed number) in scope to the program counter if negative flag is set.
-        /// </summary>
-        private void BMI()
-        {
-            if (_flags.GetFlag(StatusFlag.Negative))
-                AddOffsetToPC();
-        }
-
-        /// <summary>
-        /// This instructions is used to test if one or more bits are set in a target memory location. The mask pattern in A is ANDed with the value 
-        /// in memory to set or clear the zero flag, but the result is not kept. Bits 7 and 6 of the value from memory are copied into the N and V flags.
-        /// (source: http://www.obelisk.me.uk/6502/reference.html#BIT)
-        /// </summary>
-        private void BIT()
-        {
-            byte memory = _bus.Read(_operandAddress);
-
-            _flags.SetFlag(StatusFlag.Zero, (_a & memory) == 0);
-            _flags.SetFlag(StatusFlag.Overflow, (memory & 0x0040) == 0x0040); // bit no. 6 from the memory value
-            _flags.SetFlag(StatusFlag.Negative, memory.IsNegative());
-        }
-
-        /// <summary>
-        /// Adds the address (a signed number) in scope to the program counter if zero flag is set.
-        /// </summary>
-        private void BEQ()
-        {
-            if (_flags.GetFlag(StatusFlag.Zero))
-                AddOffsetToPC();
-        }
-
-        /// <summary>
-        /// Adds the address (a signed number) in scope to the program counter if carry flag is set.
-        /// </summary>
-        private void BCS()
-        {
-            if (_flags.GetFlag(StatusFlag.Carry))
-                AddOffsetToPC();
-        }
-
-        /// <summary>
-        /// Adds the address (a signed number) in scope to the program counter if carry flag is not set.
-        /// </summary>
-        private void BCC()
-        {
-            if (!_flags.GetFlag(StatusFlag.Carry))
-                AddOffsetToPC();
-        }
-
-        private void AddOffsetToPC()
-        {
-            // Add additional cycle when branch condition is true
-            _cycles++;
-
-            ushort targetAddress = (ushort)(_programCounter + (sbyte)_bus.Read(_operandAddress));
-            CheckIfCrossedPageBoundary(_programCounter, targetAddress); // Add another cycle if new branch is in another page
-
-            _programCounter = targetAddress;
-        }
-
-        /// <summary>
-        /// Adds a value to the accumulator's value.
-        /// </summary>
-        private void ADC()
-        {
-            /*
-             * Overflow happens when the result can't fit into a signed byte: RESULT < -128 OR RESULT > 127
-             * In order to this happen, both operands should hava the same sign: same sign operands
-             * produces a bigger magnitude (the magnitude of a signed number is the actual number next to the sign: +5 magnitude equals to 5).
-             */
-
-            byte accValue = _a;
-            byte val = _bus.Read(_operandAddress);
-
-            int temp = accValue + val + (_flags.GetFlag(StatusFlag.Carry) ? 1 : 0);
-
-            byte result = (byte)temp;
-
-            // If result is greater than 255, enable the Carry flag
-            _flags.SetFlag(StatusFlag.Carry, temp > 255);
-
-            //// If the bit no. 7 is set, then enable the Negative flag
-            //_flags.SetFlag(StatusFlag.Negative, result.IsNegative());
-
-            //// If result equals 0, enable the Zero flag
-            //_flags.SetFlag(StatusFlag.Zero, result == 0);
-
-            UpdateZeroNegativeFlags(result);
-
-            // If two numbers of the same sign produce a number whose sign is different, then there's an overflow
-            _flags.SetFlag(StatusFlag.Overflow, ((accValue ^ result) & (val ^ result) & 0x0080) == 0x0080);
-
-            _a = result;
-        }
-
-        /// <summary>
-        /// Substracts a value from the accumulator's value.
-        /// </summary>
-        private void SBC()
-        {
-            /* The one complement of a number N is defined as N - 255. In binary, this is achieved by
-             * flipping each bit of the binary representation of N. The two complement is just the one complement
-             * plus one: 2 complement = 1 complement + 1 = (255 - N) + 1 = 256 - N. The two complement is used
-             * for represent negative numbers.
-             * 
-             * The substraction M - N can be represented as: M + (-N) = M + (256 - N) = M + (2 complement of N)
-             * due to there's not a borrow flag, we use the carry flag as our borrow flag by using its complement: B = 1 - C
-             * The substraction of N from M is expressed as:
-             *  M - N - B = M + (-N) - (1 - C) = M + (2 complement of N) - 1 + C
-             *  M + (256 - N) - 1 + C = M + (255 - N) + C = M + (1 complement of N) + C
-             */
-
-            /* Same story as ADC: overflow happens when the result can't fit into a signed byte: RESULT < -128 OR RESULT > 127
-             * However, in substraction, the overflow would happen when both operands initially have different signs. The sign of substracting number
-             * will change when taking its one complement (from (-) to (+), and (+) to (-)). For example, M = (+), N = (-), so when making the
-             * substraction, we end with M + (-N) = M + (+N); it gets converted to (+) because the one complement of N. Another example would be, M = (-),
-             * N = (+), so the substraction is -M + (+N) = -M + (-N); it gets converted to (-) because the one complement of N.
-             */
-
-            byte accValue = _a;
-            byte val = _bus.Read(_operandAddress);
-            byte complement = (byte)(~val);
-
-            int temp = accValue + complement + (_flags.GetFlag(StatusFlag.Carry) ? 1 : 0);
-            byte result = (byte)temp;
-
-            // If carry flag is set, it means a borror did not happen, otherwise it did happen
-            _flags.SetFlag(StatusFlag.Carry, temp > 255);
-
-            UpdateZeroNegativeFlags(result);
-
-            //_flags.SetFlag(StatusFlag.Zero, result == 0);
-
-            //_flags.SetFlag(StatusFlag.Negative, result.IsNegative());
-
-            // In the substraction, the sign check is done in the complement
-            _flags.SetFlag(StatusFlag.Overflow, ((accValue ^ result) & (complement ^ result) & 0x0080) == 0x0080);
-
-            _a = result;
-        }
-
-        /// <summary>                                                                                    
-        /// Loads a value located in an address into the accumulator.
-        /// </summary>
-        private void LDA()
-        {
-            _a = _bus.Read(_operandAddress);
-
-            UpdateZeroNegativeFlags(_a);
-        }
-
-        /// <summary>
-        /// Stores the accumulator value into memory.
-        /// </summary>
-        private void STA()
-        {
-            _bus.Write(_operandAddress, _a);
-        }
-
-        /// <summary>
-        /// Turn on the Carry Flag by setting 1.
-        /// </summary>
-        private void SEC()
-        {
-            _flags.SetFlag(StatusFlag.Carry, true);
-        }
-
-        /// <summary>
-        /// Clears the Carry Flag by setting 0.
-        /// </summary>
-        private void CLC()
-        {
-            _flags.SetFlag(StatusFlag.Carry, false);
-        }
-
-        /// <summary>
-        /// Shifts each bit of a memory content one place to the left.
-        /// </summary>
-        private void ASL()
-        {
-            byte val = _bus.Read(_operandAddress);
-            
-            byte result = ShiftLeft(val);
-
-            _bus.Write(_operandAddress, result);
-        }
-
-        /// <summary>
-        /// Shifts each bit of current accumulator value one place to the left.
-        /// </summary>
-        private void ASL_ACC()
-        {            
-            byte result = ShiftLeft(_a);
-            _a = result;
-        }
-
-        /// <summary>
-        /// Performs a shift operation (left direction) in the given value (updates the CPU flags).
-        /// </summary>
-        /// <param name="val">The value.</param>
-        /// <returns>The value after performing the left shift.</returns>
-        private byte ShiftLeft(byte val)
-        {
-            byte result = (byte)(val << 1);
-
-            _flags.SetFlag(StatusFlag.Carry, (val & 0x0080) == 0x0080);
-            UpdateZeroNegativeFlags(result);
-
-            return result;
-        }
-
-        /// <summary>
-        /// Shifts each bit of the memory content one place to the right.
-        /// </summary>
-        private void LSR()
-        {
-            byte val = _bus.Read(_operandAddress);
-            
-            byte result = ShiftRight(val);
-
-            _bus.Write(_operandAddress, result);
-        }
-
-        /// <summary>
-        /// Shifts each bit of current accumulator value one place to the right.
-        /// </summary>
-        private void LSR_ACC()
-        {
-            byte result = ShiftRight(_a);
-            _a = result;
-        }
-
-        /// <summary>
-        /// Performs a shift operation (right direction) in the given value (updates the CPU flags).
-        /// </summary>
-        /// <param name="val">The value.</param>
-        /// <returns>The value after performing the right shift.</returns>
-        private byte ShiftRight(byte val)
-        {
-            byte result = (byte)(val >> 1);
-
-            _flags.SetFlag(StatusFlag.Carry, (val & 0x01) == 0x01);
-            UpdateZeroNegativeFlags(result);
-
-            return result;
-        }
-
-        /// <summary>
-        /// Moves each of the bits of an memory content one place to the left.
-        /// </summary>
-        private void ROL()
-        {
-            byte val = _bus.Read(_operandAddress);
-            
-            byte result = RotateLeft(val);
-
-            _bus.Write(_operandAddress, result);
-        }
-
-        /// <summary>
-        /// Moves each of the bits of the accumulator value one place to the left.
-        /// </summary>
-        private void ROL_ACC()
-        {
-            byte result = RotateLeft(_a);
-            _a = result;
-        }
-
-        /// <summary>
-        /// "Rotates" (shift) to the left side the given value (updates the CPU flags).
-        /// </summary>
-        /// <param name="val">The value.</param>
-        /// <returns>The value after performing the left side rotation (shift).</returns>
-        private byte RotateLeft(byte val)
-        {
-            int r = val << 1;
-            r |= (_flags.GetFlag(StatusFlag.Carry) ? 0x01 : 0); // places the carry flag into the bit 0
-            byte result = (byte)r;
-
-            _flags.SetFlag(StatusFlag.Carry, (val & 0x0080) == 0x0080);
-            UpdateZeroNegativeFlags(result);
-
-            return result;
-        }
-
-        /// <summary>
-        /// Moves each of the bits of an memory content one place to the right.
-        /// </summary>
-        private void ROR()
-        {
-            byte val = _bus.Read(_operandAddress);
-            
-            byte result = RotateRight(val);
-
-            _bus.Write(_operandAddress, result);
-        }
-
-        /// <summary>
-        /// Moves each of the bits of the accumulator value one place to the right.
-        /// </summary>
-        private void ROR_ACC()
-        {
-            byte result = RotateRight(_a);
-            _a = result;
-        }
-
-        /// <summary>
-        /// "Rotates" (shift) to the right side the given value (updates the CPU flags).
-        /// </summary>
-        /// <param name="val">The value.</param>
-        /// <returns>The value after performing the right side rotation (shift).</returns>
-        private byte RotateRight(byte val)
-        {
-            int r = val >> 1;
-            r |= (_flags.GetFlag(StatusFlag.Carry) ? 0x0080 : 0); // places the carry flag into bit no.7
-            byte result = (byte)r;
-
-            _flags.SetFlag(StatusFlag.Carry, (val & 0x01) == 0x01);
-            UpdateZeroNegativeFlags(result);
-
-            return result;
-        }
-
-        /// <summary>
-        /// Performs a logical AND operation between the accumulator value and a value fetched from memory.
-        /// </summary>
-        private void AND()
-        {
-            byte val = _bus.Read(_operandAddress);
-            byte result = (byte)(val & _a);
-
-            UpdateZeroNegativeFlags(result);
-
-            _a = result;
-        }
-
-        /// <summary>
-        /// Performs a logical Exclusive OR (NOR) operation between the accumulator value and a value fetched from memory.
-        /// </summary>
-        private void EOR()
-        {
-            byte val = _bus.Read(_operandAddress);
-            byte result = (byte)(val ^ _a);
-
-            UpdateZeroNegativeFlags(result);
-
-            _a = result;
-        }
-
-        /// <summary>
-        /// Performs a logical Inclusive OR operation between the accumulator value and a value fetched from memory.
-        /// </summary>
-        private void ORA()
-        {
-            byte val = _bus.Read(_operandAddress);
-            byte result = (byte)(val | _a);
-
-            UpdateZeroNegativeFlags(result);
-
-            _a = result;
-        }
-
-#region Addressing modes
+        #region Addressing modes
 
         /// <summary>
         /// Sets the operand address for the instruction.
@@ -1470,7 +1326,7 @@ namespace MiNES.CPU
 #if CPU_NES_TEST
             _instructionHex.Add(_bus.Read(_programCounter));
 #endif
-            ushort operandAddress;
+            ushort operandAddress = 0;
             switch (mode)
             {
                 case AddressingMode.ZeroPage:
@@ -1503,44 +1359,45 @@ namespace MiNES.CPU
 
                         addressParsed = ParseBytes(lowByte, highByte);
                     }
-                    if (mode == AddressingMode.Indirect)
+                    switch (mode)
                     {
-                        // The content located in the address parsed is the LSB (Least Significant Byte) of the target address
-                        byte lowByte = _bus.Read(addressParsed);
+                        case AddressingMode.Indirect:
+                            {
+                                // The content located in the address parsed is the LSB (Least Significant Byte) of the target address
+                                byte lowByte = _bus.Read(addressParsed);
 
-                        /*
-                         * There's a bug in the hardware when parsing the effective address in the Indirect
-                         * addressing mode: if the LSB (least significant byte) of the absolute address is 0xFF, then incrementing
-                         * by one the absolute address (incrementing by one is required for get the MSB of the effective address) 
-                         * would produce a wrap around the page; example below:
-                         * 
-                         * Absolute address: 0x02FF.
-                         * LSB from the effetive address is at 0x02FF.
-                         * MSB from the effective address should be at 0x02FF + 0x0001 = 0x0300; but because the bug explained above, it's
-                         * at 0x0200 (we stayed in the same page 0x02)
-                         */
-                        if (addressParsed.GetLowByte() == 0xFF)
-                            addressParsed ^= (0x00FF);
-                        else
-                            addressParsed++;
+                                /*
+                                 * There's a bug in the hardware when parsing the effective address in the Indirect
+                                 * addressing mode: if the LSB (least significant byte) of the absolute address is 0xFF, then incrementing
+                                 * by one the absolute address (incrementing by one is required for get the MSB of the effective address) 
+                                 * would produce a wrap around the page; example below:
+                                 * 
+                                 * Absolute address: 0x02FF.
+                                 * LSB from the effetive address is at 0x02FF.
+                                 * MSB from the effective address should be at 0x02FF + 0x0001 = 0x0300; but because the bug explained above, it's
+                                 * at 0x0200 (we stayed in the same page 0x02)
+                                 */
+                                if (addressParsed.GetLowByte() == 0xFF)
+                                    addressParsed ^= (0x00FF);
+                                else
+                                    addressParsed++;
 
-                        byte highByte = _bus.Read(addressParsed);
+                                byte highByte = _bus.Read(addressParsed);
 
-                        operandAddress = ParseBytes(lowByte, highByte);
-                    }
-                    else if (mode == AddressingMode.Absolute)
-                    {
-                        operandAddress = addressParsed;
-                    }
-                    else if (mode == AddressingMode.AbsoluteX)
-                    {
-                        operandAddress = (ushort)(addressParsed + _x);
-                        CheckIfCrossedPageBoundary(addressParsed, operandAddress);
-                    }
-                    else
-                    {
-                        operandAddress = (ushort)(addressParsed + _y);
-                        CheckIfCrossedPageBoundary(addressParsed, operandAddress);
+                                operandAddress = ParseBytes(lowByte, highByte);
+                            }
+                            break;
+                        case AddressingMode.Absolute:
+                            operandAddress = addressParsed;
+                            break;
+                        case AddressingMode.AbsoluteX:
+                            operandAddress = (ushort)(addressParsed + _x);
+                            CheckIfCrossedPageBoundary(addressParsed, operandAddress);
+                            break;
+                        case AddressingMode.AbsoluteY:
+                            operandAddress = (ushort)(addressParsed + _y);
+                            CheckIfCrossedPageBoundary(addressParsed, operandAddress);
+                            break;
                     }
                     break;
                 case AddressingMode.IndirectX:
@@ -1574,7 +1431,7 @@ namespace MiNES.CPU
             IncrementPC(); // Points to the next opcode (instruction)
         }
 
-#endregion
+        #endregion
 
         /// <summary>
         /// Checks if both address are in the same page or not. If they do not, the cycle counter will be incremented by one.
@@ -1652,68 +1509,30 @@ namespace MiNES.CPU
         /// <summary>
         /// Executes a NMI interruption.
         /// </summary>
-        private int NMI()
+        public void NMI()
         {
-            try
-            {
-                Interrupt(InterruptionType.NMI);
-            }
-            finally
-            {
-                NmiTriggered = false;
-            }
+            Interrupt(InterruptionType.NMI);
 
-            // TODO: verify that NMI takes 7 cpu cycles
-            return 7;
+            _cycles += 7;
         }
 
         /// <summary>
         /// Executes the next instruction denoted by the program counter.
         /// </summary>
-        /// <returns>The number of cycles spent for execute the instruction.</returns>
-        public int Step()
+        public void Step()
         {
-            int cycles = 0;
-
-            try
+            if (_cycles == 0)
             {
-                if (NmiTriggered)
-                    cycles = NMI();
-                else if (_bus.DmaTransferTriggered)
-                    cycles = TransferOam();
-                else
-                    cycles = ExecuteInstruction();
-            }
-            finally
-            {
-                CyclesElapsed += cycles;
-            }
+                ExecuteInstruction();
 
-            return cycles;
+                CyclesElapsed += (uint)_cycles;
+            }
+            else
+            {
+                _cycles--;
+            }
         }
 
-        /// <summary>
-        /// Transfers the OAM dataset into the PPU OAM.
-        /// </summary>
-        /// <returns>The number of cycles spent while transfering the OAM.</returns>
-        private int TransferOam()
-        {
-            int cyclesSpent = CyclesElapsed % 2 != 0 ? 514 : 513;
-            try
-            {
-                ushort cpuAddress = (ushort)(_bus.OamMemoryPage << 8);
-                for (int i = 0; i < 256; i++)
-                {
-                    byte oamByte = _bus.Read(cpuAddress++);
-                    _bus.Write(0x2004, oamByte);
-                }
-            }
-            finally
-            {
-                _bus.DmaTransferTriggered = false;
-            }
-
-            return cyclesSpent;
-        }
+        public void AddDmaCycles(int cycles) => _cycles += cycles;
     }
 }

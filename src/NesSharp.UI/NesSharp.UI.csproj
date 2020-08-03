@@ -4,6 +4,8 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>NesSharp.UI</AssemblyName>
+    <RootNamespace>NesSharp.UI</RootNamespace>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -19,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MiNES\MiNES.csproj" />
+    <ProjectReference Include="..\NesSharp\NesSharp.csproj" />
   </ItemGroup>
 
 </Project>

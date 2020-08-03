@@ -1,4 +1,4 @@
-﻿namespace MiNES.CPU
+﻿namespace NesSharp.CPU
 {
     /// <summary>
     /// The interruptions available for the 6502 CPU.
