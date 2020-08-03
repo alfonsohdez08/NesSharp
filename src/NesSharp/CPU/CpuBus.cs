@@ -149,11 +149,11 @@ namespace NesSharp.CPU
                     break;
                 // PPU Scroll register (write only)
                 case 0x2005:
-                    _ppu.SetScroll(value); // First write: sets fine X and coarse X; Second write: sets fine Y and coarse Y
+                    _ppu.Scroll = value; // First write: sets fine X and coarse X; Second write: sets fine Y and coarse Y
                     break;
                 // PPU Address register (write only)
                 case 0x2006:
-                    _ppu.SetAddress(value); // First write: high byte of the address; Second write: low byte of the address
+                    _ppu.PpuAddress = value; // First write: high byte of the address; Second write: low byte of the address
                     break;
                 // PPU Data register
                 case 0x2007:

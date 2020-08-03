@@ -83,32 +83,138 @@ namespace NesSharp.PPU
         };
         #endregion
 
+        #region Registers
+        /// <summary>
+        /// PPU Control register.
+        /// </summary>
+        public PpuControl Control { get; } = new PpuControl();
+
+        /// <summary>
+        /// PPU Mask register.
+        /// </summary>
+        public PpuMask Mask { get; } = new PpuMask();
+
+        /// <summary>
+        /// PPU Status register.
+        /// </summary>
+        public PpuStatus Status { get; } = new PpuStatus();
+
+        /// <summary>
+        /// Object Attribute Memory (OAM) address register.
+        /// </summary>
+        public byte OamAddress { get; set; }
+
+        /// <summary>
+        /// OAM data register.
+        /// </summary>
+        public byte OamData
+        {
+            get => OamBuffer[OamAddress];
+            set
+            {
+                OamBuffer[OamAddress] = value;
+
+                // OAM address gets incremented by one when data is written
+                OamAddress++;
+            }
+        }
+
+        /// <summary>
+        /// Scrolling position register.
+        /// </summary>
+        public byte Scroll
+        {
+            set
+            {
+                if (!_addressLatch) // w is 0
+                {
+                    T.CoarseX = value >> 3;
+                    _fineX = value & 7;
+
+                    _addressLatch = true; // Flips to the low byte state
+                }
+                else // w is 1
+                {
+                    T.CoarseY = value >> 3;
+                    T.FineY = value & 7;
+
+                    _addressLatch = false; // Flips to the high byte state
+                }
+            }
+        }
+
+        /// <summary>
+        /// Address where the data should be either written or read.
+        /// </summary>
+        public byte PpuAddress
+        {
+            set
+            {
+                if (!_addressLatch) // w is 0
+                {
+                    value = (byte)(value & 0x3F);
+                    T.Loopy = (T.Loopy & 0x00FF) | (value << 8);
+
+                    _addressLatch = true; // Flips to the low byte state
+                }
+                else // w is 1
+                {
+                    T.Loopy = (T.Loopy & 0x7F00) | value;
+                    V.Loopy = T.Loopy;
+
+                    _addressLatch = false; // Flips to the high byte state
+                }
+            }
+        }
+
+        /// <summary>
+        /// The PPU data.
+        /// </summary>
+        public byte PpuData
+        {
+            get
+            {
+                // Reads the data buffered (from previous read request)
+                byte data = _dataBuffer;
+
+                // Updates the buffer with the data allocated in the compiled address
+                _dataBuffer = _ppuBus.Read(V.Address);
+
+                /* If the compiled address does not overlap the color palette address range, then return
+                 * the data read from the buffer; otherwise return the data read from the address right away
+                 */
+                if (V.Loopy >= 0x3F00)
+                    data = _dataBuffer;
+
+                IncrementVRamAddress();
+
+                return data;
+            }
+            set
+            {
+                _ppuBus.Write(V.Address, value);
+                IncrementVRamAddress();
+            }
+        }
+
+        /*Loopy registers*/
+
+        public PpuLoopy V { get; } = new PpuLoopy();
+        public PpuLoopy T { get; } = new PpuLoopy();
+
+        #endregion
+
         /// <summary>
         /// Count how many frames has been rendered so far.
         /// </summary>
         public bool IsIdle;
         //public bool IsIdle { get; private set; }
 
-        /// <summary>
-        /// Object Attribute Memory (OAM) address register.
-        /// </summary>
-        public byte OamAddress;
-
         public bool IsFrameCompleted { get; private set; }
 
         public bool NmiRequested;
 
         public int[] Frame => _frameBuffer;
-
-        /// <summary>
-        /// PPU Control register.
-        /// </summary>
-        internal readonly PpuControl Control = new PpuControl();
-
-        /// <summary>
-        /// PPU Mask register.
-        /// </summary>
-        internal readonly PpuMask Mask = new PpuMask();
 
         /* When powering up the PPU, the status register (located at $2002) will
          * be set to 0xA0 (10100000).
@@ -117,14 +223,6 @@ namespace NesSharp.PPU
          * Bit 6: Sprite hit (more research about this)
          * Bit 5: Sprite overflow (more than 8 sprites appears in a scanline)
          */
-
-        /// <summary>
-        /// PPU Status register.
-        /// </summary>
-        internal readonly PpuStatus Status = new PpuStatus();
-
-        internal readonly PpuLoopy V = new PpuLoopy();
-        internal readonly PpuLoopy T = new PpuLoopy();
 
         private readonly PpuBus _ppuBus;
         private readonly int[] _frameBuffer = new int[Width * Height];
@@ -196,94 +294,12 @@ namespace NesSharp.PPU
             _nmi = nmiTrigger;
         }
 
-        public byte OamData
-        {
-            get => OamBuffer[OamAddress];
-            set
-            {
-                OamBuffer[OamAddress] = value;
-
-                // OAM address gets incremented by one when data is written
-                OamAddress++;
-            }
-        }
-
         /// <summary>
         /// Resets the address latch used by the PPU address register and PPU scroll register.
         /// </summary>
         public void ResetAddressLatch()
         {
             _addressLatch = false;
-        }
-
-        /// <summary>
-        /// Sets the address into the PPU address register.
-        /// </summary>
-        /// <param name="value">The value of the address (either high or low byte, depending on the latch).</param>
-        public void SetAddress(int value)
-        {
-            if (!_addressLatch) // w is 0
-            {
-                value = (byte)(value & 0x3F);
-                T.Loopy = (T.Loopy & 0x00FF) | (value << 8);
-
-                _addressLatch = true; // Flips to the low byte state
-            }
-            else // w is 1
-            {
-                T.Loopy = (T.Loopy & 0x7F00) | value;
-                V.Loopy = T.Loopy;
-
-                _addressLatch = false; // Flips to the high byte state
-            }
-        }
-
-        /// <summary>
-        /// Sets the scroll into Loppy T register.
-        /// </summary>
-        /// <param name="value">The value of the register ("d" in nesdev docs).</param>
-        public void SetScroll(byte value)
-        {
-            if (!_addressLatch) // w is 0
-            {
-                T.CoarseX = value >> 3; 
-                _fineX = value & 7;
-
-                _addressLatch = true; // Flips to the low byte state
-            }
-            else // w is 1
-            {
-                T.CoarseY = value >> 3;
-                T.FineY = value & 7;
-
-                _addressLatch = false; // Flips to the high byte state
-            }
-        }
-
-        public byte PpuData {
-            get
-            {
-                // Reads the data buffered (from previous read request)
-                byte data = _dataBuffer;
-
-                // Updates the buffer with the data allocated in the compiled address
-                _dataBuffer = _ppuBus.Read(V.Address);
-
-                /* If the compiled address does not overlap the color palette address range, then return
-                 * the data read from the buffer; otherwise return the data read from the address right away
-                 */
-                if (V.Loopy >= 0x3F00)
-                    data = _dataBuffer;
-
-                IncrementVRamAddress();
-
-                return data;
-            }
-            set
-            {
-                _ppuBus.Write(V.Address, value);
-                IncrementVRamAddress();
-            }
         }
 
         public void Step()
@@ -296,7 +312,7 @@ namespace NesSharp.PPU
                     ShiftBackgroundRegisters();
 
                 if (_scanline == -1)
-                    PreRenderingScanline();
+                    PreRender();
                 else
                     RenderPixel();
 
@@ -324,12 +340,11 @@ namespace NesSharp.PPU
                     CopyHorizontalPositionToV();
 
                 // During cycles elapesed between 257 and 320 (inclusive), the OAM address is set to 0
-                //if (_cycles == 257)
                 if (_cycles >= 257 && _cycles <= 320)
                     OamAddress = 0;
             }
             else if (_scanline >= 241 && _scanline < 261)
-                VerticalBlankScanlines();
+                VerticalBlankPeriod();
 
             _cycles++;
             if (_cycles >= 341 || (_cycles >= 340 && _scanline == -1 && _isOddFrame && IsRenderingEnabled)) // When is an odd frame and we are in pre render scanline, the scanline is 340 cycles long (only when rendering is enabled)
@@ -497,15 +512,16 @@ namespace NesSharp.PPU
         private void EvaluateSprites()
         {
             // Initializes to $FF the OAM buffer
-            if (_cycles >= 1 && _cycles <= 64)
+            //if (_cycles >= 1 && _cycles <= 64)
+            if (_cycles == 1)
             {
-                _scanlineOamBuffer[_cycles & 0x1F] = 0xFF;
+                Array.Fill(_scanlineOamBuffer, 0xFF);
             }
-            else if (_cycles > 64 && _cycles <= 256)
+            //else if (_cycles > 64 && _cycles <= 256)
+            else if (_cycles == 256)
             {
                 // Fill the secondary oam buffer at once
-                if (_cycles == 256)
-                    FillScanlineOamBuffer();
+                FillScanlineOamBuffer();
             }
             else if (_cycles >= 257 && _cycles <= 320)
             {
@@ -715,7 +731,7 @@ namespace NesSharp.PPU
             V.Nametable = (V.Nametable & 1) | ((T.Nametable & 2) << 1);
         }
 
-        private void PreRenderingScanline()
+        private void PreRender()
         {
             if (_cycles == 1)
             {
@@ -724,7 +740,6 @@ namespace NesSharp.PPU
                 Status.VerticalBlank = false;
             }
             else if (IsRenderingEnabled && _cycles >= 280 && _cycles <= 304)
-            //else if (IsRenderingEnabled && _cycles == 280)
             {
                 CopyVerticalPositionToV();
             }
@@ -841,14 +856,11 @@ namespace NesSharp.PPU
         {
             int paletteColorAddress = ParseBackgroundPaletteAddress(palette, colorIndex);
             int paletteColor = _ppuBus.ReadPalette((uint)paletteColorAddress);
-            //byte paletteColor = _ppuBus.Read(paletteColorAddress);
-            //if (paletteColor < 0 || paletteColor > SystemColorPalette.Length)
-            //    throw new InvalidOperationException($"The given palette color does not exist: {paletteColor}.");
 
             return SystemColorPalette[paletteColor];
         }
 
-        private void VerticalBlankScanlines()
+        private void VerticalBlankPeriod()
         {
             if (_scanline == 241 && _cycles == 1)
             {
@@ -859,88 +871,5 @@ namespace NesSharp.PPU
                 IsIdle = true;
             }
         }
-
-        //private readonly Tile[] _backgroundTiles;
-
-        //public Tile[] BackgroundTiles => _backgroundTiles;
-
-        //private ushort GetNametableBaseAddress()
-        //{
-        //    throw new NotImplementedException();
-
-        //    //byte nametable = Control.BaseNametableAddress;
-
-        //    //ushort baseAddress;
-        //    //switch (nametable)
-        //    //{
-        //    //    case 0:
-        //    //        baseAddress = 0x2000;
-        //    //        break;
-        //    //    case 1:
-        //    //        baseAddress = 0x2400;
-        //    //        break;
-        //    //    case 2:
-        //    //        baseAddress = 0x2800;
-        //    //        break;
-        //    //    case 3:
-        //    //        baseAddress = 0x2C00;
-        //    //        break;
-        //    //    default:
-        //    //        throw new InvalidOperationException($"The given nametable is invalid: {nametable}.");
-        //    //}
-
-        //    //return baseAddress;
-        //}
-
-        //public byte[][] GetNametable0()
-        //{
-        //    ushort nametableAddress = GetNametableBaseAddress();
-
-        //    byte[][] nametable = new byte[30][]; // 30 tiles high
-        //    for (int i = 0; i < nametable.Length; i++)
-        //    {
-        //        nametable[i] = new byte[32]; // 32 tiles across
-        //        for (int j = 0; j < nametable[i].Length; j++)
-        //        {
-        //            byte tileIdx = _ppuBus.Read(nametableAddress);
-        //            nametable[i][j] = tileIdx;
-
-        //            nametableAddress++;
-        //        }
-        //    }
-
-        //    return nametable;
-        //}
-
-        //public byte[][] GetNametable2()
-        //{
-        //    ushort nametableAddress = 0x2800;
-        //    //ushort finalAddress = (ushort)(nametableAddress + 0x03C0);
-
-        //    byte[][] nametable = new byte[30][]; // 30 tiles high
-        //    for (int i = 0; i < nametable.Length; i++)
-        //    {
-        //        nametable[i] = new byte[32]; // 32 tiles across
-        //        for (int j = 0; j < nametable[i].Length; j++)
-        //        {
-        //            byte tileIdx = _ppuBus.Read(nametableAddress);
-        //            nametable[i][j] = tileIdx;
-
-        //            nametableAddress++;
-        //        }
-        //    }
-
-        //    return nametable;
-        //}
-
-        //public Color[] GetPalettes()
-        //{
-        //    //var palettes = new Color[32];
-
-        //    //for (ushort addr = 0x3F00, idx = 0; addr < 0x3F20; addr++, idx++)
-        //    //    //palettes[idx] = SystemColorPalette[_ppuBus.Read(addr)];
-
-        //    throw new NotImplementedException();
-        //}
     }
 }

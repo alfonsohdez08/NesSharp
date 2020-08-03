@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
-using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using SkiaSharp;
@@ -36,6 +35,9 @@ namespace NesSharp.UI
         {
             InitializeComponent();
 
+            Width = 256;
+            Height = 265;
+
             var menuStrip = new MenuStrip();
 
             var fileMenuItem = new ToolStripMenuItem("File");
@@ -49,12 +51,13 @@ namespace NesSharp.UI
 
             Controls.Add(menuStrip);
 
-            _screen = new PictureBox();
-            
-            _screen.Width = 256;
-            _screen.Height = 240;
-            _screen.Location = new Point(0, menuStrip.Location.Y + 25);
-            _screen.Image = GetBlackScreen();
+            _screen = new PictureBox
+            {
+                Width = 256,
+                Height = 240,
+                Location = new Point(0, menuStrip.Location.Y + 25),
+                Image = GetBlackScreen()
+            };
 
             Controls.Add(_screen);
         }
