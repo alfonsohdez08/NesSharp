@@ -1,15 +1,15 @@
-﻿using MiNES.CPU;
-using MiNES.Extensions;
-using MiNES.PPU.Registers;
+﻿using NesSharp.CPU;
+using NesSharp.Extensions;
+using NesSharp.PPU.Registers;
 using System;
 using System.Drawing;
 using System.Linq;
 using System.Runtime.CompilerServices;
 
-namespace MiNES.PPU
+namespace NesSharp.PPU
 {
     class Ppu
-    {
+    { 
         private const int Width = 256;
         private const int Height = 240;
 
@@ -84,20 +84,10 @@ namespace MiNES.PPU
         #endregion
 
         /// <summary>
-        /// The number of the master clock ticks required in order to reach the tick 2 of the first vertical blank scanline.
-        /// </summary>
-        /// <remarks>
-        /// It's used for determine up to which moment the PPU should be emulated.
-        /// </remarks>
-        public const int MasterClockTicks = 412625;
-
-        /// <summary>
         /// Count how many frames has been rendered so far.
         /// </summary>
         public bool IsIdle;
         //public bool IsIdle { get; private set; }
-
-        public int Cycles => _cycles;
 
         /// <summary>
         /// Object Attribute Memory (OAM) address register.
@@ -148,7 +138,7 @@ namespace MiNES.PPU
 
         private bool _isSpriteZeroInBuffer;
 
-        private int _dataBuffer = 0;
+        private byte _dataBuffer = 0;
 
         private uint _framesRendered = 1;
         
@@ -196,28 +186,27 @@ namespace MiNES.PPU
         /// Initially would be false because frame 1 would be the first frame to render.
         /// </remarks>
         private bool _isOddFrame = true;
-        public bool SkipIdleTick => _isOddFrame && IsRenderingEnabled;
+        //public bool SkipIdleTick => _isOddFrame && IsRenderingEnabled;
 
+        private readonly NmiTrigger _nmi;
 
-
-        private readonly NES _nes;
-
-        public Ppu(PpuBus ppuBus, NES nes)
+        public Ppu(PpuBus ppuBus, NmiTrigger nmiTrigger)
         {
             _ppuBus = ppuBus;
-            _nes = nes;
-            //ResetFrameRenderingStatus();
+            _nmi = nmiTrigger;
         }
 
-        public void SetOamData(byte data)
+        public byte OamData
         {
-            OamBuffer[OamAddress] = data;
+            get => OamBuffer[OamAddress];
+            set
+            {
+                OamBuffer[OamAddress] = value;
 
-            // OAM address gets incremented by one when data is written
-            OamAddress++;
+                // OAM address gets incremented by one when data is written
+                OamAddress++;
+            }
         }
-
-        public byte GetOamData() => OamBuffer[OamAddress];
 
         /// <summary>
         /// Resets the address latch used by the PPU address register and PPU scroll register.
@@ -271,37 +260,30 @@ namespace MiNES.PPU
             }
         }
 
-        /// <summary>
-        /// Retrieves the data from the address set through the PPU address register.
-        /// </summary>
-        /// <returns>The data allocated in the address set through the PPU address register.</returns>
-        public int GetPpuData()
-        {
-            // Reads the data buffered (from previous read request)
-            int data = _dataBuffer;
+        public byte PpuData {
+            get
+            {
+                // Reads the data buffered (from previous read request)
+                byte data = _dataBuffer;
 
-            // Updates the buffer with the data allocated in the compiled address
-            _dataBuffer = _ppuBus.Read(V.Address);
+                // Updates the buffer with the data allocated in the compiled address
+                _dataBuffer = _ppuBus.Read(V.Address);
 
-            /* If the compiled address does not overlap the color palette address range, then return
-             * the data read from the buffer; otherwise return the data read from the address right away
-             */
-            if (V.Loopy >= 0x3F00)
-                data = _dataBuffer;
+                /* If the compiled address does not overlap the color palette address range, then return
+                 * the data read from the buffer; otherwise return the data read from the address right away
+                 */
+                if (V.Loopy >= 0x3F00)
+                    data = _dataBuffer;
 
-            IncrementVRamAddress();
+                IncrementVRamAddress();
 
-            return data;
-        }
-
-        /// <summary>
-        /// Stores a value in the address set through the PPU address register.
-        /// </summary>
-        /// <param name="val">The value that will be stored.</param>
-        public void SetPpuData(byte val)
-        {
-            _ppuBus.Write(V.Address, val);
-            IncrementVRamAddress();
+                return data;
+            }
+            set
+            {
+                _ppuBus.Write(V.Address, value);
+                IncrementVRamAddress();
+            }
         }
 
         public void Step()
@@ -872,7 +854,7 @@ namespace MiNES.PPU
             {
                 Status.VerticalBlank = true;
                 if (Control.TriggerNmi)
-                    _nes.TriggerNmi();
+                    _nmi.Invoke();
 
                 IsIdle = true;
             }

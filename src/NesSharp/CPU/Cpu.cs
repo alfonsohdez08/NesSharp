@@ -3,16 +3,21 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using static MiNES.Extensions.BitwiseExtensions;
+using static NesSharp.Extensions.BitwiseExtensions;
 
-namespace MiNES.CPU
+namespace NesSharp.CPU
 {
 
     /// <summary>
     /// The 6502 CPU.
     /// </summary>
-    public partial class Cpu
+    partial class Cpu
     {
+        /// <summary>
+        /// The CPU bus (interacts with other components within the NES).
+        /// </summary>
+        private readonly CpuBus _bus;
+
         /// <summary>
         /// Accumulator.
         /// </summary>
@@ -54,7 +59,7 @@ namespace MiNES.CPU
         /// <summary>
         /// The number of cycles spent for execute an instruction (for execute the fetch decode execute cycle).
         /// </summary>
-        private byte _cycles;
+        private int _cycles;
 
         /// <summary>
         /// A flag for denote whether the underlying instruction requires an additional cycle e.g. crosses a page bounday.
@@ -62,14 +67,9 @@ namespace MiNES.CPU
         private bool _additionalCycle = false;
 
         /// <summary>
-        /// The CPU bus (interacts with other components within the NES).
-        /// </summary>
-        private readonly CpuBus _bus;
-
-        /// <summary>
         /// Counter of how many cycles has been elapsed along instructions executed.
         /// </summary>
-        public uint TicksElapsed { get; private set; }
+        public uint CyclesElapsed { get; private set; }
 
 #if CPU_NES_TEST
         private readonly List<byte> _instructionHex = new List<byte>();
@@ -160,8 +160,6 @@ namespace MiNES.CPU
 
         private static string FormatByte(byte b) => $"{b.ToString("X").PadLeft(2, '0')}";
 #endif
-
-        public int TicksAccumulated { get; set; }
 
         /// <summary>
         /// Creates an instance of the 6502 CPU.
@@ -273,7 +271,7 @@ namespace MiNES.CPU
         /// Executes a CPU instruction (droven by the fetch decode execute cycle).
         /// </summary>
         /// <returns>The number of cycle spent in order to execute the instruction.</returns>
-        private byte ExecuteInstruction()
+        private void ExecuteInstruction()
         {
             // Fetches the op code from the memory
             byte opCode = _bus.Read(_programCounter);
@@ -524,14 +522,10 @@ namespace MiNES.CPU
                     break;
             }
 
-
-
 #if CPU_NES_TEST
             TestLineResult += $" CYC:{_cyclesElapsed}";
             _cyclesElapsed += _cycles;
 #endif
-
-            return _cycles;
         }
 
         /// <summary>
@@ -1515,37 +1509,30 @@ namespace MiNES.CPU
         /// <summary>
         /// Executes a NMI interruption.
         /// </summary>
-        private int NMI()
+        public void NMI()
         {
             Interrupt(InterruptionType.NMI);
 
-            return 7;
+            _cycles += 7;
         }
 
         /// <summary>
         /// Executes the next instruction denoted by the program counter.
         /// </summary>
-        /// <returns>The number of cycles spent for execute the instruction.</returns>
-        public int Step()
+        public void Step()
         {
-            int cycles = 0;
-
-            try
+            if (_cycles == 0)
             {
-                cycles = ExecuteInstruction();
+                ExecuteInstruction();
+
+                CyclesElapsed += (uint)_cycles;
             }
-            finally
+            else
             {
-                cycles += TicksAccumulated; // pick up the ticks accumulated
-                TicksAccumulated = 0;
-
-                TicksElapsed += (uint)cycles;
+                _cycles--;
             }
-
-            return cycles;
         }
 
-        internal void ExecuteNMI() => TicksAccumulated = NMI();
-
+        public void AddDmaCycles(int cycles) => _cycles += cycles;
     }
 }

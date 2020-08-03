@@ -1,4 +1,4 @@
-﻿namespace MiNES.CPU
+﻿namespace NesSharp.CPU
 {
     /// <summary>
     /// The addressing modes used by the 6502 CPU.

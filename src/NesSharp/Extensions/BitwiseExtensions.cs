@@ -1,7 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 
-namespace MiNES.Extensions
+namespace NesSharp.Extensions
 {
     /// <summary>
     /// Utilities for manipulate values bit by bit.

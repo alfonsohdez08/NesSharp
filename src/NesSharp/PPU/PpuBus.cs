@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics.Tracing;
 
-namespace MiNES.PPU
+namespace NesSharp.PPU
 {
 
     /// <summary>

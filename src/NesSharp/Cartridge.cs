@@ -1,10 +1,10 @@
-﻿using MiNES.PPU;
+﻿using NesSharp.PPU;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace MiNES
+namespace NesSharp
 {
     public class Cartridge
     {

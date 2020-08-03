@@ -1,10 +1,10 @@
-﻿using MiNES.Extensions;
+﻿using NesSharp.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace MiNES.CPU
+namespace NesSharp.CPU
 {
     enum StatusFlag: byte
     {

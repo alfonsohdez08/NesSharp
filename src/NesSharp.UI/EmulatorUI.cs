@@ -8,11 +8,10 @@ using System.Windows.Forms;
 using SkiaSharp;
 using SkiaSharp.Views.Desktop;
 
-namespace MiNES.Windows.Client
+namespace NesSharp.UI
 {
     public partial class EmulatorUI : Form
     {
-        //private byte[] _cartridgeRom;
         private string _gamePath;
         private NES _nes;
         private int[] _currentFrame;
@@ -97,9 +96,10 @@ namespace MiNES.Windows.Client
 
         private void StartEmulation()
         {
-            var cartridge = Cartridge.LoadCartridge(_gamePath);
+            Cartridge cartridge = Cartridge.LoadCartridge(_gamePath);
             _nes = new NES(cartridge, _joypad);
-            new TaskFactory().StartNew(RunGame, TaskCreationOptions.LongRunning);
+            
+            Task.Factory.StartNew(RunGame, TaskCreationOptions.LongRunning);
         }
 
         private void RunGame()

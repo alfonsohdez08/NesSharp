@@ -1,4 +1,4 @@
-﻿namespace MiNES.PPU.Registers
+﻿namespace NesSharp.PPU.Registers
 {
     class PpuMask
     {
