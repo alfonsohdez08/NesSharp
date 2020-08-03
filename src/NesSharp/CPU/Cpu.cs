@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Text;
 using static NesSharp.Extensions.BitwiseExtensions;
 
@@ -19,55 +16,52 @@ namespace NesSharp.CPU
         private readonly CpuBus _bus;
 
         /// <summary>
-        /// Accumulator.
-        /// </summary>
-        private byte _a;
-
-        /// <summary>
-        /// X register (general purpose).
-        /// </summary>
-        private byte _x;
-
-        /// <summary>
-        /// Y register (general purpose).
-        /// </summary>
-        private byte _y;
-
-        /// <summary>
-        /// Status register (each bit represents a flag).
+        /// The Status register.
         /// </summary>
         private readonly Flags _flags = new Flags();
 
         /// <summary>
-        /// Holds the address of the outer 
+        /// The Accumulator register.
+        /// </summary>
+        private byte _a;
+
+        /// <summary>
+        /// The X register.
+        /// </summary>
+        private byte _x;
+
+        /// <summary>
+        /// The Y register.
+        /// </summary>
+        private byte _y;
+
+        /// <summary>
+        /// The pointer address of the next available position in the stack.
         /// </summary>
         private byte _stackPointer;
 
         /// <summary>
-        /// The Program Counter register (holds the memory address of the next instruction or instruction's operand).
+        /// The register that holds the address of either the current's instruction operand or next instruction.
         /// </summary>
         private ushort _programCounter;
 
         /// <summary>
-        /// Instruction's operand memory address (the location in memory where resides the instruction's operand).
-        /// <remarks>
-        /// For instance, for immediate addressing mode, it stores the adddres where it should pickup the value.
-        /// </remarks>
+        /// The address where the instruction operand should be looked up.
         /// </summary>
         private ushort _operandAddress;
 
         /// <summary>
-        /// The number of cycles spent for execute an instruction (for execute the fetch decode execute cycle).
+        /// The number of CPU cycles that takes instruction looked up.
         /// </summary>
         private int _cycles;
 
         /// <summary>
-        /// A flag for denote whether the underlying instruction requires an additional cycle e.g. crosses a page bounday.
+        /// A flag for denote whether the instruction requires an additional cycle e.g. crosses a page bounday.
         /// </summary>
         private bool _additionalCycle = false;
 
         /// <summary>
-        /// Counter of how many cycles has been elapsed along instructions executed.
+        /// Counter of how many cycles has been elapsed along the instructions executed.
         /// </summary>
         public uint CyclesElapsed { get; private set; }
 
@@ -175,6 +169,54 @@ namespace NesSharp.CPU
         }
 
         /// <summary>
+        /// Executes a NMI interruption.
+        /// </summary>
+        public void NMI()
+        {
+            Interrupt(InterruptionType.NMI);
+
+            _cycles += 7;
+            CyclesElapsed += 7;
+        }
+
+        /// <summary>
+        /// Executes the next instruction denoted by the program counter.
+        /// </summary>
+        public void Step()
+        {
+            if (_cycles == 0)
+            {
+                ExecuteInstruction();
+
+                CyclesElapsed += (uint)_cycles;
+            }
+            else
+            {
+                _cycles--;
+            }
+        }
+
+        /// <summary>
+        /// Acknowledges the CPU the cycles spent for do the sprites DMA.
+        /// </summary>
+        /// <param name="cycles">The cycles spent for do the sprites DMA.</param>
+        public void AddDmaCycles(int cycles)
+        {
+            _cycles += cycles;
+            CyclesElapsed += (uint)cycles;
+        }
+
+        /// <summary>
+        /// Parses the address for a stack operation (the stack uses the second page (page 1) from the CPU memory).
+        /// </summary>
+        /// <param name="stackPointerAddress">The address where the stack points.</param>
+        /// <returns>An address somewhere in the page 1.</returns>
+        private static ushort ParseStackAddress(byte stackPointerAddress)
+        {
+            return (ushort)(0x0100 | stackPointerAddress);
+        }
+
+        /// <summary>
         /// Initializes the CPU based on the commercial NES.
         /// </summary>
         private void Initialize()
@@ -189,91 +231,12 @@ namespace NesSharp.CPU
 #endif
         }
 
-#if !CPU_NES_TEST
-        private string ParseInstruction(Instruction instruction)
-        {
-            var instructionSb = new StringBuilder(instruction.Mnemonic.ToString());
-
-            if (!(instruction.AddressingMode == AddressingMode.Accumulator || instruction.AddressingMode == AddressingMode.Implied))
-            {
-                var operandParsed = new StringBuilder($"${FetchOperand()}");
-                if (instruction.AddressingMode == AddressingMode.Immediate)
-                    operandParsed.Insert(0, '#');
-                else if (instruction.AddressingMode == AddressingMode.AbsoluteX || instruction.AddressingMode == AddressingMode.ZeroPageX)
-                    operandParsed.Append(",X");
-                else if (instruction.AddressingMode == AddressingMode.AbsoluteY || instruction.AddressingMode == AddressingMode.ZeroPageY)
-                    operandParsed.Append(",Y");
-                else if (instruction.AddressingMode == AddressingMode.Indirect)
-                {
-                    operandParsed.Insert(0, '(');
-                    operandParsed.Append(')');
-                }
-                else if (instruction.AddressingMode == AddressingMode.IndirectX)
-                {
-                    operandParsed.Insert(0, '(');
-                    operandParsed.Append(",X)");
-                }
-                else if (instruction.AddressingMode == AddressingMode.IndirectY)
-                {
-                    operandParsed.Insert(0, '(');
-                    operandParsed.Append("),Y");
-                }
-
-                instructionSb.Append($" {operandParsed.ToString()}");
-            }
-
-            string FetchOperand()
-            {
-                ushort val = _operandAddress;
-                if (instruction.AddressingMode == AddressingMode.Immediate)
-                    val = _bus.Read(_operandAddress);
-                else if (instruction.AddressingMode == AddressingMode.Relative)
-                    val = _bus.Read(_operandAddress);
-                    //val = (ushort)(_pcAddress + (sbyte)(_bus.Read(_operandAddress))); // Perform the addition no matter what the condition result
-
-                return ParseOperand(val, instruction.AddressingMode);
-            }
-
-            return instructionSb.ToString();
-        }
-
-        private static string ParseOperand(ushort operand, AddressingMode addressingMode)
-        {
-            string op = operand.ToString("X");
-
-            // This representation is not accurate because it attempts to follow the format of the nes_cpu_test.log
-            switch (addressingMode)
-            {
-                // Addressing modes whose represetantion must be 2 bytes
-                case AddressingMode.Absolute:
-                case AddressingMode.AbsoluteX:
-                case AddressingMode.AbsoluteY:
-                case AddressingMode.Indirect:
-                    op = op.PadLeft(4, '0');
-                    break;
-                // Addressing modes whose represetantion must be 1 byte
-                case AddressingMode.Immediate:
-                case AddressingMode.ZeroPage:
-                case AddressingMode.ZeroPageX:
-                case AddressingMode.ZeroPageY:
-                case AddressingMode.IndirectX:
-                case AddressingMode.IndirectY:
-                case AddressingMode.Relative:
-                    op = op.PadLeft(2, '0');
-                    break;
-            }
-
-            return op;
-        }
-#endif
-
         /// <summary>
         /// Executes a CPU instruction (droven by the fetch decode execute cycle).
         /// </summary>
-        /// <returns>The number of cycle spent in order to execute the instruction.</returns>
         private void ExecuteInstruction()
         {
-            // Fetches the op code from the memory
+            // Fetch the op code from the memory
             byte opCode = _bus.Read(_programCounter);
 
 #if CPU_NES_TEST
@@ -308,12 +271,9 @@ namespace NesSharp.CPU
             //TestLineResult = $"{opCodeAddress.ToString("X")}  {instructionHexDump.PadRight(10, ' ')}{instructionDisassembled.PadRight(32, ' ')}{registersSnapshot}";
             TestLineResult = $"{instructionAddress.ToString("X").PadLeft(4, '0')} {instructionHexDump.PadRight(10, ' ')}{registersSnapshot}";
             _instructionHex.Clear();
-#else
-            //string instructionDissasembled = ParseInstruction(instruction);
-            //Console.WriteLine($"{instructionAddress.ToString("X").PadLeft(4, '0')}: {instructionDissasembled}");
 #endif
 
-            // Executes the instruction based on its mnemonic code
+            // Execute the instruction based on its mnemonic code
             switch (instruction.Mnemonic)
             {
                 case Mnemonic.ADC:
@@ -959,30 +919,6 @@ namespace NesSharp.CPU
         private void BCC() => GotoBranchIf(!_flags.GetFlag(StatusFlag.Carry));
 
         /// <summary>
-        /// Go to a branch if condition is true.
-        /// </summary>
-        /// <param name="conditionResult">The result of the condition evaluated.</param>
-        private void GotoBranchIf(bool conditionResult)
-        {
-            if (conditionResult)
-                AddOffsetToPC();
-        }
-
-        /// <summary>
-        /// Adds an offset to the current program counter.
-        /// </summary>
-        private void AddOffsetToPC()
-        {
-            // Add additional cycle when branch condition is true
-            _cycles++;
-
-            ushort targetAddress = (ushort)(_programCounter + (sbyte)_bus.Read(_operandAddress));
-            CheckIfCrossedPageBoundary(_programCounter, targetAddress); // Add another cycle if new branch is in another page
-
-            _programCounter = targetAddress;
-        }
-
-        /// <summary>
         /// This instructions is used to test if one or more bits are set in a target memory location. The mask pattern in A is ANDed with the value 
         /// in memory to set or clear the zero flag, but the result is not kept. Bits 7 and 6 of the value from memory are copied into the N and V flags.
         /// (source: http://www.obelisk.me.uk/6502/reference.html#BIT)
@@ -1141,7 +1077,6 @@ namespace NesSharp.CPU
         /// </summary>
         private void LSR_ACC() => _a = ShiftRight(_a);
 
-
         /// <summary>
         /// Performs a shift operation (right direction) in the given value (updates the CPU flags).
         /// </summary>
@@ -1173,7 +1108,6 @@ namespace NesSharp.CPU
         /// Moves each of the bits of the accumulator value one place to the left.
         /// </summary>
         private void ROL_ACC() => _a = RotateLeft(_a);
-
 
         /// <summary>
         /// "Rotates" (shift) to the left side the given value (updates the CPU flags).
@@ -1208,7 +1142,6 @@ namespace NesSharp.CPU
         /// Moves each of the bits of the accumulator value one place to the right.
         /// </summary>
         private void ROR_ACC() => _a = RotateRight(_a);
-
 
         /// <summary>
         /// "Rotates" (shift) to the right side the given value (updates the CPU flags).
@@ -1310,6 +1243,30 @@ namespace NesSharp.CPU
 
             ushort address = ParseBytes(jumpAddressLowByte, jumpAddressHighByte);
             _programCounter = address;
+        }
+
+        /// <summary>
+        /// Go to a branch if condition is true.
+        /// </summary>
+        /// <param name="conditionResult">The result of the condition evaluated.</param>
+        private void GotoBranchIf(bool conditionResult)
+        {
+            if (conditionResult)
+                AddOffsetToPC();
+        }
+
+        /// <summary>
+        /// Adds an offset to the current program counter.
+        /// </summary>
+        private void AddOffsetToPC()
+        {
+            // Add additional cycle when branch condition is true
+            _cycles++;
+
+            ushort targetAddress = (ushort)(_programCounter + (sbyte)_bus.Read(_operandAddress));
+            CheckIfCrossedPageBoundary(_programCounter, targetAddress); // Add another cycle if new branch is in another page
+
+            _programCounter = targetAddress;
         }
 
         #region Addressing modes
@@ -1461,16 +1418,6 @@ namespace NesSharp.CPU
         }
 
         /// <summary>
-        /// Parses the address for a stack operation (the stack uses the second page (page 1) from the CPU memory).
-        /// </summary>
-        /// <param name="stackPointerAddress">The address where the stack points.</param>
-        /// <returns>An address somewhere in the page 1.</returns>
-        private static ushort ParseStackAddress(byte stackPointerAddress)
-        {
-            return (ushort)(0x0100 | stackPointerAddress);
-        }
-
-        /// <summary>
         /// Pushes a value onto the stack (it updates the stack pointer after pushing the value).
         /// </summary>
         /// <param name="b">The value that would be pushed into the stack.</param>
@@ -1504,40 +1451,6 @@ namespace NesSharp.CPU
             _stackPointer = stackPointer;
 
             return val;
-        }
-
-        /// <summary>
-        /// Executes a NMI interruption.
-        /// </summary>
-        public void NMI()
-        {
-            Interrupt(InterruptionType.NMI);
-
-            _cycles += 7;
-            CyclesElapsed += 7;
-        }
-
-        /// <summary>
-        /// Executes the next instruction denoted by the program counter.
-        /// </summary>
-        public void Step()
-        {
-            if (_cycles == 0)
-            {
-                ExecuteInstruction();
-
-                CyclesElapsed += (uint)_cycles;
-            }
-            else
-            {
-                _cycles--;
-            }
-        }
-
-        public void AddDmaCycles(int cycles)
-        {
-            _cycles += cycles;
-            CyclesElapsed += (uint)cycles;
         }
     }
 }

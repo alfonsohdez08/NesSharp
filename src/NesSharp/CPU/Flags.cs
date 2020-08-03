@@ -6,7 +6,7 @@ using System.Text;
 
 namespace NesSharp.CPU
 {
-    enum StatusFlag: byte
+    internal enum StatusFlag: byte
     {
         Carry = 0,
         Zero = 1,
@@ -19,7 +19,7 @@ namespace NesSharp.CPU
     class Flags
     {
         /// <summary>
-        /// The 6502 CPU flags are represented as a 8-bit register where each bit represets a CPU flag.
+        /// The flags word.
         /// </summary>
         private byte _flags; 
 
@@ -33,6 +33,9 @@ namespace NesSharp.CPU
         private const byte DefaultFlags = 0x34;
 #endif
 
+        /// <summary>
+        /// Creates an instance of Flags.
+        /// </summary>
         public Flags()
         {
             _flags = DefaultFlags;
@@ -55,6 +58,10 @@ namespace NesSharp.CPU
         /// <returns>True if it's "on"; otherwise false.</returns>
         public bool GetFlag(StatusFlag flag) => _flags.GetBit((byte)flag);
 
+        /// <summary>
+        /// Sets flags at once (as a whole).
+        /// </summary>
+        /// <param name="value">The flag word.</param>
         public void SetFlags(byte value)
         {
             /*
@@ -74,27 +81,31 @@ namespace NesSharp.CPU
             _flags = value;
         }
 
+        /// <summary>
+        /// Retrieves the flags word.
+        /// </summary>
+        /// <returns>The flag word.</returns>
         public byte GetFlags() => _flags;
 
-#if DEBUG
-        /// <summary>
-        /// Provides a more human readable form of the CPU flags.
-        /// </summary>
-        /// <returns>A string representing the current state of the flags.</returns>
-        public override string ToString()
-        {
-            var sb = new StringBuilder();
+//#if DEBUG
+//        /// <summary>
+//        /// Provides a more human readable form of the CPU flags.
+//        /// </summary>
+//        /// <returns>A string representing the current state of the flags.</returns>
+//        public override string ToString()
+//        {
+//            var sb = new StringBuilder();
 
-            var e = Enum.GetValues(typeof(StatusFlag)).Cast<StatusFlag>();
-            foreach (StatusFlag f in e)
-            {
-                int mask = (1 << (byte)f);
-                sb.AppendLine($"{f}: {(_flags & mask) == mask}");
-            }
+//            var e = Enum.GetValues(typeof(StatusFlag)).Cast<StatusFlag>();
+//            foreach (StatusFlag f in e)
+//            {
+//                int mask = (1 << (byte)f);
+//                sb.AppendLine($"{f}: {(_flags & mask) == mask}");
+//            }
 
-            return sb.ToString();
-        }
-#endif
+//            return sb.ToString();
+//        }
+//#endif
 
     }
 }

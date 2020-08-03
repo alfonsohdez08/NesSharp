@@ -1,9 +1,9 @@
 ﻿namespace NesSharp.CPU
 {
     /// <summary>
-    /// The interruptions available for the 6502 CPU.
+    /// The 6502 CPU interruptions.
     /// </summary>
-    enum InterruptionType
+    internal enum InterruptionType
     {
         NMI,
         IRQ,

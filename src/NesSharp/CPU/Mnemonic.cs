@@ -1,6 +1,9 @@
 ﻿namespace NesSharp.CPU
 {
-    enum Mnemonic : byte
+    /// <summary>
+    /// The 6502 CPU mnemonics.
+    /// </summary>
+    internal enum Mnemonic : byte
     {
         ADC,
         AND,

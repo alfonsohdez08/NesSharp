@@ -4,7 +4,7 @@ using System.ComponentModel;
 namespace NesSharp.Extensions
 {
     /// <summary>
-    /// Utilities for manipulate values bit by bit.
+    /// Utilities for manipulate values bits.
     /// </summary>
     public static class BitwiseExtensions
     {
@@ -15,16 +15,7 @@ namespace NesSharp.Extensions
         /// <param name="lowByte">Low byte (least significant byte).</param>
         /// <param name="highByte">High byte (most significant byte).</param>
         /// <returns>A 16 bit value.</returns>
-        public static ushort ParseBytes(byte lowByte, byte highByte)
-        {
-            //string highByteHex = highByte.ToString("x");
-            //string lowByteHex = lowByte.ToString("x");
-
-            // https://stackoverflow.com/questions/6090561/how-to-use-high-and-low-bytes
-            return (ushort)(lowByte | highByte << 8);
-
-            //return Convert.ToUInt16(highByteHex + lowByteHex, 16);
-        }
+        public static ushort ParseBytes(byte lowByte, byte highByte) => (ushort)(lowByte | highByte << 8); // https://stackoverflow.com/questions/6090561/how-to-use-high-and-low-bytes
 
         /// <summary>
         /// Checks if the given value is negative (the bit no. 7 is "on").

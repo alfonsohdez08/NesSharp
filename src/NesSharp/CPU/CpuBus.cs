@@ -1,13 +1,12 @@
 ﻿using NesSharp.PPU;
-using static NesSharp.NES;
 
 namespace NesSharp.CPU
 {
 
     /// <summary>
-    /// CPU's bus.
+    /// The CPU's bus.
     /// </summary>
-    class CpuBus
+    class CpuBus: IBus
     {
         private readonly Ppu _ppu;
         private readonly Joypad _joypad;
@@ -23,7 +22,7 @@ namespace NesSharp.CPU
             _dma = dma;
         }
 
-        public byte Read(uint address)
+        public byte Read(ushort address)
         {
             byte val = 0;
             // 2KB RAM mirrored
@@ -55,7 +54,7 @@ namespace NesSharp.CPU
         /// </summary>
         /// <param name="address">The PPU register address.</param>
         /// <returns>The value allocated in the register identified by the given address.</returns>
-        private byte ReadPpuRegister(uint address)
+        private byte ReadPpuRegister(ushort address)
         {
             byte value = 0;
             switch(address)
@@ -99,7 +98,7 @@ namespace NesSharp.CPU
             return value;
         }
 
-        public void Write(uint address, byte val)
+        public void Write(ushort address, byte val)
         {
             // Hardware RAM (NES)
             if (address >= 0x0000 && address < 0x2000)
@@ -162,18 +161,5 @@ namespace NesSharp.CPU
                     break;
             }
         }
-
-        //public void WriteToOamBuffer(byte page)
-        //{
-        //    byte[] buffer = new ArraySegment<byte>(_ram, page << 8, 256).ToArray();
-        //    _nes.Ppu.OamBuffer = buffer;
-            
-        //    int oamAddress = _nes.Ppu.OamAddress;
-        //    oamAddress += 0x100;
-        //    _nes.Ppu.OamAddress = (byte)oamAddress;
-
-        //    _nes.Cpu.TicksAccumulated = _nes.Cpu.TicksElapsed % 2 != 0 ? 514 : 513;
-        //}
-
     }
 }

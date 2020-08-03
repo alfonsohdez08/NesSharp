@@ -30,6 +30,8 @@
             AdditionalCycleWhenCrossPage = additionalCycle;
         }
 
+#if DEBUG
         public override string ToString() => $"{Mnemonic} {AddressingMode}";
+#endif
     }
 }
