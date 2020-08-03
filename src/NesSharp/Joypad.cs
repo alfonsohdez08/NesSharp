@@ -1,9 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace NesSharp
+﻿namespace NesSharp
 {
+    /// <summary>
+    /// The NES controller buttons.
+    /// </summary>
     public enum Button
     {
         Right = 0,

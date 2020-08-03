@@ -2,6 +2,9 @@
 
 namespace NesSharp.PPU
 {
+    /// <summary>
+    /// The nametables mirroring.
+    /// </summary>
     public enum Mirroring
     {
         Horizontal = 0,

@@ -1,13 +1,16 @@
 ﻿using NesSharp.PPU;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Text;
 
 namespace NesSharp
 {
+    /// <summary>
+    /// A NES game cartridge.
+    /// </summary>
     public class Cartridge
     {
+        private const byte HeaderOffset = 16;
+
         /// <summary>
         /// Gets the mirroring configured for the game stored in the cartridge.
         /// </summary>
@@ -47,11 +50,11 @@ namespace NesSharp
 
         private void ParseProgramRomBanks(byte[] nesFile)
         {
-            byte[] lowerBank = new ArraySegment<byte>(nesFile, 16, 0x4000).ToArray();
+            byte[] lowerBank = new ArraySegment<byte>(nesFile, HeaderOffset, 0x4000).ToArray();
             byte[] upperBank;
 
             if (_prgBanks > 1)
-                upperBank = new ArraySegment<byte>(nesFile, 16 + 0x4000, 0x4000).ToArray();
+                upperBank = new ArraySegment<byte>(nesFile, HeaderOffset + 0x4000, 0x4000).ToArray();
             else
                 upperBank = lowerBank;
 
@@ -64,9 +67,14 @@ namespace NesSharp
             if (_chrBanks == 0)
                 return;
 
-            CharacterRom = new ArraySegment<byte>(nesFile, 16 + _prgBanks * 0x4000, 0x2000).ToArray();
+            CharacterRom = new ArraySegment<byte>(nesFile, HeaderOffset + _prgBanks * 0x4000, 0x2000).ToArray();
         }
 
+        /// <summary>
+        /// Builds a NES game cartridge.
+        /// </summary>
+        /// <param name="path">The path where the cartridge is located.</param>
+        /// <returns>A cartridge ready to be played.</returns>
         public static Cartridge LoadCartridge(string path) => new Cartridge(File.ReadAllBytes(path));
     }
 }
