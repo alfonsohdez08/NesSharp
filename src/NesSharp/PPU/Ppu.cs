@@ -82,6 +82,51 @@ namespace NesSharp.PPU
             -16777216
         };
         #endregion
+        
+        private readonly NmiTrigger _nmi;
+        private readonly PpuBus _ppuBus;
+        private readonly int[] _frameBuffer = new int[Width * Height];
+        private readonly int[] _scanlineOamBuffer = new int[32];
+        private readonly int[] _spriteCounters = new int[8];
+        private readonly int[] _spriteAttributes = new int[8];
+        private readonly int[] _spriteLowPlaneTiles = new int[8];
+        private readonly int[] _spriteHighPlaneTiles = new int[8];
+
+        private byte _dataBuffer = 0;
+        private bool _isSpriteZeroInBuffer;
+        private uint _framesRendered = 1;
+        private int _fineX;
+        private int _cycles = 0;
+        private int _scanline = -1;
+        private int _lowBackgroundShiftRegister;
+        private int _highBackgroundShiftRegister;
+        private int _lowAttributeShiftRegister;
+        private int _highAttributeShiftRegister;
+        private int _tileId;
+        private int _attribute;
+        private int _blockId;
+        private int _lowPixelsRow;
+        private int _highPixelsRow;
+
+        private bool IsRenderingEnabled => Mask.RenderBackground || Mask.RenderSprites;
+
+        /// <summary>
+        /// Controls the state of the address latch (false = high byte; true = low byte).
+        /// </summary>
+        private bool _addressLatch = false;
+
+        private int _spriteBufferIndex = 0;
+        private int _spriteY;
+        private int _spriteTileIndex;
+        private bool _flipSpriteVertically;
+        private bool _flipSpriteHorizontally;
+        private bool _isEmptySprite;
+
+        /// <summary>
+        /// Denotes whether frame being rendered is odd or not.
+        /// </summary>
+        private bool _isOddFrame = true;
+        private bool SkipIdleCycle => _isOddFrame && IsRenderingEnabled;
 
         #region Registers
         /// <summary>
@@ -109,10 +154,10 @@ namespace NesSharp.PPU
         /// </summary>
         public byte OamData
         {
-            get => OamBuffer[OamAddress];
+            get => _oamBuffer[OamAddress];
             set
             {
-                OamBuffer[OamAddress] = value;
+                _oamBuffer[OamAddress] = value;
 
                 // OAM address gets incremented by one when data is written
                 OamAddress++;
@@ -207,99 +252,19 @@ namespace NesSharp.PPU
         /// <summary>
         /// Count how many frames has been rendered so far.
         /// </summary>
-        public bool IsIdle;
-        //public bool IsIdle { get; private set; }
-
-        public bool IsFrameCompleted { get; private set; }
-
-        public bool NmiRequested;
+        public bool IsIdle { get; private set; }
 
         public int[] Frame => _frameBuffer;
-
-        /* When powering up the PPU, the status register (located at $2002) will
-         * be set to 0xA0 (10100000).
-         * 
-         * Bit 7: 0 = the PPU is not in the V-Blank area (Vertical Blank is the area non visible of the screen); 1 = the PPU is in the V-Blank area
-         * Bit 6: Sprite hit (more research about this)
-         * Bit 5: Sprite overflow (more than 8 sprites appears in a scanline)
-         */
-
-        private readonly PpuBus _ppuBus;
-        private readonly int[] _frameBuffer = new int[Width * Height];
 
         /// <summary>
         /// The PPU OAM (it's 256 bytes long, capable of store 64 sprites, sprite data is 4 bytes long).
         /// </summary>
-        public byte[] OamBuffer { get; set; } = new byte[256];
-
-        private readonly int[] _scanlineOamBuffer = new int[32];
-
-        private bool _isSpriteZeroInBuffer;
-
-        private byte _dataBuffer = 0;
-
-        private uint _framesRendered = 1;
-        
-        private int _fineX;
-        private int _cycles = 0;
-        private int _scanline = -1;
-
-        private int _lowBackgroundShiftRegister;
-        private int _highBackgroundShiftRegister;
-
-        private int _lowAttributeShiftRegister;
-        private int _highAttributeShiftRegister;
-
-        private int _tileId;
-        
-        private int _attribute;
-        private int _blockId;
-
-        private int _lowPixelsRow;
-        private int _highPixelsRow;
-
-        private bool IsRenderingEnabled => Mask.RenderBackground || Mask.RenderSprites;
-
-        /// <summary>
-        /// Controls the state of the address latch (false = high byte; true = low byte).
-        /// </summary>
-        private bool _addressLatch = false;
-
-        private int[] _spriteCounters = new int[8];
-        private int[] _spriteAttributes = new int[8];
-        private int[] _spriteLowPlaneTiles = new int[8];
-        private int[] _spriteHighPlaneTiles = new int[8];
-
-        private int _spriteBufferIndex = 0;
-        private int _spriteY;
-        private int _spriteTileIndex;
-        private bool _flipSpriteVertically;
-        private bool _flipSpriteHorizontally;
-        private bool _isEmptySprite;
-
-        /// <summary>
-        /// Denotes whether frame being rendered is odd or not.
-        /// </summary>
-        /// <remarks>
-        /// Initially would be false because frame 1 would be the first frame to render.
-        /// </remarks>
-        private bool _isOddFrame = true;
-        //public bool SkipIdleTick => _isOddFrame && IsRenderingEnabled;
-
-        private readonly NmiTrigger _nmi;
+        private readonly byte[] _oamBuffer = new byte[256];
 
         public Ppu(PpuBus ppuBus, NmiTrigger nmiTrigger)
         {
             _ppuBus = ppuBus;
             _nmi = nmiTrigger;
-        }
-
-        /// <summary>
-        /// Resets the address latch used by the PPU address register and PPU scroll register.
-        /// </summary>
-        public void ResetAddressLatch()
-        {
-            _addressLatch = false;
         }
 
         public void Step()
@@ -347,7 +312,7 @@ namespace NesSharp.PPU
                 VerticalBlankPeriod();
 
             _cycles++;
-            if (_cycles >= 341 || (_cycles >= 340 && _scanline == -1 && _isOddFrame && IsRenderingEnabled)) // When is an odd frame and we are in pre render scanline, the scanline is 340 cycles long (only when rendering is enabled)
+            if (_cycles >= 341 || (_cycles >= 340 && _scanline == -1 && SkipIdleCycle)) // When is an odd frame and we are in pre render scanline, the scanline is 340 cycles long (only when rendering is enabled)
             {
                 _cycles = 0;
                 _spriteBufferIndex = 0;
@@ -369,6 +334,11 @@ namespace NesSharp.PPU
             }
 
         }
+
+        /// <summary>
+        /// Resets the address latch used by the PPU address register and PPU scroll register.
+        /// </summary>
+        public void ResetAddressLatch() => _addressLatch = false;
 
         /// <summary>
         /// Resets the frame rendering status.
@@ -457,7 +427,7 @@ namespace NesSharp.PPU
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void EvaluateBackground()
         {
-            int stage = _cycles & 7;
+            int stage = _cycles % 8;
             switch (stage)
             {
                 // Load high background pattern table byte
@@ -484,13 +454,13 @@ namespace NesSharp.PPU
                         if (lowBit)
                             _lowAttributeShiftRegister = (_lowAttributeShiftRegister & 0xFF00) | 0xFF;
                         else
-                            _lowAttributeShiftRegister = _lowAttributeShiftRegister & 0xFF00;
+                            _lowAttributeShiftRegister &= 0xFF00;
 
                         bool highBit = palette.GetBit(1);
                         if (highBit)
                             _highAttributeShiftRegister = (_highAttributeShiftRegister & 0xFF00) | 0xFF;
                         else
-                            _highAttributeShiftRegister = _highAttributeShiftRegister & 0xFF00;
+                            _highAttributeShiftRegister &= 0xFF00;
                     }
                     break;
                 // Fetch nametable byte
@@ -512,12 +482,10 @@ namespace NesSharp.PPU
         private void EvaluateSprites()
         {
             // Initializes to $FF the OAM buffer
-            //if (_cycles >= 1 && _cycles <= 64)
             if (_cycles == 1)
             {
                 Array.Fill(_scanlineOamBuffer, 0xFF);
             }
-            //else if (_cycles > 64 && _cycles <= 256)
             else if (_cycles == 256)
             {
                 // Fill the secondary oam buffer at once
@@ -654,17 +622,17 @@ namespace NesSharp.PPU
             int spritesBuffered = 0;
             _isSpriteZeroInBuffer = false;
 
-            for (int n = 0; n < OamBuffer.Length; n += 4)
+            for (int n = 0; n < _oamBuffer.Length; n += 4)
             {
-                int spriteYPos = OamBuffer[n];
+                int spriteYPos = _oamBuffer[n];
                 if (IsSpriteInRange(spriteYPos))
                 {
                     if (spritesBuffered < 8)
                     {
                         _scanlineOamBuffer[bufferIndex] = spriteYPos;
-                        _scanlineOamBuffer[bufferIndex + 1] = OamBuffer[n + 1];
-                        _scanlineOamBuffer[bufferIndex + 2] = OamBuffer[n + 2];
-                        _scanlineOamBuffer[bufferIndex + 3] = OamBuffer[n + 3];
+                        _scanlineOamBuffer[bufferIndex + 1] = _oamBuffer[n + 1];
+                        _scanlineOamBuffer[bufferIndex + 2] = _oamBuffer[n + 2];
+                        _scanlineOamBuffer[bufferIndex + 3] = _oamBuffer[n + 3];
 
                         bufferIndex += 4;
                         spritesBuffered++;

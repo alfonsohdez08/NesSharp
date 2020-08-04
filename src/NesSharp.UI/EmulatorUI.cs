@@ -35,9 +35,6 @@ namespace NesSharp.UI
         {
             InitializeComponent();
 
-            Width = 256;
-            Height = 265;
-
             var menuStrip = new MenuStrip();
 
             var fileMenuItem = new ToolStripMenuItem("File");
@@ -62,12 +59,12 @@ namespace NesSharp.UI
             Controls.Add(_screen);
         }
 
-        private static Image GetBlackScreen()
+        private Image GetBlackScreen()
         {
-            var bitmap = new Bitmap(256, 240);
-            for (int x = 0; x < 256; x++)
+            var bitmap = new Bitmap(Width, Height);
+            for (int x = 0; x < Width; x++)
             {
-                for (int y = 0; y < 240; y++)
+                for (int y = 0; y < Height; y++)
                 {
                     bitmap.SetPixel(x, y, Color.Black);
                 }

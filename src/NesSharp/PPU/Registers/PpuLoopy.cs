@@ -2,12 +2,11 @@
 {
     public class PpuLoopy
     {
-        public int CoarseX;
-        public int CoarseY;
-        public int Nametable;
-        public int FineY;
-        public uint Address;
-
+        public int CoarseX { get; set; }
+        public int CoarseY { get; set; }
+        public int Nametable { get; set; }
+        public int FineY { get; set; }
+        public ushort Address { get; set; }
         public int Loopy
         {
             get => (FineY << 12)
@@ -20,10 +19,13 @@
                 CoarseY = (value & 0x03E0) >> 5;
                 Nametable = (value & 0x0C00) >> 10;
                 FineY = (value & 0x7000) >> 12;
-                Address = (uint)(value & 0x3FFF);
+                Address = (ushort)(value & 0x3FFF);
             }
         }
 
+        /// <summary>
+        /// Increments the horizontal position.
+        /// </summary>
         public void IncrementHorizontalPosition()
         {
             var coarseX = CoarseX;

@@ -2,12 +2,11 @@
 {
     class PpuMask
     {
-        public bool GreyscaleMode;
-        public bool RenderLeftSideBackground;
-        public bool RenderLeftSideSprites;
-        public bool RenderBackground;
-        public bool RenderSprites;
-
+        public bool GreyscaleMode { get; private set; }
+        public bool RenderLeftSideBackground { get; private set; }
+        public bool RenderLeftSideSprites { get; private set; }
+        public bool RenderBackground { get; private set; }
+        public bool RenderSprites { get; private set; }
         public int Mask
         {
             get => ((RenderSprites ? 1 : 0) << 4)

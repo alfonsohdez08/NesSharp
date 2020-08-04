@@ -2,10 +2,9 @@
 {
     class PpuStatus
     {
-        public bool SpriteOverflow;
-        public bool SpriteZeroHit;
-        public bool VerticalBlank;
-
+        public bool SpriteOverflow { get; set; }
+        public bool SpriteZeroHit { get; set; }
+        public bool VerticalBlank { get; set; }
         public int Status
         {
             get => ((VerticalBlank ? 1 : 0) << 7)

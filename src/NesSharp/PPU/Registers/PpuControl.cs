@@ -6,13 +6,12 @@ namespace NesSharp.PPU.Registers
 {
     class PpuControl
     {
-        public int BaseNametableAddress;
-        public int VRamAddressIncrement;
-        public int SpritePatternTableAddress;
-        public int BackgroundPatternTableAddress;
-        public bool SpriteSize;
-        public bool TriggerNmi;
-
+        public int BaseNametableAddress { get; private set; }
+        public int VRamAddressIncrement { get; private set; }
+        public int SpritePatternTableAddress { get; private set; }
+        public int BackgroundPatternTableAddress { get; private set; }
+        public bool SpriteSize { get; private set; }
+        public bool TriggerNmi { get; private set; }
         public int Control
         {
             get => ((TriggerNmi ? 1 : 0) << 7)
