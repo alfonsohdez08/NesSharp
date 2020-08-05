@@ -35,34 +35,22 @@ namespace NesSharp.PPU
 
     interface INametableAddressParser
     {
-        uint Parse(uint address);
+        ushort Parse(ushort address);
     }
 
     class HorizontalMirroringParser : INametableAddressParser
     {
         // Bits 11 and 13 controls the base address for Horizontal mirroring
-        private const uint Mask = 0x2800;
+        private const ushort Mask = 0x2800;
 
-        public uint Parse(uint address)
-        {
-            uint baseAddress = address & Mask;
-            uint offset = address & 0x03FF;
-
-            return baseAddress + offset;
-        }
+        public ushort Parse(ushort address) => (ushort)((address & Mask) + (address & 0x03FF));
     }
 
     class VerticalMirroringParser : INametableAddressParser
     {
         // Bits 10 and 13 controls the base address for Vertical mirroring
-        private const uint Mask = 0x2400;
+        private const ushort Mask = 0x2400;
 
-        public uint Parse(uint address)
-        {
-            uint baseAddress = address & Mask;
-            uint offset = address & 0x03FF;
-
-            return baseAddress + offset;
-        }
+        public ushort Parse(ushort address) => (ushort)((address & Mask) + (address & 0x03FF));
     }
 }

@@ -26,27 +26,63 @@ namespace NesSharp
             _cpu = new Cpu(cpuBus);
         }
 
+        private const int CpuCyclesInVbl = 2273;
+
+
         public int[] Frame()
         {
-            // Run the PPU and CPU together
-            for (; !_ppu.IsIdle; _masterClockTicks += 5)
+            int cpuCyclesInVbl = 0;
+
+            do
             {
-                _ppu.Step();
-                if (_masterClockTicks % 15 == 0)
-                    _cpu.Step();
-            }
+                int cpuCyclesSpent = _cpu.Step();
+                int totalPpuCycles = cpuCyclesSpent * 3;
 
-            // Just run the CPU for the rest of the VBLANK scanlines (PPU is idle during VBLANK scanlines)
-            for (; _masterClockTicks < MasterClockTicksFrame; _masterClockTicks += 15)
-                _cpu.Step();
+                if (!_ppu.IsIdle)
+                {
+                    for (int ppuCycles = 0; ppuCycles < totalPpuCycles; ppuCycles++)
+                    {
+                        _ppu.Step();
+                        if (_ppu.IsIdle)
+                        {
+                            ppuCycles++;
+                            cpuCyclesInVbl = (totalPpuCycles - ppuCycles) / 3;
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    cpuCyclesInVbl += cpuCyclesSpent;
+                }
 
-            // The ticks spill (if not 0, then that remaind is ticks for the next frame)
-            _masterClockTicks -= MasterClockTicksFrame;
+            } while (cpuCyclesInVbl < CpuCyclesInVbl);
 
             // Reset the status of the PPU for render the next frame
             _ppu.ResetFrameRenderingStatus();
 
             return _ppu.Frame;
+
+
+            //// Run the PPU and CPU together
+            //for (; !_ppu.IsIdle; _masterClockTicks += 5)
+            //{
+            //    _ppu.Step();
+            //    if (_masterClockTicks % 15 == 0)
+            //        _cpu.Step();
+            //}
+
+            //// Just run the CPU for the rest of the VBLANK scanlines (PPU is idle during VBLANK scanlines)
+            //for (; _masterClockTicks < MasterClockTicksFrame; _masterClockTicks += 15)
+            //    _cpu.Step();
+
+            //// The ticks spill (if not 0, then that remaind is ticks for the next frame)
+            //_masterClockTicks -= MasterClockTicksFrame;
+
+            //// Reset the status of the PPU for render the next frame
+            //_ppu.ResetFrameRenderingStatus();
+
+            //return _ppu.Frame;
         }
 
         internal void TriggerNmi() => _cpu.NMI();

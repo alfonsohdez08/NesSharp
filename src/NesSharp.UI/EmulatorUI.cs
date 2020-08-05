@@ -83,11 +83,6 @@ namespace NesSharp.UI
                 if (openFileDialog.ShowDialog() == DialogResult.OK)
                 {
                     _gamePath = openFileDialog.FileName;
-                    //using (var fileStream = new FileStream(openFileDialog.FileName, FileMode.Open))
-                    //{
-                    //    _cartridgeRom = new byte[fileStream.Length];
-                    //    fileStream.Read(_cartridgeRom, 0, (int)fileStream.Length);
-                    //}
 
                     StartEmulation();
                 }

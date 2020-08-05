@@ -175,25 +175,36 @@ namespace NesSharp.CPU
         {
             Interrupt(InterruptionType.NMI);
 
-            _cycles += 7;
-            CyclesElapsed += 7;
+            _externalCycles = 7;
+            //_cycles += 7;
+            //CyclesElapsed += 7;
         }
+
+        int _externalCycles = 0;
 
         /// <summary>
         /// Executes the next instruction denoted by the program counter.
         /// </summary>
-        public void Step()
+        public int Step()
         {
-            if (_cycles == 0)
-            {
-                ExecuteInstruction();
+            ExecuteInstruction();
+            _cycles += _externalCycles;
+            _externalCycles = 0;
 
-                CyclesElapsed += (uint)_cycles;
-            }
-            else
-            {
-                _cycles--;
-            }
+            CyclesElapsed += (uint)_cycles;
+
+            return _cycles;
+
+            //if (_cycles == 0)
+            //{
+            //    ExecuteInstruction();
+
+            //    CyclesElapsed += (uint)_cycles;
+            //}
+            //else
+            //{
+            //    _cycles--;
+            //}
         }
 
         /// <summary>
@@ -202,8 +213,9 @@ namespace NesSharp.CPU
         /// <param name="cycles">The cycles spent for do the sprites DMA.</param>
         public void AddDmaCycles(int cycles)
         {
-            _cycles += cycles;
-            CyclesElapsed += (uint)cycles;
+            _externalCycles += cycles;
+            //_cycles += cycles;
+            //CyclesElapsed += (uint)cycles;
         }
 
         /// <summary>

@@ -94,7 +94,7 @@ namespace NesSharp.PPU
 
         private byte _dataBuffer = 0;
         private bool _isSpriteZeroInBuffer;
-        private uint _framesRendered = 1;
+        private uint _framesRendered = 0;
         private int _fineX;
         private int _cycles = 0;
         private int _scanline = -1;
@@ -121,12 +121,6 @@ namespace NesSharp.PPU
         private bool _flipSpriteVertically;
         private bool _flipSpriteHorizontally;
         private bool _isEmptySprite;
-
-        /// <summary>
-        /// Denotes whether frame being rendered is odd or not.
-        /// </summary>
-        private bool _isOddFrame = true;
-        private bool SkipIdleCycle => _isOddFrame && IsRenderingEnabled;
 
         #region Registers
         /// <summary>
@@ -267,13 +261,16 @@ namespace NesSharp.PPU
             _nmi = nmiTrigger;
         }
 
+        /// <summary>
+        /// Step over a frame pixel.
+        /// </summary>
         public void Step()
         {
             // Pre-render scanline (in the NTSC frame diagram it's labeled as scanline 261)
             if (_scanline >= -1 && _scanline < 240)
             {
                 // Update shift registers by shifting one position to the left
-                if ((_cycles >= 2 && _cycles <= 257) || (_cycles >= 322 && _cycles <= 337))
+                if (Mask.RenderBackground && (_cycles >= 2 && _cycles <= 257) || (_cycles >= 322 && _cycles <= 337))
                     ShiftBackgroundRegisters();
 
                 if (_scanline == -1)
@@ -312,27 +309,12 @@ namespace NesSharp.PPU
                 VerticalBlankPeriod();
 
             _cycles++;
-            if (_cycles >= 341 || (_cycles >= 340 && _scanline == -1 && SkipIdleCycle)) // When is an odd frame and we are in pre render scanline, the scanline is 340 cycles long (only when rendering is enabled)
+            if (_cycles >= 341) // When is an odd frame and we are in pre render scanline, the scanline is 340 cycles long (only when rendering is enabled)
             {
                 _cycles = 0;
                 _spriteBufferIndex = 0;
                 _scanline++;
-
-                //if (_scanline < 260)
-                //{
-                //    _scanline++;
-                //}
-                //else
-                //{
-                //    //_scanline = -1;
-
-                //    //Frames++;
-                //    //_isOddFrame = Frames % 2 != 0;
-
-                //    //IsFrameCompleted = true;
-                //}
             }
-
         }
 
         /// <summary>
@@ -345,10 +327,9 @@ namespace NesSharp.PPU
         /// </summary>
         public void ResetFrameRenderingStatus()
         {
-            _cycles = 0;
             _scanline = -1;
             _framesRendered++;
-            _isOddFrame = _framesRendered % 2 != 0;
+            _cycles = IsRenderingEnabled && _framesRendered % 2 != 0 ? 1 : 0; // When rendering is enabled and the next frame generated is odd, the idle tick will be skipped
             IsIdle = false;
         }
 
@@ -432,7 +413,7 @@ namespace NesSharp.PPU
             {
                 // Load high background pattern table byte
                 case 0:
-                    _highPixelsRow = _ppuBus.ReadCharacterRom((uint)(Control.BackgroundPatternTableAddress + (_tileId * 16) + V.FineY + 8));
+                    _highPixelsRow = _ppuBus.ReadCharacterRom((ushort)(Control.BackgroundPatternTableAddress + (_tileId * 16) + V.FineY + 8));
                     break;
                 case 1:
                     // Load background shift registers
@@ -465,16 +446,16 @@ namespace NesSharp.PPU
                     break;
                 // Fetch nametable byte
                 case 2:
-                    _tileId = _ppuBus.ReadNametable((uint)(0x2000 | (V.Loopy & 0x0FFF)));
+                    _tileId = _ppuBus.ReadNametable((ushort)(0x2000 | (V.Loopy & 0x0FFF)));
                     break;
                 // Fetch attribute table byte
                 case 4:
-                    _attribute = _ppuBus.ReadNametable((uint)(0x23C0 | (V.Loopy & 0x0C00) | ((V.Loopy >> 4) & 0x38) | ((V.Loopy >> 2) & 0x07)));
+                    _attribute = _ppuBus.ReadNametable((ushort)(0x23C0 | (V.Loopy & 0x0C00) | ((V.Loopy >> 4) & 0x38) | ((V.Loopy >> 2) & 0x07)));
                     _blockId = ParseBlock(V.CoarseX, V.CoarseY);
                     break;
                 // Fetch low background pattern table byte
                 case 6:
-                    _lowPixelsRow = _ppuBus.ReadCharacterRom((uint)(Control.BackgroundPatternTableAddress + (_tileId * 16) + V.FineY));
+                    _lowPixelsRow = _ppuBus.ReadCharacterRom((ushort)(Control.BackgroundPatternTableAddress + (_tileId * 16) + V.FineY));
                     break;
             }
         }
@@ -486,9 +467,9 @@ namespace NesSharp.PPU
             {
                 Array.Fill(_scanlineOamBuffer, 0xFF);
             }
-            else if (_cycles == 256)
+            // Fill the secondary (scanline) oam buffer at once
+            else if (_cycles == 64)
             {
-                // Fill the secondary oam buffer at once
                 FillScanlineOamBuffer();
             }
             else if (_cycles >= 257 && _cycles <= 320)
@@ -545,13 +526,13 @@ namespace NesSharp.PPU
                     // top half
                     if (y < 8)
                     {
-                        lowPlane = _ppuBus.ReadCharacterRom((uint)(patternTableAddress + (spriteId * 16) + y));
+                        lowPlane = _ppuBus.ReadCharacterRom((ushort)(patternTableAddress + (spriteId * 16) + y));
 
                     } // bottom half
                     else
                     {
                         //spriteId++; // bottom half tile is next to the top half tile in the pattern table
-                        lowPlane = _ppuBus.ReadCharacterRom((uint)(patternTableAddress + ((spriteId + 1) * 16) + (y - 8)));
+                        lowPlane = _ppuBus.ReadCharacterRom((ushort)(patternTableAddress + ((spriteId + 1) * 16) + (y - 8)));
                     }
 
                 } // 8 x 8 sprites
@@ -559,7 +540,7 @@ namespace NesSharp.PPU
                 {
                     int flipOffset = _flipSpriteVertically ? (7 - _spriteY) : _spriteY;
 
-                    lowPlane = _ppuBus.ReadCharacterRom((uint)(Control.SpritePatternTableAddress + (_spriteTileIndex * 16) + flipOffset));
+                    lowPlane = _ppuBus.ReadCharacterRom((ushort)(Control.SpritePatternTableAddress + (_spriteTileIndex * 16) + flipOffset));
                 }
 
                 if (_flipSpriteHorizontally)
@@ -589,13 +570,13 @@ namespace NesSharp.PPU
                     // top half
                     if (y < 8)
                     {
-                        highPlane = _ppuBus.ReadCharacterRom((uint)(patternTableAddress + (spriteId * 16) + y + 8));
+                        highPlane = _ppuBus.ReadCharacterRom((ushort)(patternTableAddress + (spriteId * 16) + y + 8));
 
                     } // bottom half
                     else
                     {
                         //spriteId++; // bottom half tile is next to the top half tile in the pattern table
-                        highPlane = _ppuBus.ReadCharacterRom((uint)(patternTableAddress + ((spriteId + 1) * 16) + (y - 8) + 8));
+                        highPlane = _ppuBus.ReadCharacterRom((ushort)(patternTableAddress + ((spriteId + 1) * 16) + (y - 8) + 8));
                     }
 
                 } // 8 x 8 sprites
@@ -603,7 +584,7 @@ namespace NesSharp.PPU
                 {
                     int flipOffset = _flipSpriteVertically ? (7 - _spriteY) : _spriteY;
 
-                    highPlane = _ppuBus.ReadCharacterRom((uint)(Control.SpritePatternTableAddress + (_spriteTileIndex * 16) + flipOffset + 8));
+                    highPlane = _ppuBus.ReadCharacterRom((ushort)(Control.SpritePatternTableAddress + (_spriteTileIndex * 16) + flipOffset + 8));
                 }
 
                 if (_flipSpriteHorizontally)
@@ -652,13 +633,10 @@ namespace NesSharp.PPU
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ShiftBackgroundRegisters()
         {
-            if (Mask.RenderBackground)
-            {
-                _lowBackgroundShiftRegister <<= 1;
-                _highBackgroundShiftRegister <<= 1;
-                _lowAttributeShiftRegister <<= 1;
-                _highAttributeShiftRegister <<= 1;
-            }
+            _lowBackgroundShiftRegister <<= 1;
+            _highBackgroundShiftRegister <<= 1;
+            _lowAttributeShiftRegister <<= 1;
+            _highAttributeShiftRegister <<= 1;
         }
 
         private void ShiftSpriteRegisters()
@@ -823,7 +801,7 @@ namespace NesSharp.PPU
         private int GetPaletteColor(int palette, int colorIndex)
         {
             int paletteColorAddress = ParseBackgroundPaletteAddress(palette, colorIndex);
-            int paletteColor = _ppuBus.ReadPalette((uint)paletteColorAddress);
+            int paletteColor = _ppuBus.ReadPalette((ushort)paletteColorAddress);
 
             return SystemColorPalette[paletteColor];
         }

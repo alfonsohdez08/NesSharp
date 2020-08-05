@@ -7,7 +7,7 @@ namespace NesSharp.PPU
     /// <summary>
     /// PPU's bus.
     /// </summary>
-    public class PpuBus
+    public class PpuBus: IBus
     {        
         private readonly byte[] _vram = new byte[2 * 1024];
         private readonly byte[] _paletteRam = new byte[32];
@@ -21,24 +21,24 @@ namespace NesSharp.PPU
             _ntAddressParser = NametableMirroringResolver.GetAddressParser(mirroring);
         }
 
-        public byte Read(uint address)
+        public byte Read(ushort address)
         {
             // Nametables and attribute tables (mirrored in the range [0x3000, 0x3EFF])
             if (address >= 0x2000 && address < 0x3F00)
-                return ReadNametable(0x2000 + (address & 0x0FFF));
+                return ReadNametable((ushort)(0x2000 + (address & 0x0FFF)));
             // Background palette and sprite palletes (mirrored in the range [0x3F20, 0x3FFF])
             else if (address >= 0x3F00 && address < 0x4000)
-                return ReadPalette(0x3F00 + (address & 0x001F));
+                return ReadPalette((ushort)(0x3F00 + (address & 0x001F)));
 
             return _chr[address & 0x3FFF];
         }
 
-        public byte ReadCharacterRom(uint address)
+        public byte ReadCharacterRom(ushort address)
         {
             return _chr[address & 0x3FFF];
         }
 
-        public byte ReadPalette(uint address)
+        public byte ReadPalette(ushort address)
         {
             switch (address)
             {
@@ -59,7 +59,7 @@ namespace NesSharp.PPU
             return _paletteRam[address & 0x1F];
         }
 
-        private void WritePalette(uint address, byte paletteEntry)
+        private void WritePalette(ushort address, byte paletteEntry)
         {
             switch (address)
             {
@@ -80,15 +80,15 @@ namespace NesSharp.PPU
             _paletteRam[address & 0x1F] = paletteEntry;
         }
 
-        public void Write(uint address, byte val)
+        public void Write(ushort address, byte val)
         {
             // For CHR-RAM
             if (address >= 0x0000 & address < 0x2000)
                 _chr[address] = val;
             else if (address >= 0x2000 && address < 0x3F00)
-                WriteNametable(0x2000 + (address & 0x0FFF), val);
+                WriteNametable((ushort)(0x2000 + (address & 0x0FFF)), val);
             else if (address >= 0x3F00 && address < 0x4000)
-                WritePalette(0x3F00 + (address & 0x001F), val);
+                WritePalette((ushort)(0x3F00 + (address & 0x001F)), val);
         }
 
         /// <summary>
@@ -96,7 +96,7 @@ namespace NesSharp.PPU
         /// </summary>
         /// <param name="address">The address where the value should be stored.</param>
         /// <param name="val">The value that will be stored.</param>
-        private void WriteNametable(uint address, byte val)
+        private void WriteNametable(ushort address, byte val)
         {
             var addressParsed = _ntAddressParser.Parse(address);
 
@@ -108,7 +108,7 @@ namespace NesSharp.PPU
         /// </summary>
         /// <param name="address">The address where the entry is allocated.</param>
         /// <returns>The value allocated in the given address.</returns>
-        public byte ReadNametable(uint address)
+        public byte ReadNametable(ushort address)
         {
             var addressParsed = _ntAddressParser.Parse(address);
 
