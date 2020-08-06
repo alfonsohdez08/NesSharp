@@ -68,5 +68,12 @@
 
             return buttonState;
         }
+
+        public void ResetJoypadState()
+        {
+            _incomingData = 0;
+            _snapshot = 0;
+            _strobe = false;
+        }
     }
 }

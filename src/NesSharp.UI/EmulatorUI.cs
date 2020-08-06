@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using SkiaSharp;
@@ -11,13 +12,6 @@ namespace NesSharp.UI
 {
     public partial class EmulatorUI : Form
     {
-        private string _gamePath;
-        private NES _nes;
-        private int[] _currentFrame;
-        private PictureBox _screen;
-
-        private delegate void PaintScreen();
-
         private readonly Joypad _joypad = new Joypad();
         private readonly Dictionary<Keys, Button> _joypadMapping = new Dictionary<Keys, Button>()
         {
@@ -30,6 +24,13 @@ namespace NesSharp.UI
             {Keys.Enter, Button.Start },
             {Keys.Space, Button.Select }
         };
+        private readonly object _locker = new object();
+
+        private string _gamePath;
+        private PictureBox _screen;
+        private CancellationTokenSource _cancellationTokenSource;
+
+        private delegate void PaintScreen(int[] frame);
 
         public EmulatorUI()
         {
@@ -77,38 +78,45 @@ namespace NesSharp.UI
         {
             using (var openFileDialog = new OpenFileDialog())
             {
-                openFileDialog.InitialDirectory = @"C:\Users\ward\nes";
                 openFileDialog.Filter = "nes files (*.nes)|*.nes|All files (*.*)|*.*";
 
                 if (openFileDialog.ShowDialog() == DialogResult.OK)
-                {
-                    _gamePath = openFileDialog.FileName;
-
-                    StartEmulation();
-                }
+                    StartEmulation(openFileDialog.FileName);
             }
         }
 
-        private void StartEmulation()
+        private void StartEmulation(string gamePath)
         {
-            Cartridge cartridge = Cartridge.LoadCartridge(_gamePath);
-            _nes = new NES(cartridge, _joypad);
-            
-            Task.Factory.StartNew(RunGame, TaskCreationOptions.LongRunning);
+            _cancellationTokenSource?.Cancel();
+
+            _joypad.ResetJoypadState();
+            Cartridge cartridge = Cartridge.LoadCartridge(gamePath);
+            var nes = new NES(cartridge, _joypad);
+
+            _cancellationTokenSource = new CancellationTokenSource();
+            Task.Factory.StartNew(() => RunGame(nes, _cancellationTokenSource.Token), TaskCreationOptions.LongRunning);
         }
 
-        private void RunGame()
+
+        private void RunGame(NES nes, CancellationToken cancellationToken)
         {
+            bool abortEmulation = false;
             var paintGameScreen = new PaintScreen(DrawImage);
 
             var stopwatch = new Stopwatch();
-            while(true)
+            while(!abortEmulation)
             {
                 stopwatch.Restart();
                 for (int i = 0; i < 60; i++)
                 {
-                    _currentFrame = _nes.Frame();
-                    _screen.Invoke(paintGameScreen);
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        abortEmulation = true;
+                        break;
+                    }
+
+                    var frame = nes.Frame();
+                    _screen.Invoke(paintGameScreen, new object[] { frame });
                 }
 
                 stopwatch.Stop();
@@ -117,14 +125,17 @@ namespace NesSharp.UI
             }
         }
 
-        unsafe private void DrawImage()
+        unsafe private void DrawImage(int[] frame)
         {
-            fixed(int* framePointer = _currentFrame)
+            lock(_locker)
             {
-                var bitmap = new SKBitmap(256, 240);
-                bitmap.SetPixels((IntPtr)framePointer);
+                fixed (int* framePointer = frame)
+                {
+                    var bitmap = new SKBitmap(256, 240);
+                    bitmap.SetPixels((IntPtr)framePointer);
 
-                _screen.Image = bitmap.ToBitmap();
+                    _screen.Image = bitmap.ToBitmap();
+                }
             }
         }
 
