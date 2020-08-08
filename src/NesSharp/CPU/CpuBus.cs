@@ -1,4 +1,5 @@
 ﻿using NesSharp.PPU;
+using System;
 
 namespace NesSharp.CPU
 {
@@ -13,13 +14,15 @@ namespace NesSharp.CPU
         private readonly byte[] _ram = new byte[2 * 1024];
         private readonly byte[] _programRom;
         private readonly DMA _dma;
+        private readonly CpuMasterClockCycles _cpuMasterClockCycles;
 
-        public CpuBus(byte[] programRom, Ppu ppu, Joypad joypad, DMA dma)
+        public CpuBus(byte[] programRom, Ppu ppu, Joypad joypad, DMA dma, CpuMasterClockCycles cpuMasterClockCyclesAction)
         {
             _programRom = programRom;
             _ppu = ppu;
             _joypad = joypad;
             _dma = dma;
+            _cpuMasterClockCycles = cpuMasterClockCyclesAction;
         }
 
         public byte Read(ushort address)
@@ -49,6 +52,8 @@ namespace NesSharp.CPU
             return val;
         }
 
+        private void CatchupPpu() => _ppu.RunUpTo(_cpuMasterClockCycles.Invoke());
+
         /// <summary>
         /// Reads the PPU registers available in the addresses $2000-$2007 from the CPU memory map.
         /// </summary>
@@ -56,6 +61,8 @@ namespace NesSharp.CPU
         /// <returns>The value allocated in the register identified by the given address.</returns>
         private byte ReadPpuRegister(ushort address)
         {
+            CatchupPpu();
+
             byte value = 0;
             switch(address)
             {
@@ -125,6 +132,8 @@ namespace NesSharp.CPU
         /// <param name="value">The value that will be stored.</param>
         private void WritePpuRegister(ushort address, byte value)
         {
+            CatchupPpu();
+
             switch (address)
             {
                 // PPU Control register (write only)

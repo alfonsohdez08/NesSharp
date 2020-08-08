@@ -150,5 +150,10 @@ namespace NesSharp.UI
             if (_joypadMapping.TryGetValue(e.KeyCode, out Button buttonPressed))
                 _joypad.ReleaseButton(buttonPressed);
         }
+
+        private void EmulatorUI_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            _cancellationTokenSource?.Cancel();
+        }
     }
 }

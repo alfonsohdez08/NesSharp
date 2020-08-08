@@ -8,7 +8,7 @@ namespace NesSharp.CPU
     /// <summary>
     /// The 6502 CPU.
     /// </summary>
-    partial class Cpu
+    partial class Cpu: Clockeable
     {
         /// <summary>
         /// The CPU bus (interacts with other components within the NES).
@@ -175,36 +175,27 @@ namespace NesSharp.CPU
         {
             Interrupt(InterruptionType.NMI);
 
-            _externalCycles = 7;
-            //_cycles += 7;
-            //CyclesElapsed += 7;
+            CyclesElapsed += 7;
+            MasterClockCycles += (7 * 15);
         }
-
-        int _externalCycles = 0;
 
         /// <summary>
         /// Executes the next instruction denoted by the program counter.
         /// </summary>
-        public int Step()
+        private int Step()
         {
             ExecuteInstruction();
-            _cycles += _externalCycles;
-            _externalCycles = 0;
-
+            
+            MasterClockCycles += (_cycles * 15);
             CyclesElapsed += (uint)_cycles;
 
             return _cycles;
+        }
 
-            //if (_cycles == 0)
-            //{
-            //    ExecuteInstruction();
-
-            //    CyclesElapsed += (uint)_cycles;
-            //}
-            //else
-            //{
-            //    _cycles--;
-            //}
+        public override void RunUpTo(int masterClockCycles)
+        {
+            while (MasterClockCycles <= masterClockCycles)
+                Step();
         }
 
         /// <summary>
@@ -213,9 +204,8 @@ namespace NesSharp.CPU
         /// <param name="cycles">The cycles spent for do the sprites DMA.</param>
         public void AddDmaCycles(int cycles)
         {
-            _externalCycles += cycles;
-            //_cycles += cycles;
-            //CyclesElapsed += (uint)cycles;
+            CyclesElapsed += (uint)cycles;
+            MasterClockCycles += (cycles * 15);
         }
 
         /// <summary>
