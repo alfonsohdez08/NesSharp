@@ -8,7 +8,7 @@ using System.Runtime.CompilerServices;
 
 namespace NesSharp.PPU
 {
-    class Ppu
+    class Ppu: Clockeable
     { 
         private const int Width = 256;
         private const int Height = 240;
@@ -308,13 +308,23 @@ namespace NesSharp.PPU
             else if (_scanline >= 241 && _scanline < 261)
                 VerticalBlankPeriod();
 
+            MasterClockCycles += 5;
             _cycles++;
-            if (_cycles >= 341) // When is an odd frame and we are in pre render scanline, the scanline is 340 cycles long (only when rendering is enabled)
+            if (_cycles >= 341)
             {
                 _cycles = 0;
                 _spriteBufferIndex = 0;
                 _scanline++;
+
+                if (_scanline > 260)
+                    ResetFrameRenderingStatus();
             }
+        }
+
+        public override void RunUpTo(int masterClockCycles)
+        {
+            while (MasterClockCycles <= masterClockCycles)
+                Step();
         }
 
         /// <summary>
@@ -325,11 +335,22 @@ namespace NesSharp.PPU
         /// <summary>
         /// Resets the frame rendering status.
         /// </summary>
-        public void ResetFrameRenderingStatus()
+        private void ResetFrameRenderingStatus()
         {
             _scanline = -1;
             _framesRendered++;
-            _cycles = IsRenderingEnabled && _framesRendered % 2 != 0 ? 1 : 0; // When rendering is enabled and the next frame generated is odd, the idle tick will be skipped
+
+            // When rendering is enabled and the next frame generated is odd, the idle tick will be skipped
+            if (IsRenderingEnabled && _framesRendered % 2 != 0)
+            {
+                _cycles = 1;
+                MasterClockCycles += 5;
+            }
+            else
+            {
+                _cycles = 0;
+            }
+
             IsIdle = false;
         }
 

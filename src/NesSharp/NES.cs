@@ -6,83 +6,37 @@ namespace NesSharp
 {
     internal delegate void DMA(byte page, byte[] cpuRam);
     internal delegate void NmiTrigger();
+    internal delegate int CpuMasterClockCycles();
 
     public class NES
     {
-        //private const int CpuCyclesInVbl = 2273;
-        private const int MasterClockTicksFrame = 446710;
-
         private readonly Cpu _cpu;
         private readonly Ppu _ppu;
 
-        private int _masterClockTicks = 0;
+        public const int MasterClockCyclesInFrame = 341 * 262 * 5;
+        public const int MasterClockCyclesBeforeVbl = ((341 * 242) + 2) * 5;
 
         public NES(Cartridge gameCartridge, Joypad joypad)
         {
             var ppuBus = new PpuBus(gameCartridge.CharacterRom, gameCartridge.GameMirroring);
             _ppu = new Ppu(ppuBus, new NmiTrigger(TriggerNmi));
 
-            var cpuBus = new CpuBus(gameCartridge.ProgramRom, _ppu, joypad, new DMA(PerformDma));
+            var cpuBus = new CpuBus(gameCartridge.ProgramRom, _ppu, joypad, new DMA(PerformDma), new CpuMasterClockCycles(() => _cpu.MasterClockCycles));
             _cpu = new Cpu(cpuBus);
         }
 
-        private const int CpuCyclesInVbl = 2273;
-
-
         public int[] Frame()
         {
-            int cpuCyclesInVbl = 0;
+            _cpu.RunUpTo(MasterClockCyclesBeforeVbl);
+            _ppu.RunUpTo(_cpu.MasterClockCycles);
 
-            do
-            {
-                int cpuCyclesSpent = _cpu.Step();
-                int totalPpuCycles = cpuCyclesSpent * 3;
+            _cpu.RunUpTo(MasterClockCyclesInFrame);
+            _ppu.RunUpTo(_cpu.MasterClockCycles);
 
-                if (!_ppu.IsIdle)
-                {
-                    for (int ppuCycles = 0; ppuCycles < totalPpuCycles; ppuCycles++)
-                    {
-                        _ppu.Step();
-                        if (_ppu.IsIdle)
-                        {
-                            ppuCycles++;
-                            cpuCyclesInVbl = (totalPpuCycles - ppuCycles) / 3;
-                            break;
-                        }
-                    }
-                }
-                else
-                {
-                    cpuCyclesInVbl += cpuCyclesSpent;
-                }
-
-            } while (cpuCyclesInVbl < CpuCyclesInVbl);
-
-            // Reset the status of the PPU for render the next frame
-            _ppu.ResetFrameRenderingStatus();
+            _cpu.MasterClockCycles -= MasterClockCyclesInFrame;
+            _ppu.MasterClockCycles -= MasterClockCyclesInFrame;
 
             return _ppu.Frame;
-
-
-            //// Run the PPU and CPU together
-            //for (; !_ppu.IsIdle; _masterClockTicks += 5)
-            //{
-            //    _ppu.Step();
-            //    if (_masterClockTicks % 15 == 0)
-            //        _cpu.Step();
-            //}
-
-            //// Just run the CPU for the rest of the VBLANK scanlines (PPU is idle during VBLANK scanlines)
-            //for (; _masterClockTicks < MasterClockTicksFrame; _masterClockTicks += 15)
-            //    _cpu.Step();
-
-            //// The ticks spill (if not 0, then that remaind is ticks for the next frame)
-            //_masterClockTicks -= MasterClockTicksFrame;
-
-            //// Reset the status of the PPU for render the next frame
-            //_ppu.ResetFrameRenderingStatus();
-
-            //return _ppu.Frame;
         }
 
         internal void TriggerNmi() => _cpu.NMI();
