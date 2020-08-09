@@ -11,6 +11,11 @@ namespace NesSharp.CPU
     partial class Cpu: Clockeable
     {
         /// <summary>
+        /// The NTSC CPU master clock factor.
+        /// </summary>
+        private const int NtscMasterClockFactor = 15;
+
+        /// <summary>
         /// The CPU bus (interacts with other components within the NES).
         /// </summary>
         private readonly CpuBus _bus;
@@ -51,9 +56,9 @@ namespace NesSharp.CPU
         private ushort _operandAddress;
 
         /// <summary>
-        /// The number of CPU cycles that takes instruction looked up.
+        /// The number of CPU cycles spent for execute the instruction looked up.
         /// </summary>
-        private int _cycles;
+        private int _instructionCycles;
 
         /// <summary>
         /// A flag for denote whether the instruction requires an additional cycle e.g. crosses a page bounday.
@@ -173,39 +178,37 @@ namespace NesSharp.CPU
         /// </summary>
         public void NMI()
         {
-            Interrupt(InterruptionType.NMI);
+            const int nmiCycles = 7;
 
-            CyclesElapsed += 7;
-            MasterClockCycles += (7 * 15);
+            Interrupt(InterruptionType.NMI);
+            AddCycles(nmiCycles);
+        }
+
+        /// <summary>
+        /// Add an amount of cycles to the CPU cycles counter for acknowledge/log an operation that has happened.
+        /// </summary>
+        /// <param name="cpuCycles">The number of CPU cycles.</param>
+        public void AddCycles(int cpuCycles)
+        {
+            CyclesElapsed += (uint)cpuCycles;
+            MasterClockCycles += (cpuCycles * NtscMasterClockFactor);
         }
 
         /// <summary>
         /// Executes the next instruction denoted by the program counter.
         /// </summary>
-        private int Step()
+        private int StepInstruction()
         {
             ExecuteInstruction();
-            
-            MasterClockCycles += (_cycles * 15);
-            CyclesElapsed += (uint)_cycles;
+            AddCycles(_instructionCycles);
 
-            return _cycles;
+            return _instructionCycles;
         }
 
         public override void RunUpTo(int masterClockCycles)
         {
             while (MasterClockCycles <= masterClockCycles)
-                Step();
-        }
-
-        /// <summary>
-        /// Acknowledges the CPU the cycles spent for do the sprites DMA.
-        /// </summary>
-        /// <param name="cycles">The cycles spent for do the sprites DMA.</param>
-        public void AddDmaCycles(int cycles)
-        {
-            CyclesElapsed += (uint)cycles;
-            MasterClockCycles += (cycles * 15);
+                StepInstruction();
         }
 
         /// <summary>
@@ -261,7 +264,7 @@ namespace NesSharp.CPU
             if (instruction == null) // Illegal opcode (kills the CPU)
                 throw new Exception("The CPU got killed by an illegal opcode.");
 
-            _cycles = instruction.Cycles;
+            _instructionCycles = instruction.Cycles;
             _additionalCycle = instruction.AdditionalCycleWhenCrossPage;
 
             SetOperand(instruction.AddressingMode);
@@ -1263,7 +1266,7 @@ namespace NesSharp.CPU
         private void AddOffsetToPC()
         {
             // Add additional cycle when branch condition is true
-            _cycles++;
+            _instructionCycles++;
 
             ushort targetAddress = (ushort)(_programCounter + (sbyte)_bus.Read(_operandAddress));
             CheckIfCrossedPageBoundary(_programCounter, targetAddress); // Add another cycle if new branch is in another page
@@ -1400,7 +1403,7 @@ namespace NesSharp.CPU
         private void CheckIfCrossedPageBoundary(ushort initialAddress, ushort addressAdded)
         {
             if (_additionalCycle && !AreAddressOnSamePage(initialAddress, addressAdded))
-                _cycles++;
+                _instructionCycles++;
         }
 
         /// <summary>

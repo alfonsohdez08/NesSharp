@@ -45,7 +45,7 @@ namespace NesSharp
             for (int i = 0; i < 256; i++)
                 _ppu.OamData = cpuRam[address++];
 
-            _cpu.AddDmaCycles(_cpu.CyclesElapsed % 2 == 0 ? 513 : 514);
+            _cpu.AddCycles(_cpu.CyclesElapsed % 2 == 0 ? 513 : 514);
         }
     }
 }

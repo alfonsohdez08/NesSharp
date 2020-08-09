@@ -9,7 +9,8 @@ using System.Runtime.CompilerServices;
 namespace NesSharp.PPU
 {
     class Ppu: Clockeable
-    { 
+    {
+        private const int NtscMasterClockCycle = 5;
         private const int Width = 256;
         private const int Height = 240;
 
@@ -308,7 +309,7 @@ namespace NesSharp.PPU
             else if (_scanline >= 241 && _scanline < 261)
                 VerticalBlankPeriod();
 
-            MasterClockCycles += 5;
+            MasterClockCycles += NtscMasterClockCycle;
             _cycles++;
             if (_cycles >= 341)
             {
@@ -344,7 +345,7 @@ namespace NesSharp.PPU
             if (IsRenderingEnabled && _framesRendered % 2 != 0)
             {
                 _cycles = 1;
-                MasterClockCycles += 5;
+                MasterClockCycles += NtscMasterClockCycle;
             }
             else
             {
