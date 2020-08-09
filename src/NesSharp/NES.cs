@@ -19,9 +19,9 @@ namespace NesSharp
         public NES(Cartridge gameCartridge, Joypad joypad)
         {
             var ppuBus = new PpuBus(gameCartridge.CharacterRom, gameCartridge.GameMirroring);
-            _ppu = new Ppu(ppuBus, new NmiTrigger(TriggerNmi));
+            _ppu = new Ppu(ppuBus, new NmiTrigger(() => _cpu.NMI()));
 
-            var cpuBus = new CpuBus(gameCartridge.ProgramRom, _ppu, joypad, new DMA(PerformDma), new CpuMasterClockCycles(() => _cpu.MasterClockCycles));
+            var cpuBus = new CpuBus(gameCartridge.ProgramRom, _ppu, joypad, new DMA(PerformDma), () => _cpu.MasterClockCycles);
             _cpu = new Cpu(cpuBus);
         }
 
@@ -38,8 +38,6 @@ namespace NesSharp
 
             return _ppu.Frame;
         }
-
-        internal void TriggerNmi() => _cpu.NMI();
 
         internal void PerformDma(byte page, byte[] cpuRam)
         {

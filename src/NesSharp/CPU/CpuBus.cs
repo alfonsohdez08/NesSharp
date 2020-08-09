@@ -14,9 +14,9 @@ namespace NesSharp.CPU
         private readonly byte[] _ram = new byte[2 * 1024];
         private readonly byte[] _programRom;
         private readonly DMA _dma;
-        private readonly CpuMasterClockCycles _cpuMasterClockCycles;
+        private readonly Func<int> _cpuMasterClockCycles;
 
-        public CpuBus(byte[] programRom, Ppu ppu, Joypad joypad, DMA dma, CpuMasterClockCycles cpuMasterClockCyclesAction)
+        public CpuBus(byte[] programRom, Ppu ppu, Joypad joypad, DMA dma, Func<int> cpuMasterClockCyclesAction)
         {
             _programRom = programRom;
             _ppu = ppu;
