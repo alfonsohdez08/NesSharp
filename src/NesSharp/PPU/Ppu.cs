@@ -260,7 +260,7 @@ namespace NesSharp.PPU
         /// <summary>
         /// Step over a frame pixel.
         /// </summary>
-        public void Step()
+        private void Step()
         {
             // Pre-render scanline (in the NTSC frame diagram it's labeled as scanline 261)
             if (_scanline >= -1 && _scanline < 240)
@@ -341,10 +341,6 @@ namespace NesSharp.PPU
             {
                 _cycles = 1;
                 MasterClockCycles += NtscMasterClockCycle;
-            }
-            else
-            {
-                _cycles = 0;
             }
         }
 
