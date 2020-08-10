@@ -52,21 +52,21 @@ namespace NesSharp.UI
 
             _screen = new PictureBox
             {
-                Width = 256,
-                Height = 240,
+                Width = Width,
+                Height = Height,
                 Location = new Point(0, menuStrip.Location.Y + 25),
-                Image = GetBlackScreen()
+                Image = GetBlackScreen(Width, Height),
             };
 
             Controls.Add(_screen);
         }
 
-        private Image GetBlackScreen()
+        private static Image GetBlackScreen(int width, int height)
         {
-            var bitmap = new Bitmap(Width, Height);
-            for (int x = 0; x < Width; x++)
+            var bitmap = new Bitmap(width, height);
+            for (int x = 0; x < width; x++)
             {
-                for (int y = 0; y < Height; y++)
+                for (int y = 0; y < height; y++)
                 {
                     bitmap.SetPixel(x, y, Color.Black);
                 }
@@ -75,7 +75,7 @@ namespace NesSharp.UI
             return bitmap;
         }
 
-        private void OpenRomSelectionDialog(object o, EventArgs e)
+        private void OpenRomSelectionDialog(object sender, EventArgs e)
         {
             using (var openFileDialog = new OpenFileDialog())
             {

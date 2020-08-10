@@ -34,9 +34,9 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 450);
+            this.ClientSize = new System.Drawing.Size(784, 561);
             this.Name = "EmulatorUI";
-            this.Text = "Form1";
+            this.Text = "NesSharp";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.EmulatorUI_FormClosing);
             this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.EmulatorUI_KeyDown);
             this.KeyUp += new System.Windows.Forms.KeyEventHandler(this.EmulatorUI_KeyUp);
