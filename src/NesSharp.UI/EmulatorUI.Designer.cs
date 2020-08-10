@@ -40,6 +40,7 @@
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.EmulatorUI_FormClosing);
             this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.EmulatorUI_KeyDown);
             this.KeyUp += new System.Windows.Forms.KeyEventHandler(this.EmulatorUI_KeyUp);
+            this.PreviewKeyDown += new System.Windows.Forms.PreviewKeyDownEventHandler(this.EmulatorUI_PreviewKeyDown);
             this.ResumeLayout(false);
 
         }

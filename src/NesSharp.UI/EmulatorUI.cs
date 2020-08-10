@@ -28,14 +28,18 @@ namespace NesSharp.UI
         };
         private readonly object _locker = new object();
 
-        private PictureBox _screen;
         private CancellationTokenSource _cancellationTokenSource;
+        private readonly SKControl _gameScreen;
 
-        private delegate void PaintScreen(int[] frame);
+        private int[] _frameBuffer = new int[256 * 240];
 
         public EmulatorUI()
         {
             InitializeComponent();
+
+            // The SKControl it's focused while rendering, so this would make 
+            // sure the key event handlers reach the form first
+            //this.KeyPreview = true;
 
             var menuStrip = new MenuStrip();
 
@@ -50,29 +54,17 @@ namespace NesSharp.UI
 
             Controls.Add(menuStrip);
 
-            _screen = new PictureBox
+            _gameScreen = new SKControl()
             {
-                Width = Width,
-                Height = Height,
-                Location = new Point(0, menuStrip.Location.Y + 25),
-                Image = GetBlackScreen(Width, Height),
+                Location = new Point(0, menuStrip.DisplayRectangle.Bottom + 1),
+                Size = new Size(this.ClientSize.Width, this.ClientSize.Height)
             };
+            _gameScreen.PaintSurface += OnPaintSurface;
+            _gameScreen.KeyDown += EmulatorUI_KeyDown;
+            _gameScreen.KeyUp += EmulatorUI_KeyUp;
+            _gameScreen.PreviewKeyDown += EmulatorUI_PreviewKeyDown;
 
-            Controls.Add(_screen);
-        }
-
-        private static Image GetBlackScreen(int width, int height)
-        {
-            var bitmap = new Bitmap(width, height);
-            for (int x = 0; x < width; x++)
-            {
-                for (int y = 0; y < height; y++)
-                {
-                    bitmap.SetPixel(x, y, Color.Black);
-                }
-            }
-
-            return bitmap;
+            Controls.Add(_gameScreen);
         }
 
         private void OpenRomSelectionDialog(object sender, EventArgs e)
@@ -84,6 +76,23 @@ namespace NesSharp.UI
                 if (openFileDialog.ShowDialog() == DialogResult.OK)
                     StartEmulation(openFileDialog.FileName);
             }
+        }
+
+        private void OnPaintSurface(object sender, SKPaintSurfaceEventArgs e)
+        {
+            var canvas = e.Surface.Canvas;
+
+            var bitmap = new SKBitmap(256, 240);
+            unsafe
+            {
+                fixed (int* framePointer = _frameBuffer)
+                {
+                    bitmap.SetPixels((IntPtr)framePointer);
+                }
+            }
+            canvas.DrawBitmap(bitmap, SKPoint.Empty);
+
+            canvas.Flush();
         }
 
         private void StartEmulation(string gamePath)
@@ -101,7 +110,6 @@ namespace NesSharp.UI
         private void RunGame(NES nes, CancellationToken cancellationToken)
         {
             bool abortEmulation = false;
-            var paintGameScreen = new PaintScreen(DrawImage);
 
             var stopwatch = new Stopwatch();
             while(!abortEmulation)
@@ -115,27 +123,13 @@ namespace NesSharp.UI
                         break;
                     }
 
-                    var frame = nes.Frame();
-                    _screen.Invoke(paintGameScreen, new object[] { frame });
+                    _frameBuffer = nes.Frame();
+                    _gameScreen.Invalidate(); // triggers repainting for the control
                 }
 
                 stopwatch.Stop();
 
                 Console.WriteLine($"{stopwatch.ElapsedMilliseconds} ms elapsed to process 60 frames per second.");
-            }
-        }
-
-        unsafe private void DrawImage(int[] frame)
-        {
-            lock(_locker)
-            {
-                fixed (int* framePointer = frame)
-                {
-                    var bitmap = new SKBitmap(256, 240);
-                    bitmap.SetPixels((IntPtr)framePointer);
-
-                    _screen.Image = bitmap.ToBitmap();
-                }
             }
         }
 
@@ -154,6 +148,11 @@ namespace NesSharp.UI
         private void EmulatorUI_FormClosing(object sender, FormClosingEventArgs e)
         {
             _cancellationTokenSource?.Cancel();
+        }
+
+        private void EmulatorUI_PreviewKeyDown(object sender, PreviewKeyDownEventArgs e)
+        {
+            //e.IsInputKey = true;
         }
     }
 }
