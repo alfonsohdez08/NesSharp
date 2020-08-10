@@ -150,9 +150,6 @@ namespace NesSharp.UI
             _cancellationTokenSource?.Cancel();
         }
 
-        private void EmulatorUI_PreviewKeyDown(object sender, PreviewKeyDownEventArgs e)
-        {
-            //e.IsInputKey = true;
-        }
+        private void EmulatorUI_PreviewKeyDown(object sender, PreviewKeyDownEventArgs e) => e.IsInputKey = true;
     }
 }
