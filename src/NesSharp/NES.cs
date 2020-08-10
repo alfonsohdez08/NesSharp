@@ -6,7 +6,6 @@ namespace NesSharp
 {
     internal delegate void DMA(byte page, byte[] cpuRam);
     internal delegate void NmiTrigger();
-    internal delegate int CpuMasterClockCycles();
 
     public class NES
     {

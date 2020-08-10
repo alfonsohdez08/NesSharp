@@ -75,6 +75,8 @@ namespace NesSharp
         /// </summary>
         /// <param name="path">The path where the cartridge is located.</param>
         /// <returns>A cartridge ready to be played.</returns>
-        public static Cartridge LoadCartridge(string path) => new Cartridge(File.ReadAllBytes(path));
+        public static Cartridge LoadCartridge(string path) => LoadCartridge(File.ReadAllBytes(path));
+
+        public static Cartridge LoadCartridge(byte[] cartridgeContent) => new Cartridge(cartridgeContent);
     }
 }

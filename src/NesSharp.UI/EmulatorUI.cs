@@ -12,6 +12,8 @@ namespace NesSharp.UI
 {
     public partial class EmulatorUI : Form
     {
+        private const string NesFilesDialogFilter = "nes files (*.nes)|*.nes";
+
         private readonly Joypad _joypad = new Joypad();
         private readonly Dictionary<Keys, Button> _joypadMapping = new Dictionary<Keys, Button>()
         {
@@ -26,7 +28,6 @@ namespace NesSharp.UI
         };
         private readonly object _locker = new object();
 
-        private string _gamePath;
         private PictureBox _screen;
         private CancellationTokenSource _cancellationTokenSource;
 
@@ -78,7 +79,7 @@ namespace NesSharp.UI
         {
             using (var openFileDialog = new OpenFileDialog())
             {
-                openFileDialog.Filter = "nes files (*.nes)|*.nes|All files (*.*)|*.*";
+                openFileDialog.Filter = NesFilesDialogFilter;
 
                 if (openFileDialog.ShowDialog() == DialogResult.OK)
                     StartEmulation(openFileDialog.FileName);
@@ -96,7 +97,6 @@ namespace NesSharp.UI
             _cancellationTokenSource = new CancellationTokenSource();
             Task.Factory.StartNew(() => RunGame(nes, _cancellationTokenSource.Token), TaskCreationOptions.LongRunning);
         }
-
 
         private void RunGame(NES nes, CancellationToken cancellationToken)
         {

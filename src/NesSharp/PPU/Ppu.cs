@@ -244,11 +244,6 @@ namespace NesSharp.PPU
 
         #endregion
 
-        /// <summary>
-        /// Count how many frames has been rendered so far.
-        /// </summary>
-        public bool IsIdle { get; private set; }
-
         public int[] Frame => _frameBuffer;
 
         /// <summary>
@@ -351,8 +346,6 @@ namespace NesSharp.PPU
             {
                 _cycles = 0;
             }
-
-            IsIdle = false;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -835,8 +828,6 @@ namespace NesSharp.PPU
                 Status.VerticalBlank = true;
                 if (Control.TriggerNmi)
                     _nmi.Invoke();
-
-                IsIdle = true;
             }
         }
     }
