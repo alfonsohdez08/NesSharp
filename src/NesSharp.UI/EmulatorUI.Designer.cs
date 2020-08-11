@@ -38,7 +38,9 @@
             this.Name = "EmulatorUI";
             this.Text = "NesSharp";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.EmulatorUI_FormClosing);
+            this.Resize += new System.EventHandler(this.EmulatorUI_Resize);
             this.ResumeLayout(false);
+
         }
 
         #endregion

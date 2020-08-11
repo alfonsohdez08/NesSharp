@@ -90,7 +90,8 @@ namespace NesSharp.UI
                     bitmap.SetPixels((IntPtr)framePointer);
                 }
             }
-            canvas.DrawBitmap(bitmap, SKPoint.Empty);
+            var b = bitmap.Resize(new SKImageInfo(e.Info.Width, e.Info.Height), SKFilterQuality.None);
+            canvas.DrawBitmap(b, SKPoint.Empty);
 
             canvas.Flush();
         }
@@ -151,5 +152,10 @@ namespace NesSharp.UI
         }
 
         private void EmulatorUI_PreviewKeyDown(object sender, PreviewKeyDownEventArgs e) => e.IsInputKey = true;
+
+        private void EmulatorUI_Resize(object sender, EventArgs e)
+        {
+            _gameScreen.Size = new Size(this.ClientSize.Width, this.ClientSize.Height);
+        }
     }
 }
