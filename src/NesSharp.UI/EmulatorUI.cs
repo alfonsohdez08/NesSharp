@@ -12,6 +12,13 @@ namespace NesSharp.UI
 {
     public partial class EmulatorUI : Form
     {
+#if DEBUG
+        private const int FramesPerSecond = 30;
+#else
+        private const int FramesPerSecond = 60;
+#endif
+        private readonly long _frameRate = (long)((1.0/FramesPerSecond) * 1000.0);
+
         private const string NesFilesDialogFilter = "nes files (*.nes)|*.nes";
 
         private readonly Joypad _joypad = new Joypad();
@@ -27,10 +34,11 @@ namespace NesSharp.UI
             {Keys.Space, Button.Select }
         };
         private readonly object _locker = new object();
+        private readonly int _menuHeight;
 
-        private CancellationTokenSource _cancellationTokenSource;
         private readonly SKControl _gameScreen;
-
+        
+        private CancellationTokenSource _cancellationTokenSource;
         private int[] _frameBuffer = new int[256 * 240];
 
         public EmulatorUI()
@@ -53,11 +61,12 @@ namespace NesSharp.UI
             menuStrip.Items.Add(fileMenuItem);
 
             Controls.Add(menuStrip);
-
+            _menuHeight = menuStrip.Size.Height;
+           
             _gameScreen = new SKControl()
             {
-                Location = new Point(0, menuStrip.DisplayRectangle.Bottom + 1),
-                Size = new Size(this.ClientSize.Width, this.ClientSize.Height)
+                Location = new Point(0, menuStrip.ClientRectangle.Bottom),
+                Size = GetGameScreen()
             };
             _gameScreen.PaintSurface += OnPaintSurface;
             _gameScreen.KeyDown += EmulatorUI_KeyDown;
@@ -66,6 +75,8 @@ namespace NesSharp.UI
 
             Controls.Add(_gameScreen);
         }
+
+        private Size GetGameScreen() => new Size(this.ClientSize.Width, Math.Abs(this.ClientSize.Height - _menuHeight));
 
         private void OpenRomSelectionDialog(object sender, EventArgs e)
         {
@@ -113,18 +124,27 @@ namespace NesSharp.UI
             bool abortEmulation = false;
 
             var stopwatch = new Stopwatch();
+
+            var frameStopWatch = new Stopwatch();
+
             while(!abortEmulation)
             {
                 stopwatch.Restart();
-                for (int i = 0; i < 60; i++)
+                for (int i = 0; i < FramesPerSecond; i++)
                 {
                     if (cancellationToken.IsCancellationRequested)
                     {
                         abortEmulation = true;
                         break;
                     }
+                    
+                    frameStopWatch.Restart();
 
                     _frameBuffer = nes.Frame();
+
+                    while (frameStopWatch.ElapsedMilliseconds < _frameRate)
+                        Thread.Sleep(0);
+
                     _gameScreen.Invalidate(); // triggers repainting for the control
                 }
 
@@ -153,9 +173,6 @@ namespace NesSharp.UI
 
         private void EmulatorUI_PreviewKeyDown(object sender, PreviewKeyDownEventArgs e) => e.IsInputKey = true;
 
-        private void EmulatorUI_Resize(object sender, EventArgs e)
-        {
-            _gameScreen.Size = new Size(this.ClientSize.Width, this.ClientSize.Height);
-        }
+        private void EmulatorUI_Resize(object sender, EventArgs e) =>_gameScreen.Size = GetGameScreen();
     }
 }
