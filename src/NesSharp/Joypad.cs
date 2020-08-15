@@ -17,16 +17,34 @@
 
     public class Joypad
     {
-        private readonly object _locker = new object();
+        private readonly object _inputsLocker = new object();
 
         private int _inputs;
         private int _snapshot;
         private bool _poll;
 
+        private int Inputs
+        {
+            get
+            {
+                lock(_inputsLocker)
+                {
+                    return _inputs;
+                }
+            }
+            set
+            {
+                lock(_inputsLocker)
+                {
+                    _inputs = value;
+                }    
+            }
+        }
+
         /// <summary>
         /// Gets the button state of the joypad.
         /// </summary>
-        public byte State
+        internal byte State
         {
             get
             {
@@ -47,7 +65,7 @@
         /// Set a press signal.
         /// </summary>
         /// <param name="button">The button pressed.</param>
-        public void PressButton(Button button) => _inputs |= (1 << (int)button);
+        public void PressButton(Button button) => Inputs |= (1 << (int)button);
 
         /// <summary>
         /// Unset the press signal.
@@ -57,7 +75,7 @@
         {
             int mask = 1 << (int)button;
 
-            _inputs = (_inputs | mask) ^ mask;
+            Inputs = (Inputs | mask) ^ mask;
         }
 
         /// <summary>
@@ -67,15 +85,10 @@
         internal void Poll(bool poll)
         {
             _poll = poll;
-            
+
             // If stop pulling, snapshot the inputs
-            if (!_poll) 
-            {
-                lock(_locker)
-                {
-                    _snapshot = _inputs;
-                }
-            }
+            if (!_poll)
+                _snapshot = Inputs;
         }
 
         /// <summary>
@@ -83,13 +96,9 @@
         /// </summary>
         public void ResetJoypadState()
         {
-            _inputs = 0;
+            Inputs = 0;
+            _snapshot = 0;
             _poll = false;
-
-            lock (_locker)
-            {
-                _snapshot = 0;
-            }
         }
     }
 }
