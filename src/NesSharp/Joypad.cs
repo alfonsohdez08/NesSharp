@@ -17,63 +17,79 @@
 
     public class Joypad
     {
-        private int _incomingData;
+        private readonly object _locker = new object();
+
+        private int _inputs;
         private int _snapshot;
-        private bool _strobe;
+        private bool _poll;
 
-        /* https://wiki.nesdev.com/w/index.php/Controller_reading_code
-            bit	    7    	    6    	    5    	    4    	    3    	    2    	    1    	    0    
-            button	A	B	Select	Start	Up	Down	Left	Right         
-         */
-
-        public void Strobe(bool strobe)
+        /// <summary>
+        /// Gets the button state of the joypad.
+        /// </summary>
+        public byte State
         {
-            _strobe = strobe;
-            _snapshot = _incomingData;
+            get
+            {
+                // https://wiki.nesdev.com/w/index.php/Controller_reading_code
+                int buttonState = (_snapshot & 0x80) == 0x80 ? 1 : 0;
+
+                if (!_poll)
+                {
+                    _snapshot <<= 1;
+                    _snapshot &= 0xFF;
+                }
+
+                return (byte)buttonState;
+            }
         }
 
-        public void PressButton(Button button)
-        {
-            //if (!Poll)
-            //    return;
+        /// <summary>
+        /// Set a press signal.
+        /// </summary>
+        /// <param name="button">The button pressed.</param>
+        public void PressButton(Button button) => _inputs |= (1 << (int)button);
 
-            _incomingData |= (1 << (int)button);
-
-            //// Reload mode
-            //if (Strobe)
-            //{
-            //    int mask = 1 << (int)button;
-            //    _incomingData |= mask;
-            //}
-
-            //Register &= 0xFF;
-        }
-
+        /// <summary>
+        /// Unset the press signal.
+        /// </summary>
+        /// <param name="button">The button released (unpressed).</param>
         public void ReleaseButton(Button button)
         {
             int mask = 1 << (int)button;
 
-            _incomingData = (_incomingData | mask) ^ mask;
+            _inputs = (_inputs | mask) ^ mask;
         }
 
-        public int ReadState()
+        /// <summary>
+        /// Acknowledges the circuit to either start or stop capturing inputs.
+        /// </summary>
+        /// <param name="poll">True if start capturing inputs, otherwise false.</param>
+        internal void Poll(bool poll)
         {
-            int buttonState = (_snapshot & 0x80) == 0x80 ? 1 : 0;
-
-            if (!_strobe)
+            _poll = poll;
+            
+            // If stop pulling, snapshot the inputs
+            if (!_poll) 
             {
-                _snapshot <<= 1;
-                _snapshot &= 0xFF;
+                lock(_locker)
+                {
+                    _snapshot = _inputs;
+                }
             }
-
-            return buttonState;
         }
 
+        /// <summary>
+        /// Resets the state of the joypad.
+        /// </summary>
         public void ResetJoypadState()
         {
-            _incomingData = 0;
-            _snapshot = 0;
-            _strobe = false;
+            _inputs = 0;
+            _poll = false;
+
+            lock (_locker)
+            {
+                _snapshot = 0;
+            }
         }
     }
 }

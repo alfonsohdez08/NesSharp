@@ -35,7 +35,7 @@ namespace NesSharp.CPU
                 val = ReadPpuRegister((ushort)(0x2000 + (address & 7)));
             else if (address == 0x4016)
             {
-                val = (byte)_joypad.ReadState();
+                val = (byte)_joypad.State;
 
                 //int bit = (_joypad._incomingData & 0x80) == 0x80 ? 1 : 0;
                 //val = (byte)bit;
@@ -120,7 +120,7 @@ namespace NesSharp.CPU
             }
             else if (address == 0x4016)
             {
-                _joypad.Strobe(val == 1);
+                _joypad.Poll(val == 1);
                 //_joypad.Strobe = val == 1;
             }
         }
