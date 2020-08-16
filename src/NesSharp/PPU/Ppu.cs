@@ -685,7 +685,7 @@ namespace NesSharp.PPU
         {
             V.CoarseY = T.CoarseY;
             V.FineY = T.FineY;
-            V.Nametable = (V.Nametable & 1) | ((T.Nametable & 2) << 1);
+            V.Nametable = (V.Nametable & 1) | (T.Nametable & 2);
         }
 
         private void PreRender()

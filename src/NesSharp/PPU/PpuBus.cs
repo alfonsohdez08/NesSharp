@@ -23,9 +23,10 @@ namespace NesSharp.PPU
 
         public byte Read(ushort address)
         {
-            // Nametables and attribute tables (mirrored in the range [0x3000, 0x3EFF])
-            if (address >= 0x2000 && address < 0x3F00)
+            if (address >= 0x2000 && address < 0x3000)
                 return ReadNametable((ushort)(0x2000 + (address & 0x0FFF)));
+            else if (address >= 0x3000 && address <= 0x3EFF)
+                return ReadNametable((ushort)(0x2000 + (address % 0x0F00)));
             // Background palette and sprite palletes (mirrored in the range [0x3F20, 0x3FFF])
             else if (address >= 0x3F00 && address < 0x4000)
                 return ReadPalette((ushort)(0x3F00 + (address & 0x001F)));
@@ -33,10 +34,7 @@ namespace NesSharp.PPU
             return _chr[address & 0x3FFF];
         }
 
-        public byte ReadCharacterRom(ushort address)
-        {
-            return _chr[address & 0x3FFF];
-        }
+        public byte ReadCharacterRom(ushort address) => _chr[address & 0x3FFF];
 
         public byte ReadPalette(ushort address)
         {
@@ -85,8 +83,10 @@ namespace NesSharp.PPU
             // For CHR-RAM
             if (address >= 0x0000 & address < 0x2000)
                 _chr[address] = val;
-            else if (address >= 0x2000 && address < 0x3F00)
+            else if (address >= 0x2000 && address < 0x3000)
                 WriteNametable((ushort)(0x2000 + (address & 0x0FFF)), val);
+            else if (address >= 0x3000 && address <= 0x3EFF)
+                WriteNametable((ushort)(0x2000 + (address % 0x0F00)), val);
             else if (address >= 0x3F00 && address < 0x4000)
                 WritePalette((ushort)(0x3F00 + (address & 0x001F)), val);
         }
