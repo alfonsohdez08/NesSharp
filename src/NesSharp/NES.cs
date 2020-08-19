@@ -1,6 +1,7 @@
 ﻿using NesSharp.CPU;
 using NesSharp.PPU;
 using System;
+using System.Collections.ObjectModel;
 
 namespace NesSharp
 {

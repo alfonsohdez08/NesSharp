@@ -1,9 +1,6 @@
-﻿using NesSharp.CPU;
-using NesSharp.Extensions;
+﻿using NesSharp.Extensions;
 using NesSharp.PPU.Registers;
 using System;
-using System.Drawing;
-using System.Linq;
 using System.Runtime.CompilerServices;
 
 namespace NesSharp.PPU
@@ -223,7 +220,7 @@ namespace NesSharp.PPU
                 /* If the compiled address does not overlap the color palette address range, then return
                  * the data read from the buffer; otherwise return the data read from the address right away
                  */
-                if (V.Loopy >= 0x3F00)
+                if (V.Address >= 0x3F00)
                     data = _dataBuffer;
 
                 IncrementVRamAddress();

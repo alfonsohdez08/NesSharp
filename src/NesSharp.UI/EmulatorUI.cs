@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Threading;
@@ -33,9 +35,7 @@ namespace NesSharp.UI
             {Keys.Enter, Button.Start },
             {Keys.Space, Button.Select }
         };
-        private readonly object _locker = new object();
         private readonly int _menuHeight;
-
         private readonly SKControl _gameScreen;
         
         private CancellationTokenSource _cancellationTokenSource;
@@ -44,10 +44,6 @@ namespace NesSharp.UI
         public EmulatorUI()
         {
             InitializeComponent();
-
-            // The SKControl it's focused while rendering, so this would make 
-            // sure the key event handlers reach the form first
-            //this.KeyPreview = true;
 
             var menuStrip = new MenuStrip();
 
@@ -145,7 +141,7 @@ namespace NesSharp.UI
                     while (frameStopWatch.ElapsedMilliseconds < _frameRate)
                         Thread.Sleep(0);
 
-                    _gameScreen.Invalidate(); // triggers repainting for the control
+                    _gameScreen.Invalidate();
                 }
 
                 stopwatch.Stop();
