@@ -40,6 +40,7 @@ START | Enter
 ![Excite Bike](https://i.imgur.com/jv8kNLG.png)
 ![Super Mario Bros](https://i.imgur.com/9SgcDSF.png)
 ![Donkey Kong](https://i.imgur.com/Nf8k1Sx.png)
+![Match Rider](https://i.imgur.com/EKZ8k6Z.png)
 
 # Should I use this emulator for play my favorite games?
 
