@@ -37,6 +37,9 @@ START | Enter
 
 # Screenshots
 
+![Excite Bike](https://i.imgur.com/4lr7GZa.png)
+![Super Mario Bros](https://i.imgur.com/9SgcDSF.png)
+![Donkey Kong](https://i.imgur.com/Nf8k1Sx.png)
 # Should I use this emulator for play my favorite games?
 
 **Please, do not do so**. I do **not** recommend that; first of all, all the games are not supported - only games that do not have a mapper are playable. Also, there's some games that are not being emulated correclty - for instance, Ice Climbers. And there's not sound yet... so the gaming experience would not be the best. This emulator was for learning purpose.
